@@ -136,18 +136,14 @@ namespace SaleBillSystem.NET.Forms
         
         private void NewBill()
         {
-            MessageBox.Show("This would open the Sale Bill Entry form.", Program.APP_NAME);
-            // In a complete implementation:
-            // var form = new SaleBillForm();
-            // form.ShowDialog();
+            var form = new SaleBillForm();
+            form.ShowDialog();
         }
         
         private void ShowBillList()
         {
-            MessageBox.Show("This would open the Bill List form.", Program.APP_NAME);
-            // In a complete implementation:
-            // var form = new BillListForm();
-            // form.ShowDialog();
+            var form = new BillListForm();
+            form.ShowDialog();
         }
         
         private void ShowPartyMaster()
@@ -158,10 +154,8 @@ namespace SaleBillSystem.NET.Forms
         
         private void ShowItemMaster()
         {
-            MessageBox.Show("This would open the Item Master form.", Program.APP_NAME);
-            // In a complete implementation:
-            // var form = new ItemMasterForm();
-            // form.ShowDialog();
+            var form = new ItemMasterForm();
+            form.ShowDialog();
         }
         
         private void ShowAbout()

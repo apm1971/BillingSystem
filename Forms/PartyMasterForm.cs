@@ -234,6 +234,9 @@ namespace SaleBillSystem.NET.Forms
                 {
                     LoadParties();
                     ClearForm();
+                    
+                    // Set DialogResult to OK so calling forms know a party was saved
+                    this.DialogResult = DialogResult.OK;
                 }
             }
             catch (Exception ex)

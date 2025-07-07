@@ -76,8 +76,8 @@ namespace SaleBillSystem.NET.Data
                         City TEXT,
                         Phone TEXT,
                         Email TEXT,
-                        GSTIN TEXT,
                         CreditLimit REAL,
+                        CreditDays INTEGER,
                         OutstandingAmount REAL
                     )");
                     
@@ -88,7 +88,7 @@ namespace SaleBillSystem.NET.Data
                         ItemName TEXT,
                         Unit TEXT,
                         Rate REAL,
-                        GST REAL,
+                        Charges REAL,
                         StockQuantity REAL
                     )");
                     
@@ -100,7 +100,7 @@ namespace SaleBillSystem.NET.Data
                         PartyID INTEGER,
                         PartyName TEXT,
                         TotalAmount REAL,
-                        TotalGST REAL,
+                        TotalCharges REAL,
                         NetAmount REAL
                     )");
                     
@@ -113,8 +113,7 @@ namespace SaleBillSystem.NET.Data
                         Quantity REAL,
                         Rate REAL,
                         Amount REAL,
-                        GSTPct REAL,
-                        GSTAmount REAL,
+                        Charges REAL,
                         TotalAmount REAL
                     )");
                 }

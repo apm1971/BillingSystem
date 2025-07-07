@@ -160,7 +160,7 @@ namespace SaleBillSystem.NET.Forms
                     BillDate = b.BillDate,
                     PartyName = b.PartyName,
                     TotalAmount = b.TotalAmount,
-                    TotalGST = b.TotalGST,
+                    TotalCharges = b.TotalCharges,
                     NetAmount = b.NetAmount,
                     ItemCount = b.BillItems.Count
                 }).ToList();
@@ -225,7 +225,7 @@ namespace SaleBillSystem.NET.Forms
                     $"Date: {selectedBill.BillDate:dd/MM/yyyy}\n" +
                     $"Party: {selectedBill.PartyName}\n" +
                     $"Total Amount: {selectedBill.TotalAmount:N2}\n" +
-                    $"Total GST: {selectedBill.TotalGST:N2}\n" +
+                    $"Total Charges: {selectedBill.TotalCharges:N2}\n" +
                     $"Net Amount: {selectedBill.NetAmount:N2}\n" +
                     $"Number of Items: {selectedBill.BillItems.Count}\n\n";
 

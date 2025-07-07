@@ -39,12 +39,12 @@ namespace SaleBillSystem.NET.Forms
             txtItemName.MaxLength = 100;
             txtUnit.MaxLength = 20;
             txtRate.TextAlign = HorizontalAlignment.Right;
-            txtGST.TextAlign = HorizontalAlignment.Right;
+            txtCharges.TextAlign = HorizontalAlignment.Right;
             txtStockQuantity.TextAlign = HorizontalAlignment.Right;
 
             // Set default values
             txtRate.Text = "0.00";
-            txtGST.Text = "0.00";
+            txtCharges.Text = "0.00";
             txtStockQuantity.Text = "0.00";
 
             // Setup search functionality
@@ -98,9 +98,9 @@ namespace SaleBillSystem.NET.Forms
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "GST",
-                HeaderText = "GST %",
-                DataPropertyName = "GST",
+                Name = "Charges",
+                HeaderText = "Charges",
+                DataPropertyName = "Charges",
                 Width = 80,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
@@ -145,7 +145,7 @@ namespace SaleBillSystem.NET.Forms
             txtItemName.Text = string.Empty;
             txtUnit.Text = string.Empty;
             txtRate.Text = "0.00";
-            txtGST.Text = "0.00";
+            txtCharges.Text = "0.00";
             txtStockQuantity.Text = "0.00";
 
             txtItemCode.Focus();
@@ -161,7 +161,7 @@ namespace SaleBillSystem.NET.Forms
             txtItemName.Text = item.ItemName;
             txtUnit.Text = item.Unit;
             txtRate.Text = item.Rate.ToString("N2");
-            txtGST.Text = item.GST.ToString("N2");
+            txtCharges.Text = item.Charges.ToString("N2");
             txtStockQuantity.Text = item.StockQuantity.ToString("N2");
 
             btnDelete.Enabled = true;
@@ -176,7 +176,7 @@ namespace SaleBillSystem.NET.Forms
                 ItemName = txtItemName.Text.Trim(),
                 Unit = txtUnit.Text.Trim(),
                 Rate = Convert.ToDouble(txtRate.Text),
-                GST = Convert.ToDouble(txtGST.Text),
+                Charges = Convert.ToDouble(txtCharges.Text),
                 StockQuantity = Convert.ToDouble(txtStockQuantity.Text)
             };
 
@@ -227,11 +227,11 @@ namespace SaleBillSystem.NET.Forms
                 return false;
             }
 
-            if (!double.TryParse(txtGST.Text, out double gst) || gst < 0 || gst > 100)
+            if (!double.TryParse(txtCharges.Text, out double charges) || charges < 0)
             {
-                MessageBox.Show("Please enter a valid GST percentage (0-100)", "Validation Error", 
+                MessageBox.Show("Please enter a valid Charges amount", "Validation Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtGST.Focus();
+                txtCharges.Focus();
                 return false;
             }
 

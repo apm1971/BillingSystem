@@ -31,7 +31,7 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.txtStockQuantity = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.txtGST = new System.Windows.Forms.TextBox();
+            this.txtCharges = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.txtRate = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
@@ -50,7 +50,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.groupBox1.Controls.Add(this.txtStockQuantity);
             this.groupBox1.Controls.Add(this.label6);
-            this.groupBox1.Controls.Add(this.txtGST);
+            this.groupBox1.Controls.Add(this.txtCharges);
             this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.txtRate);
             this.groupBox1.Controls.Add(this.label4);
@@ -84,13 +84,13 @@ namespace SaleBillSystem.NET.Forms
             this.label6.TabIndex = 10;
             this.label6.Text = "Stock Quantity:";
             // 
-            // txtGST
+            // txtCharges
             // 
-            this.txtGST.Location = new System.Drawing.Point(120, 150);
-            this.txtGST.Name = "txtGST";
-            this.txtGST.Size = new System.Drawing.Size(80, 23);
-            this.txtGST.TabIndex = 9;
-            this.txtGST.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.txtCharges.Location = new System.Drawing.Point(120, 150);
+            this.txtCharges.Name = "txtCharges";
+            this.txtCharges.Size = new System.Drawing.Size(120, 23);
+            this.txtCharges.TabIndex = 9;
+            this.txtCharges.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // label5
             // 
@@ -99,7 +99,7 @@ namespace SaleBillSystem.NET.Forms
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(46, 15);
             this.label5.TabIndex = 8;
-            this.label5.Text = "GST %:";
+            this.label5.Text = "Charges:";
             // 
             // txtRate
             // 
@@ -214,7 +214,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.TextBox txtStockQuantity;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.TextBox txtGST;
+        private System.Windows.Forms.TextBox txtCharges;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox txtRate;
         private System.Windows.Forms.Label label4;

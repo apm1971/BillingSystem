@@ -30,6 +30,7 @@ namespace SaleBillSystem.NET.Forms
         {
             // Set numeric format for TextBoxes
             txtCreditLimit.Text = "0.00";
+            txtCreditDays.Text = "0";
             txtOutstandingAmount.Text = "0.00";
             
             // Set up Tab order
@@ -38,13 +39,14 @@ namespace SaleBillSystem.NET.Forms
             txtCity.TabIndex = 2;
             txtPhone.TabIndex = 3;
             txtEmail.TabIndex = 4;
-            txtGSTIN.TabIndex = 5;
+
             txtCreditLimit.TabIndex = 6;
-            txtOutstandingAmount.TabIndex = 7;
-            btnSave.TabIndex = 8;
-            btnNew.TabIndex = 9;
-            btnDelete.TabIndex = 10;
-            btnClose.TabIndex = 11;
+            txtCreditDays.TabIndex = 7;
+            txtOutstandingAmount.TabIndex = 8;
+            btnSave.TabIndex = 9;
+            btnNew.TabIndex = 10;
+            btnDelete.TabIndex = 11;
+            btnClose.TabIndex = 12;
         }
         
         private void SetupDataGrid()
@@ -89,12 +91,7 @@ namespace SaleBillSystem.NET.Forms
                     Width = 100
                 });
                 
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "GSTIN",
-                    HeaderText = "GSTIN",
-                    Width = 120
-                });
+
                 
                 dgvParties.Columns.Add(new DataGridViewTextBoxColumn
                 {
@@ -133,8 +130,9 @@ namespace SaleBillSystem.NET.Forms
             txtCity.Text = string.Empty;
             txtPhone.Text = string.Empty;
             txtEmail.Text = string.Empty;
-            txtGSTIN.Text = string.Empty;
+
             txtCreditLimit.Text = "0.00";
+            txtCreditDays.Text = "0";
             txtOutstandingAmount.Text = "0.00";
             
             txtPartyName.Focus();
@@ -151,8 +149,9 @@ namespace SaleBillSystem.NET.Forms
             txtCity.Text = party.City;
             txtPhone.Text = party.Phone;
             txtEmail.Text = party.Email;
-            txtGSTIN.Text = party.GSTIN;
+
             txtCreditLimit.Text = party.CreditLimit.ToString("N2");
+            txtCreditDays.Text = party.CreditDays.ToString();
             txtOutstandingAmount.Text = party.OutstandingAmount.ToString("N2");
             
             btnDelete.Enabled = true;
@@ -168,8 +167,9 @@ namespace SaleBillSystem.NET.Forms
                 City = txtCity.Text.Trim(),
                 Phone = txtPhone.Text.Trim(),
                 Email = txtEmail.Text.Trim(),
-                GSTIN = txtGSTIN.Text.Trim(),
+
                 CreditLimit = Convert.ToDouble(txtCreditLimit.Text),
+                CreditDays = Convert.ToInt32(txtCreditDays.Text),
                 OutstandingAmount = Convert.ToDouble(txtOutstandingAmount.Text)
             };
             
@@ -317,8 +317,7 @@ namespace SaleBillSystem.NET.Forms
                 List<Party> filteredParties = parties.FindAll(p => 
                     p.PartyName.ToLower().Contains(searchText) ||
                     p.City.ToLower().Contains(searchText) ||
-                    p.Phone.ToLower().Contains(searchText) ||
-                    p.GSTIN.ToLower().Contains(searchText)
+                    p.Phone.ToLower().Contains(searchText)
                 );
                 
                 dgvParties.DataSource = null;

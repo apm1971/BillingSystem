@@ -29,8 +29,6 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.txtGSTIN = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
             this.txtEmail = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.txtPhone = new System.Windows.Forms.TextBox();
@@ -48,8 +46,6 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.txtGSTIN);
-            this.groupBox1.Controls.Add(this.label6);
             this.groupBox1.Controls.Add(this.txtEmail);
             this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.txtPhone);
@@ -62,26 +58,10 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(460, 250);
+            this.groupBox1.Size = new System.Drawing.Size(460, 215);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Party Details";
-            // 
-            // txtGSTIN
-            // 
-            this.txtGSTIN.Location = new System.Drawing.Point(120, 210);
-            this.txtGSTIN.Name = "txtGSTIN";
-            this.txtGSTIN.Size = new System.Drawing.Size(200, 23);
-            this.txtGSTIN.TabIndex = 11;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(20, 213);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(48, 15);
-            this.label6.TabIndex = 10;
-            this.label6.Text = "GSTIN:";
             // 
             // txtEmail
             // 
@@ -168,7 +148,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.btnSave.BackColor = System.Drawing.Color.LightGreen;
             this.btnSave.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnSave.Location = new System.Drawing.Point(270, 280);
+            this.btnSave.Location = new System.Drawing.Point(270, 245);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(100, 35);
             this.btnSave.TabIndex = 1;
@@ -180,7 +160,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.btnCancel.BackColor = System.Drawing.Color.LightCoral;
             this.btnCancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnCancel.Location = new System.Drawing.Point(380, 280);
+            this.btnCancel.Location = new System.Drawing.Point(380, 245);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(100, 35);
             this.btnCancel.TabIndex = 2;
@@ -192,7 +172,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(494, 331);
+            this.ClientSize = new System.Drawing.Size(494, 296);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.groupBox1);
@@ -210,8 +190,6 @@ namespace SaleBillSystem.NET.Forms
         #endregion
 
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.TextBox txtGSTIN;
-        private System.Windows.Forms.Label label6;
         private System.Windows.Forms.TextBox txtEmail;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox txtPhone;

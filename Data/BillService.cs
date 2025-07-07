@@ -26,7 +26,7 @@ namespace SaleBillSystem.NET.Data
                     PartyID = Convert.ToInt32(row["PartyID"]),
                     PartyName = row["PartyName"].ToString(),
                     TotalAmount = Convert.ToDouble(row["TotalAmount"]),
-                    TotalGST = Convert.ToDouble(row["TotalGST"]),
+                    TotalCharges = Convert.ToDouble(row["TotalCharges"]),
                     NetAmount = Convert.ToDouble(row["NetAmount"])
                 };
                 
@@ -60,8 +60,7 @@ namespace SaleBillSystem.NET.Data
                     Quantity = Convert.ToDouble(row["Quantity"]),
                     Rate = Convert.ToDouble(row["Rate"]),
                     Amount = Convert.ToDouble(row["Amount"]),
-                    GSTPct = Convert.ToDouble(row["GSTPct"]),
-                    GSTAmount = Convert.ToDouble(row["GSTAmount"]),
+                    Charges = Convert.ToDouble(row["Charges"]),
                     TotalAmount = Convert.ToDouble(row["TotalAmount"])
                 };
                 
@@ -91,7 +90,7 @@ namespace SaleBillSystem.NET.Data
                     PartyID = Convert.ToInt32(row["PartyID"]),
                     PartyName = row["PartyName"].ToString(),
                     TotalAmount = Convert.ToDouble(row["TotalAmount"]),
-                    TotalGST = Convert.ToDouble(row["TotalGST"]),
+                    TotalCharges = Convert.ToDouble(row["TotalCharges"]),
                     NetAmount = Convert.ToDouble(row["NetAmount"])
                 };
                 
@@ -118,9 +117,9 @@ namespace SaleBillSystem.NET.Data
                         {
                             // Add new bill
                             string sql = @"INSERT INTO BillMaster (
-                                BillNo, BillDate, PartyID, PartyName, TotalAmount, TotalGST, NetAmount
+                                BillNo, BillDate, PartyID, PartyName, TotalAmount, TotalCharges, NetAmount
                             ) VALUES (
-                                @BillNo, @BillDate, @PartyID, @PartyName, @TotalAmount, @TotalGST, @NetAmount
+                                @BillNo, @BillDate, @PartyID, @PartyName, @TotalAmount, @TotalCharges, @NetAmount
                             )";
                             
                             SQLiteParameter[] parameters = {
@@ -129,7 +128,7 @@ namespace SaleBillSystem.NET.Data
                                 new SQLiteParameter("@PartyID", bill.PartyID),
                                 new SQLiteParameter("@PartyName", bill.PartyName),
                                 new SQLiteParameter("@TotalAmount", bill.TotalAmount),
-                                new SQLiteParameter("@TotalGST", bill.TotalGST),
+                                new SQLiteParameter("@TotalCharges", bill.TotalCharges),
                                 new SQLiteParameter("@NetAmount", bill.NetAmount)
                             };
                             
@@ -149,7 +148,7 @@ namespace SaleBillSystem.NET.Data
                                 PartyID = @PartyID,
                                 PartyName = @PartyName,
                                 TotalAmount = @TotalAmount,
-                                TotalGST = @TotalGST,
+                                TotalCharges = @TotalCharges,
                                 NetAmount = @NetAmount
                             WHERE BillID = @BillID";
                             
@@ -159,7 +158,7 @@ namespace SaleBillSystem.NET.Data
                                 new SQLiteParameter("@PartyID", bill.PartyID),
                                 new SQLiteParameter("@PartyName", bill.PartyName),
                                 new SQLiteParameter("@TotalAmount", bill.TotalAmount),
-                                new SQLiteParameter("@TotalGST", bill.TotalGST),
+                                new SQLiteParameter("@TotalCharges", bill.TotalCharges),
                                 new SQLiteParameter("@NetAmount", bill.NetAmount),
                                 new SQLiteParameter("@BillID", bill.BillID)
                             };
@@ -175,9 +174,9 @@ namespace SaleBillSystem.NET.Data
                         foreach (BillItem item in bill.BillItems)
                         {
                             string sql = @"INSERT INTO BillDetails (
-                                BillID, ItemID, ItemName, Quantity, Rate, Amount, GSTPct, GSTAmount, TotalAmount
+                                BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, TotalAmount
                             ) VALUES (
-                                @BillID, @ItemID, @ItemName, @Quantity, @Rate, @Amount, @GSTPct, @GSTAmount, @TotalAmount
+                                @BillID, @ItemID, @ItemName, @Quantity, @Rate, @Amount, @Charges, @TotalAmount
                             )";
                             
                             SQLiteParameter[] parameters = {
@@ -187,8 +186,7 @@ namespace SaleBillSystem.NET.Data
                                 new SQLiteParameter("@Quantity", item.Quantity),
                                 new SQLiteParameter("@Rate", item.Rate),
                                 new SQLiteParameter("@Amount", item.Amount),
-                                new SQLiteParameter("@GSTPct", item.GSTPct),
-                                new SQLiteParameter("@GSTAmount", item.GSTAmount),
+                                new SQLiteParameter("@Charges", item.Charges),
                                 new SQLiteParameter("@TotalAmount", item.TotalAmount)
                             };
                             

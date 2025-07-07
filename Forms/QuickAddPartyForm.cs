@@ -40,8 +40,8 @@ namespace SaleBillSystem.NET.Forms
                     City = txtCity.Text.Trim(),
                     Phone = txtPhone.Text.Trim(),
                     Email = txtEmail.Text.Trim(),
-                    GSTIN = txtGSTIN.Text.Trim(),
                     CreditLimit = 0,
+                    CreditDays = 0,
                     OutstandingAmount = 0
                 };
 

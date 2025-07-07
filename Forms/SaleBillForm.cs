@@ -96,8 +96,7 @@ namespace SaleBillSystem.NET.Forms
                 row.Cells["Quantity"].Value = billItem.Quantity;
                 row.Cells["Rate"].Value = billItem.Rate;
                 row.Cells["Amount"].Value = billItem.Amount;
-                row.Cells["GSTPct"].Value = billItem.GSTPct;
-                row.Cells["GSTAmount"].Value = billItem.GSTAmount;
+                row.Cells["Charges"].Value = billItem.Charges;
                 row.Cells["TotalAmount"].Value = billItem.TotalAmount;
             }
             
@@ -159,9 +158,9 @@ namespace SaleBillSystem.NET.Forms
                         {
                             row.Cells["Rate"].Value = item.Rate;
                         }
-                        if (row.Cells["GSTPct"].Value == null || Convert.ToDouble(row.Cells["GSTPct"].Value) == 0)
+                        if (row.Cells["Charges"].Value == null || Convert.ToDouble(row.Cells["Charges"].Value) == 0)
                         {
-                            row.Cells["GSTPct"].Value = item.GST;
+                            row.Cells["Charges"].Value = item.Charges;
                         }
                     }
                 }
@@ -169,14 +168,12 @@ namespace SaleBillSystem.NET.Forms
                 // Calculate amounts
                 double quantity = Convert.ToDouble(row.Cells["Quantity"].Value ?? 0);
                 double rate = Convert.ToDouble(row.Cells["Rate"].Value ?? 0);
-                double gstPct = Convert.ToDouble(row.Cells["GSTPct"].Value ?? 0);
+                double charges = Convert.ToDouble(row.Cells["Charges"].Value ?? 0);
 
                 double amount = quantity * rate;
-                double gstAmount = amount * (gstPct / 100);
-                double totalAmount = amount + gstAmount;
+                double totalAmount = amount + charges;
 
                 row.Cells["Amount"].Value = Math.Round(amount, 2);
-                row.Cells["GSTAmount"].Value = Math.Round(gstAmount, 2);
                 row.Cells["TotalAmount"].Value = Math.Round(totalAmount, 2);
 
                 CalculateTotals();
@@ -190,7 +187,7 @@ namespace SaleBillSystem.NET.Forms
         private void CalculateTotals()
         {
             double totalAmount = 0;
-            double totalGST = 0;
+            double totalCharges = 0;
             double netAmount = 0;
 
             foreach (DataGridViewRow row in dgvItems.Rows)
@@ -198,13 +195,13 @@ namespace SaleBillSystem.NET.Forms
                 if (!row.IsNewRow)
                 {
                     totalAmount += Convert.ToDouble(row.Cells["Amount"].Value ?? 0);
-                    totalGST += Convert.ToDouble(row.Cells["GSTAmount"].Value ?? 0);
+                    totalCharges += Convert.ToDouble(row.Cells["Charges"].Value ?? 0);
                     netAmount += Convert.ToDouble(row.Cells["TotalAmount"].Value ?? 0);
                 }
             }
 
             lblTotalAmount.Text = $"Total Amount: {totalAmount:F2}";
-            lblTotalGST.Text = $"Total GST: {totalGST:F2}";
+            lblTotalCharges.Text = $"Total Charges: {totalCharges:F2}";
             lblNetAmount.Text = $"Net Amount: {netAmount:F2}";
         }
 
@@ -237,8 +234,7 @@ namespace SaleBillSystem.NET.Forms
                             Quantity = Convert.ToDouble(row.Cells["Quantity"].Value ?? 0),
                             Rate = Convert.ToDouble(row.Cells["Rate"].Value ?? 0),
                             Amount = Convert.ToDouble(row.Cells["Amount"].Value ?? 0),
-                            GSTPct = Convert.ToDouble(row.Cells["GSTPct"].Value ?? 0),
-                            GSTAmount = Convert.ToDouble(row.Cells["GSTAmount"].Value ?? 0),
+                            Charges = Convert.ToDouble(row.Cells["Charges"].Value ?? 0),
                             TotalAmount = Convert.ToDouble(row.Cells["TotalAmount"].Value ?? 0)
                         };
                         currentBill.BillItems.Add(billItem);

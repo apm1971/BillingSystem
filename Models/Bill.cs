@@ -11,7 +11,7 @@ namespace SaleBillSystem.NET.Models
         public int PartyID { get; set; }
         public string PartyName { get; set; } = string.Empty;
         public double TotalAmount { get; set; }
-        public double TotalGST { get; set; }
+        public double TotalCharges { get; set; }
         public double NetAmount { get; set; }
         public List<BillItem> BillItems { get; set; } = new List<BillItem>();
 
@@ -19,13 +19,13 @@ namespace SaleBillSystem.NET.Models
         public void CalculateTotals()
         {
             TotalAmount = 0;
-            TotalGST = 0;
+            TotalCharges = 0;
             NetAmount = 0;
 
             foreach (var item in BillItems)
             {
                 TotalAmount += item.Amount;
-                TotalGST += item.GSTAmount;
+                TotalCharges += item.Charges;
                 NetAmount += item.TotalAmount;
             }
         }

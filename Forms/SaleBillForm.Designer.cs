@@ -44,12 +44,11 @@ namespace SaleBillSystem.NET.Forms
             this.Quantity = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Rate = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Amount = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.GSTPct = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.GSTAmount = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Charges = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.TotalAmount = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.lblNetAmount = new System.Windows.Forms.Label();
-            this.lblTotalGST = new System.Windows.Forms.Label();
+            this.lblTotalCharges = new System.Windows.Forms.Label();
             this.lblTotalAmount = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -172,8 +171,7 @@ namespace SaleBillSystem.NET.Forms
             this.Quantity,
             this.Rate,
             this.Amount,
-            this.GSTPct,
-            this.GSTAmount,
+            this.Charges,
             this.TotalAmount});
             this.dgvItems.Location = new System.Drawing.Point(15, 22);
             this.dgvItems.Name = "dgvItems";
@@ -219,18 +217,11 @@ namespace SaleBillSystem.NET.Forms
             this.Amount.Name = "Amount";
             this.Amount.ReadOnly = true;
             // 
-            // GSTPct
+            // Charges
             // 
-            this.GSTPct.FillWeight = 60F;
-            this.GSTPct.HeaderText = "GST%";
-            this.GSTPct.Name = "GSTPct";
-            // 
-            // GSTAmount
-            // 
-            this.GSTAmount.FillWeight = 80F;
-            this.GSTAmount.HeaderText = "GST Amount";
-            this.GSTAmount.Name = "GSTAmount";
-            this.GSTAmount.ReadOnly = true;
+            this.Charges.FillWeight = 80F;
+            this.Charges.HeaderText = "Charges";
+            this.Charges.Name = "Charges";
             // 
             // TotalAmount
             // 
@@ -242,7 +233,7 @@ namespace SaleBillSystem.NET.Forms
             // groupBox3
             // 
             this.groupBox3.Controls.Add(this.lblNetAmount);
-            this.groupBox3.Controls.Add(this.lblTotalGST);
+            this.groupBox3.Controls.Add(this.lblTotalCharges);
             this.groupBox3.Controls.Add(this.lblTotalAmount);
             this.groupBox3.Location = new System.Drawing.Point(12, 494);
             this.groupBox3.Name = "groupBox3";
@@ -261,15 +252,15 @@ namespace SaleBillSystem.NET.Forms
             this.lblNetAmount.Text = "Net Amount: 0.00";
             this.lblNetAmount.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
-            // lblTotalGST
+            // lblTotalCharges
             // 
-            this.lblTotalGST.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.lblTotalGST.Location = new System.Drawing.Point(350, 25);
-            this.lblTotalGST.Name = "lblTotalGST";
-            this.lblTotalGST.Size = new System.Drawing.Size(280, 40);
-            this.lblTotalGST.TabIndex = 1;
-            this.lblTotalGST.Text = "Total GST: 0.00";
-            this.lblTotalGST.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblTotalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.lblTotalCharges.Location = new System.Drawing.Point(350, 25);
+            this.lblTotalCharges.Name = "lblTotalCharges";
+            this.lblTotalCharges.Size = new System.Drawing.Size(280, 40);
+            this.lblTotalCharges.TabIndex = 1;
+            this.lblTotalCharges.Text = "Total Charges: 0.00";
+            this.lblTotalCharges.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblTotalAmount
             // 
@@ -347,12 +338,11 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.DataGridViewTextBoxColumn Quantity;
         private System.Windows.Forms.DataGridViewTextBoxColumn Rate;
         private System.Windows.Forms.DataGridViewTextBoxColumn Amount;
-        private System.Windows.Forms.DataGridViewTextBoxColumn GSTPct;
-        private System.Windows.Forms.DataGridViewTextBoxColumn GSTAmount;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Charges;
         private System.Windows.Forms.DataGridViewTextBoxColumn TotalAmount;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Label lblNetAmount;
-        private System.Windows.Forms.Label lblTotalGST;
+        private System.Windows.Forms.Label lblTotalCharges;
         private System.Windows.Forms.Label lblTotalAmount;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

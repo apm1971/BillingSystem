@@ -25,7 +25,7 @@ namespace SaleBillSystem.NET.Data
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
                     Rate = Convert.ToDouble(row["Rate"]),
-                    GST = Convert.ToDouble(row["GST"]),
+                    Charges = Convert.ToDouble(row["Charges"]),
                     StockQuantity = Convert.ToDouble(row["StockQuantity"])
                 };
                 
@@ -54,7 +54,7 @@ namespace SaleBillSystem.NET.Data
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
                     Rate = Convert.ToDouble(row["Rate"]),
-                    GST = Convert.ToDouble(row["GST"]),
+                    Charges = Convert.ToDouble(row["Charges"]),
                     StockQuantity = Convert.ToDouble(row["StockQuantity"])
                 };
                 
@@ -88,9 +88,9 @@ namespace SaleBillSystem.NET.Data
         public static bool AddItem(Item item)
         {
             string sql = @"INSERT INTO ItemMaster (
-                ItemCode, ItemName, Unit, Rate, GST, StockQuantity
+                ItemCode, ItemName, Unit, Rate, Charges, StockQuantity
             ) VALUES (
-                @ItemCode, @ItemName, @Unit, @Rate, @GST, @StockQuantity
+                @ItemCode, @ItemName, @Unit, @Rate, @Charges, @StockQuantity
             )";
             
             SQLiteParameter[] parameters = {
@@ -98,7 +98,7 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@ItemName", item.ItemName),
                 new SQLiteParameter("@Unit", item.Unit),
                 new SQLiteParameter("@Rate", item.Rate),
-                new SQLiteParameter("@GST", item.GST),
+                new SQLiteParameter("@Charges", item.Charges),
                 new SQLiteParameter("@StockQuantity", item.StockQuantity)
             };
             
@@ -115,7 +115,7 @@ namespace SaleBillSystem.NET.Data
                 ItemName = @ItemName,
                 Unit = @Unit,
                 Rate = @Rate,
-                GST = @GST,
+                Charges = @Charges,
                 StockQuantity = @StockQuantity
             WHERE ItemID = @ItemID";
             
@@ -124,7 +124,7 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@ItemName", item.ItemName),
                 new SQLiteParameter("@Unit", item.Unit),
                 new SQLiteParameter("@Rate", item.Rate),
-                new SQLiteParameter("@GST", item.GST),
+                new SQLiteParameter("@Charges", item.Charges),
                 new SQLiteParameter("@StockQuantity", item.StockQuantity),
                 new SQLiteParameter("@ItemID", item.ItemID)
             };
@@ -175,7 +175,7 @@ namespace SaleBillSystem.NET.Data
                 ItemName = row["ItemName"].ToString(),
                 Unit = row["Unit"].ToString(),
                 Rate = Convert.ToDouble(row["Rate"]),
-                GST = Convert.ToDouble(row["GST"]),
+                Charges = Convert.ToDouble(row["Charges"]),
                 StockQuantity = Convert.ToDouble(row["StockQuantity"])
             };
         }

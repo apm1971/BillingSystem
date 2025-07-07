@@ -26,8 +26,8 @@ namespace SaleBillSystem.NET.Data
                     City = row["City"].ToString(),
                     Phone = row["Phone"].ToString(),
                     Email = row["Email"].ToString(),
-                    GSTIN = row["GSTIN"].ToString(),
                     CreditLimit = Convert.ToDouble(row["CreditLimit"]),
+                    CreditDays = Convert.ToInt32(row["CreditDays"]),
                     OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
                 };
                 
@@ -57,8 +57,8 @@ namespace SaleBillSystem.NET.Data
                     City = row["City"].ToString(),
                     Phone = row["Phone"].ToString(),
                     Email = row["Email"].ToString(),
-                    GSTIN = row["GSTIN"].ToString(),
                     CreditLimit = Convert.ToDouble(row["CreditLimit"]),
+                    CreditDays = Convert.ToInt32(row["CreditDays"]),
                     OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
                 };
                 
@@ -73,14 +73,13 @@ namespace SaleBillSystem.NET.Data
         {
             List<Party> parties = new List<Party>();
             
-            string sql = "SELECT * FROM PartyMaster WHERE PartyName LIKE ? OR City LIKE ? OR Phone LIKE ? OR GSTIN LIKE ? ORDER BY PartyName";
+            string sql = "SELECT * FROM PartyMaster WHERE PartyName LIKE ? OR City LIKE ? OR Phone LIKE ? ORDER BY PartyName";
             
             string param = "%" + searchText + "%";
             DataTable dt = DatabaseManager.ExecuteQuery(sql, 
                 new SQLiteParameter("@PartyName", param),
                 new SQLiteParameter("@City", param),
-                new SQLiteParameter("@Phone", param),
-                new SQLiteParameter("@GSTIN", param));
+                new SQLiteParameter("@Phone", param));
                 
             foreach (DataRow row in dt.Rows)
             {
@@ -94,9 +93,9 @@ namespace SaleBillSystem.NET.Data
         public static bool AddParty(Party party)
         {
             string sql = @"INSERT INTO PartyMaster (
-                PartyName, Address, City, Phone, Email, GSTIN, CreditLimit, OutstandingAmount
+                PartyName, Address, City, Phone, Email, CreditLimit, CreditDays, OutstandingAmount
             ) VALUES (
-                @PartyName, @Address, @City, @Phone, @Email, @GSTIN, @CreditLimit, @OutstandingAmount
+                @PartyName, @Address, @City, @Phone, @Email, @CreditLimit, @CreditDays, @OutstandingAmount
             )";
             
             SQLiteParameter[] parameters = {
@@ -105,8 +104,8 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@City", party.City),
                 new SQLiteParameter("@Phone", party.Phone),
                 new SQLiteParameter("@Email", party.Email),
-                new SQLiteParameter("@GSTIN", party.GSTIN),
                 new SQLiteParameter("@CreditLimit", party.CreditLimit),
+                new SQLiteParameter("@CreditDays", party.CreditDays),
                 new SQLiteParameter("@OutstandingAmount", party.OutstandingAmount)
             };
             
@@ -124,8 +123,8 @@ namespace SaleBillSystem.NET.Data
                 City = @City,
                 Phone = @Phone,
                 Email = @Email,
-                GSTIN = @GSTIN,
                 CreditLimit = @CreditLimit,
+                CreditDays = @CreditDays,
                 OutstandingAmount = @OutstandingAmount
             WHERE PartyID = @PartyID";
             
@@ -135,8 +134,8 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@City", party.City),
                 new SQLiteParameter("@Phone", party.Phone),
                 new SQLiteParameter("@Email", party.Email),
-                new SQLiteParameter("@GSTIN", party.GSTIN),
                 new SQLiteParameter("@CreditLimit", party.CreditLimit),
+                new SQLiteParameter("@CreditDays", party.CreditDays),
                 new SQLiteParameter("@OutstandingAmount", party.OutstandingAmount),
                 new SQLiteParameter("@PartyID", party.PartyID)
             };
@@ -188,8 +187,8 @@ namespace SaleBillSystem.NET.Data
                 City = row["City"].ToString(),
                 Phone = row["Phone"].ToString(),
                 Email = row["Email"].ToString(),
-                GSTIN = row["GSTIN"].ToString(),
                 CreditLimit = Convert.ToDouble(row["CreditLimit"]),
+                CreditDays = Convert.ToInt32(row["CreditDays"]),
                 OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
             };
         }

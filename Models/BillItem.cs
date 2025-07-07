@@ -11,16 +11,14 @@ namespace SaleBillSystem.NET.Models
         public double Quantity { get; set; }
         public double Rate { get; set; }
         public double Amount { get; set; }
-        public double GSTPct { get; set; }
-        public double GSTAmount { get; set; }
+        public double Charges { get; set; }
         public double TotalAmount { get; set; }
 
         // Calculate values based on quantity and rate
         public void Calculate()
         {
             Amount = Quantity * Rate;
-            GSTAmount = Amount * (GSTPct / 100);
-            TotalAmount = Amount + GSTAmount;
+            TotalAmount = Amount + Charges;
         }
     }
 } 

@@ -25,7 +25,7 @@ namespace SaleBillSystem.NET.Forms
             
             // Set default values
             txtRate.Text = "0.00";
-            txtGST.Text = "0.00";
+            txtCharges.Text = "0.00";
             txtStockQuantity.Text = "0.00";
             
             txtItemCode.Focus();
@@ -44,7 +44,7 @@ namespace SaleBillSystem.NET.Forms
                     ItemName = txtItemName.Text.Trim(),
                     Unit = txtUnit.Text.Trim(),
                     Rate = Convert.ToDouble(txtRate.Text),
-                    GST = Convert.ToDouble(txtGST.Text),
+                    Charges = Convert.ToDouble(txtCharges.Text),
                     StockQuantity = Convert.ToDouble(txtStockQuantity.Text)
                 };
 
@@ -117,11 +117,11 @@ namespace SaleBillSystem.NET.Forms
                 return false;
             }
 
-            if (!double.TryParse(txtGST.Text, out double gst) || gst < 0 || gst > 100)
+            if (!double.TryParse(txtCharges.Text, out double charges) || charges < 0)
             {
-                MessageBox.Show("Please enter a valid GST percentage (0-100)", "Validation Error", 
+                MessageBox.Show("Please enter a valid Charges amount", "Validation Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtGST.Focus();
+                txtCharges.Focus();
                 return false;
             }
 

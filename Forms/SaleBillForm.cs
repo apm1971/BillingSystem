@@ -15,6 +15,11 @@ namespace SaleBillSystem.NET.Forms
         private List<Party> parties;
         private List<Item> items;
         private bool isEditMode;
+        private DateTimePicker dtpDueDate;
+        private Label lblDueDate;
+        private ComboBox cmbBroker;
+        private Label lblBroker;
+        private List<Broker> brokers;
 
         public SaleBillForm(Bill? bill = null)
         {
@@ -31,6 +36,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 parties = PartyService.GetAllParties();
                 items = ItemService.GetAllItems();
+                brokers = BrokerService.GetAllBrokers();
             }
             catch (Exception ex)
             {
@@ -43,11 +49,20 @@ namespace SaleBillSystem.NET.Forms
         {
             this.Text = isEditMode ? "Edit Sale Bill" : "New Sale Bill";
             
+            // Create and setup due date controls
+            CreateDueDateControls();
+            
+            // Create and setup broker controls
+            CreateBrokerControls();
+            
             // Setup party combo box
             cmbParty.DataSource = parties;
             cmbParty.DisplayMember = "PartyName";
             cmbParty.ValueMember = "PartyID";
             cmbParty.SelectedIndex = -1;
+
+            // Setup broker combo box
+            SetupBrokerComboBox();
 
             // Setup item combo box in grid
             var itemColumn = (DataGridViewComboBoxColumn)dgvItems.Columns["ItemName"];
@@ -65,6 +80,7 @@ namespace SaleBillSystem.NET.Forms
                 // Generate new bill number
                 txtBillNo.Text = GenerateNewBillNumber();
                 dtpBillDate.Value = DateTime.Today;
+                dtpDueDate.Value = DateTime.Today.AddDays(30); // Default 30 days
             }
 
             // Setup event handlers
@@ -72,11 +88,110 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
             dgvItems.CellEndEdit += DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
+            dtpBillDate.ValueChanged += DtpBillDate_ValueChanged;
             
             // Set tooltips for add buttons
             var toolTip = new ToolTip();
             toolTip.SetToolTip(btnAddParty, "Add New Party");
             toolTip.SetToolTip(btnAddItem, "Add New Item");
+            toolTip.SetToolTip(dtpDueDate, "Due date for payment (auto-calculated based on party's credit days)");
+        }
+
+        private void CreateDueDateControls()
+        {
+            // Create Due Date label
+            lblDueDate = new Label
+            {
+                Text = "Due Date:",
+                Location = new Point(270, 65),
+                Size = new Size(60, 15),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            // Create Due Date picker
+            dtpDueDate = new DateTimePicker
+            {
+                Format = DateTimePickerFormat.Short,
+                Location = new Point(320, 65),
+                Size = new Size(120, 23),
+                TabIndex = 4
+            };
+
+            // Add to the first group box (Bill Header)
+            groupBox1.Controls.Add(lblDueDate);
+            groupBox1.Controls.Add(dtpDueDate);
+        }
+
+        private void CreateBrokerControls()
+        {
+            // Create Broker label
+            lblBroker = new Label
+            {
+                Text = "Broker:",
+                Location = new Point(450, 65),
+                Size = new Size(50, 15),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            // Create Broker combo box
+            cmbBroker = new ComboBox
+            {
+                Location = new Point(505, 62),
+                Size = new Size(150, 23),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                TabIndex = 5
+            };
+
+            // Add to the first group box (Bill Header)
+            groupBox1.Controls.Add(lblBroker);
+            groupBox1.Controls.Add(cmbBroker);
+        }
+
+        private void SetupBrokerComboBox()
+        {
+            // Create a list with an empty option
+            var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
+            brokerList.AddRange(brokers);
+
+            cmbBroker.DataSource = brokerList;
+            cmbBroker.DisplayMember = "BrokerName";
+            cmbBroker.ValueMember = "BrokerID";
+            cmbBroker.SelectedValue = 0; // Default to "No Broker"
+
+            // Add event handler
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+        }
+
+        private void CmbBroker_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Update current bill's broker information
+            if (cmbBroker.SelectedValue is int brokerID && brokerID > 0)
+            {
+                var broker = brokers.FirstOrDefault(b => b.BrokerID == brokerID);
+                if (broker != null)
+                {
+                    currentBill.BrokerID = broker.BrokerID;
+                    currentBill.BrokerName = broker.BrokerName;
+                }
+            }
+            else
+            {
+                currentBill.BrokerID = null;
+                currentBill.BrokerName = string.Empty;
+            }
+        }
+
+        private void DtpBillDate_ValueChanged(object sender, EventArgs e)
+        {
+            // When bill date changes, recalculate due date if a party is selected
+            if (cmbParty.SelectedValue is int partyId)
+            {
+                var party = parties.FirstOrDefault(p => p.PartyID == partyId);
+                if (party != null)
+                {
+                    CalculateDueDate(party.CreditDays);
+                }
+            }
         }
 
         private void LoadBillData()
@@ -86,6 +201,34 @@ namespace SaleBillSystem.NET.Forms
             
             // Select party
             cmbParty.SelectedValue = currentBill.PartyID;
+            
+            // Select broker if available
+            if (currentBill.BrokerID.HasValue && currentBill.BrokerID.Value > 0)
+            {
+                cmbBroker.SelectedValue = currentBill.BrokerID.Value;
+            }
+            else
+            {
+                cmbBroker.SelectedValue = 0; // No Broker
+            }
+            
+            // Set due date if available
+            if (currentBill.DueDate != DateTime.MinValue)
+            {
+                dtpDueDate.Value = currentBill.DueDate;
+            }
+            else
+            {
+                // Calculate due date for existing bills that don't have one
+                if (cmbParty.SelectedValue is int partyId)
+                {
+                    var party = parties.FirstOrDefault(p => p.PartyID == partyId);
+                    if (party != null)
+                    {
+                        CalculateDueDate(party.CreditDays);
+                    }
+                }
+            }
             
             // Load items
             foreach (var billItem in currentBill.BillItems)
@@ -115,8 +258,42 @@ namespace SaleBillSystem.NET.Forms
                 var party = parties.FirstOrDefault(p => p.PartyID == partyId);
                 if (party != null)
                 {
-                    lblPartyDetails.Text = $"{party.FullAddress}\n{party.ContactInfo}";
+                    var brokerInfo = !string.IsNullOrEmpty(party.BrokerName) ? $"\n{party.BrokerInfo}" : "";
+                    lblPartyDetails.Text = $"{party.FullAddress}\n{party.ContactInfo}\nCredit Days: {party.CreditDays}{brokerInfo}";
+                    
+                    // Auto-calculate due date based on bill date and party's credit days
+                    CalculateDueDate(party.CreditDays);
+                    
+                    // Auto-select broker if party has one
+                    if (party.BrokerID.HasValue && party.BrokerID.Value > 0)
+                    {
+                        cmbBroker.SelectedValue = party.BrokerID.Value;
+                    }
+                    else
+                    {
+                        cmbBroker.SelectedValue = 0; // No Broker
+                    }
                 }
+            }
+        }
+
+        private void CalculateDueDate(int creditDays)
+        {
+            try
+            {
+                // Calculate due date as bill date + credit days
+                var dueDate = dtpBillDate.Value.AddDays(creditDays);
+                
+                // Set the due date in the control and currentBill
+                dtpDueDate.Value = dueDate;
+                currentBill.DueDate = dueDate;
+            }
+            catch (Exception ex)
+            {
+                // Handle errors silently for now
+                var defaultDueDate = dtpBillDate.Value.AddDays(30); // Default to 30 days
+                dtpDueDate.Value = defaultDueDate;
+                currentBill.DueDate = defaultDueDate;
             }
         }
 
@@ -215,6 +392,7 @@ namespace SaleBillSystem.NET.Forms
                 // Prepare bill data
                 currentBill.BillNo = txtBillNo.Text;
                 currentBill.BillDate = dtpBillDate.Value;
+                currentBill.DueDate = dtpDueDate.Value; // Read due date from control
                 currentBill.PartyID = Convert.ToInt32(cmbParty.SelectedValue);
                 currentBill.PartyName = cmbParty.Text;
 
@@ -275,6 +453,13 @@ namespace SaleBillSystem.NET.Forms
             {
                 MessageBox.Show("Please select a party.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 cmbParty.Focus();
+                return false;
+            }
+
+            if (dtpDueDate.Value < dtpBillDate.Value)
+            {
+                MessageBox.Show("Due date cannot be earlier than bill date.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                dtpDueDate.Focus();
                 return false;
             }
 

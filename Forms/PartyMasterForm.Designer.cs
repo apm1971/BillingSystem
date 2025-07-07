@@ -46,6 +46,8 @@ namespace SaleBillSystem.NET.Forms
             this.label8 = new System.Windows.Forms.Label();
             this.txtEmail = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
+            this.cmbBroker = new System.Windows.Forms.ComboBox();
+            this.label7 = new System.Windows.Forms.Label();
             this.txtPhone = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.txtCity = new System.Windows.Forms.TextBox();
@@ -166,6 +168,8 @@ namespace SaleBillSystem.NET.Forms
             this.panelForm.Controls.Add(this.label8);
             this.panelForm.Controls.Add(this.txtEmail);
             this.panelForm.Controls.Add(this.label6);
+            this.panelForm.Controls.Add(this.cmbBroker);
+            this.panelForm.Controls.Add(this.label7);
             this.panelForm.Controls.Add(this.txtPhone);
             this.panelForm.Controls.Add(this.label5);
             this.panelForm.Controls.Add(this.txtCity);
@@ -182,7 +186,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtOutstandingAmount
             // 
-            this.txtOutstandingAmount.Location = new System.Drawing.Point(16, 369);
+            this.txtOutstandingAmount.Location = new System.Drawing.Point(16, 417);
             this.txtOutstandingAmount.Name = "txtOutstandingAmount";
             this.txtOutstandingAmount.Size = new System.Drawing.Size(260, 23);
             this.txtOutstandingAmount.TabIndex = 17;
@@ -190,7 +194,7 @@ namespace SaleBillSystem.NET.Forms
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(16, 351);
+            this.label9.Location = new System.Drawing.Point(16, 399);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(122, 15);
             this.label9.TabIndex = 16;
@@ -198,7 +202,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtCreditDays
             // 
-            this.txtCreditDays.Location = new System.Drawing.Point(16, 321);
+            this.txtCreditDays.Location = new System.Drawing.Point(16, 369);
             this.txtCreditDays.Name = "txtCreditDays";
             this.txtCreditDays.Size = new System.Drawing.Size(100, 23);
             this.txtCreditDays.TabIndex = 13;
@@ -206,7 +210,7 @@ namespace SaleBillSystem.NET.Forms
             // label11
             // 
             this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(16, 303);
+            this.label11.Location = new System.Drawing.Point(16, 351);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(73, 15);
             this.label11.TabIndex = 12;
@@ -214,7 +218,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtCreditLimit
             // 
-            this.txtCreditLimit.Location = new System.Drawing.Point(16, 273);
+            this.txtCreditLimit.Location = new System.Drawing.Point(16, 321);
             this.txtCreditLimit.Name = "txtCreditLimit";
             this.txtCreditLimit.Size = new System.Drawing.Size(260, 23);
             this.txtCreditLimit.TabIndex = 11;
@@ -222,7 +226,7 @@ namespace SaleBillSystem.NET.Forms
             // label8
             // 
             this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(16, 255);
+            this.label8.Location = new System.Drawing.Point(16, 303);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(71, 15);
             this.label8.TabIndex = 10;
@@ -243,6 +247,23 @@ namespace SaleBillSystem.NET.Forms
             this.label6.Size = new System.Drawing.Size(39, 15);
             this.label6.TabIndex = 8;
             this.label6.Text = "Email:";
+            // 
+            // cmbBroker
+            // 
+            this.cmbBroker.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbBroker.Location = new System.Drawing.Point(16, 273);
+            this.cmbBroker.Name = "cmbBroker";
+            this.cmbBroker.Size = new System.Drawing.Size(260, 23);
+            this.cmbBroker.TabIndex = 19;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(16, 255);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(45, 15);
+            this.label7.TabIndex = 18;
+            this.label7.Text = "Broker:";
             // 
             // txtPhone
             // 
@@ -379,5 +400,7 @@ namespace SaleBillSystem.NET.Forms
         private DataGridView dgvParties;
         private TextBox txtSearch;
         private Label label10;
+        private ComboBox cmbBroker;
+        private Label label7;
     }
 } 

@@ -3,6 +3,7 @@ using SaleBillSystem.NET.Models;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace SaleBillSystem.NET.Forms
@@ -10,6 +11,7 @@ namespace SaleBillSystem.NET.Forms
     public partial class PartyMasterForm : Form
     {
         private List<Party> parties = new List<Party>();
+        private List<Broker> brokers = new List<Broker>();
         private Party currentParty = new Party();
         private bool isNewParty = true;
         
@@ -17,6 +19,7 @@ namespace SaleBillSystem.NET.Forms
         {
             InitializeComponent();
             LoadParties();
+            LoadBrokers();
         }
         
         private void PartyMasterForm_Load(object sender, EventArgs e)
@@ -119,6 +122,35 @@ namespace SaleBillSystem.NET.Forms
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private void LoadBrokers()
+        {
+            try
+            {
+                brokers = BrokerService.GetAllBrokers();
+                SetupBrokerComboBox();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading brokers: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SetupBrokerComboBox()
+        {
+            if (cmbBroker != null)
+            {
+                // Create a list with an empty option
+                var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
+                brokerList.AddRange(brokers);
+
+                cmbBroker.DataSource = brokerList;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
+                cmbBroker.SelectedValue = 0; // Default to "No Broker"
+            }
+        }
         
         private void ClearForm()
         {
@@ -134,6 +166,12 @@ namespace SaleBillSystem.NET.Forms
             txtCreditLimit.Text = "0.00";
             txtCreditDays.Text = "0";
             txtOutstandingAmount.Text = "0.00";
+            
+            // Reset broker selection
+            if (cmbBroker != null)
+            {
+                cmbBroker.SelectedValue = 0; // No Broker
+            }
             
             txtPartyName.Focus();
             btnDelete.Enabled = false;
@@ -154,6 +192,19 @@ namespace SaleBillSystem.NET.Forms
             txtCreditDays.Text = party.CreditDays.ToString();
             txtOutstandingAmount.Text = party.OutstandingAmount.ToString("N2");
             
+            // Set broker selection
+            if (cmbBroker != null)
+            {
+                if (party.BrokerID.HasValue && party.BrokerID.Value > 0)
+                {
+                    cmbBroker.SelectedValue = party.BrokerID.Value;
+                }
+                else
+                {
+                    cmbBroker.SelectedValue = 0; // No Broker
+                }
+            }
+            
             btnDelete.Enabled = true;
         }
         
@@ -167,11 +218,26 @@ namespace SaleBillSystem.NET.Forms
                 City = txtCity.Text.Trim(),
                 Phone = txtPhone.Text.Trim(),
                 Email = txtEmail.Text.Trim(),
-
                 CreditLimit = Convert.ToDouble(txtCreditLimit.Text),
                 CreditDays = Convert.ToInt32(txtCreditDays.Text),
                 OutstandingAmount = Convert.ToDouble(txtOutstandingAmount.Text)
             };
+
+            // Set broker information
+            if (cmbBroker != null && cmbBroker.SelectedValue is int brokerID && brokerID > 0)
+            {
+                var broker = brokers.FirstOrDefault(b => b.BrokerID == brokerID);
+                if (broker != null)
+                {
+                    party.BrokerID = broker.BrokerID;
+                    party.BrokerName = broker.BrokerName;
+                }
+            }
+            else
+            {
+                party.BrokerID = null;
+                party.BrokerName = string.Empty;
+            }
             
             return party;
         }

@@ -18,20 +18,7 @@ namespace SaleBillSystem.NET.Data
             
             foreach (DataRow row in dt.Rows)
             {
-                Party party = new Party
-                {
-                    PartyID = Convert.ToInt32(row["PartyID"]),
-                    PartyName = row["PartyName"].ToString(),
-                    Address = row["Address"].ToString(),
-                    City = row["City"].ToString(),
-                    Phone = row["Phone"].ToString(),
-                    Email = row["Email"].ToString(),
-                    CreditLimit = Convert.ToDouble(row["CreditLimit"]),
-                    CreditDays = Convert.ToInt32(row["CreditDays"]),
-                    OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
-                };
-                
-                parties.Add(party);
+                parties.Add(MapRowToParty(row));
             }
             
             return parties;
@@ -47,22 +34,7 @@ namespace SaleBillSystem.NET.Data
             
             if (dt.Rows.Count > 0)
             {
-                DataRow row = dt.Rows[0];
-                
-                Party party = new Party
-                {
-                    PartyID = Convert.ToInt32(row["PartyID"]),
-                    PartyName = row["PartyName"].ToString(),
-                    Address = row["Address"].ToString(),
-                    City = row["City"].ToString(),
-                    Phone = row["Phone"].ToString(),
-                    Email = row["Email"].ToString(),
-                    CreditLimit = Convert.ToDouble(row["CreditLimit"]),
-                    CreditDays = Convert.ToInt32(row["CreditDays"]),
-                    OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
-                };
-                
-                return party;
+                return MapRowToParty(dt.Rows[0]);
             }
             
             return null;
@@ -93,9 +65,9 @@ namespace SaleBillSystem.NET.Data
         public static bool AddParty(Party party)
         {
             string sql = @"INSERT INTO PartyMaster (
-                PartyName, Address, City, Phone, Email, CreditLimit, CreditDays, OutstandingAmount
+                PartyName, Address, City, Phone, Email, CreditLimit, CreditDays, OutstandingAmount, BrokerID, BrokerName
             ) VALUES (
-                @PartyName, @Address, @City, @Phone, @Email, @CreditLimit, @CreditDays, @OutstandingAmount
+                @PartyName, @Address, @City, @Phone, @Email, @CreditLimit, @CreditDays, @OutstandingAmount, @BrokerID, @BrokerName
             )";
             
             SQLiteParameter[] parameters = {
@@ -106,7 +78,9 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@Email", party.Email),
                 new SQLiteParameter("@CreditLimit", party.CreditLimit),
                 new SQLiteParameter("@CreditDays", party.CreditDays),
-                new SQLiteParameter("@OutstandingAmount", party.OutstandingAmount)
+                new SQLiteParameter("@OutstandingAmount", party.OutstandingAmount),
+                new SQLiteParameter("@BrokerID", party.BrokerID.HasValue ? (object)party.BrokerID.Value : DBNull.Value),
+                new SQLiteParameter("@BrokerName", party.BrokerName ?? string.Empty)
             };
             
             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
@@ -125,7 +99,9 @@ namespace SaleBillSystem.NET.Data
                 Email = @Email,
                 CreditLimit = @CreditLimit,
                 CreditDays = @CreditDays,
-                OutstandingAmount = @OutstandingAmount
+                OutstandingAmount = @OutstandingAmount,
+                BrokerID = @BrokerID,
+                BrokerName = @BrokerName
             WHERE PartyID = @PartyID";
             
             SQLiteParameter[] parameters = {
@@ -137,6 +113,8 @@ namespace SaleBillSystem.NET.Data
                 new SQLiteParameter("@CreditLimit", party.CreditLimit),
                 new SQLiteParameter("@CreditDays", party.CreditDays),
                 new SQLiteParameter("@OutstandingAmount", party.OutstandingAmount),
+                new SQLiteParameter("@BrokerID", party.BrokerID.HasValue ? (object)party.BrokerID.Value : DBNull.Value),
+                new SQLiteParameter("@BrokerName", party.BrokerName ?? string.Empty),
                 new SQLiteParameter("@PartyID", party.PartyID)
             };
             
@@ -189,7 +167,9 @@ namespace SaleBillSystem.NET.Data
                 Email = row["Email"].ToString(),
                 CreditLimit = Convert.ToDouble(row["CreditLimit"]),
                 CreditDays = Convert.ToInt32(row["CreditDays"]),
-                OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"])
+                OutstandingAmount = Convert.ToDouble(row["OutstandingAmount"]),
+                BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : null,
+                BrokerName = row["BrokerName"]?.ToString() ?? string.Empty
             };
         }
     }

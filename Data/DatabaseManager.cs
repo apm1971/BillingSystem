@@ -39,10 +39,11 @@ namespace SaleBillSystem.NET.Data
                 // Set connection string
                 _connectionString = $"Data Source={dbPath};Version=3;";
                 
-                // Test connection
+                // Test connection and upgrade database if needed
                 using (SQLiteConnection connection = new SQLiteConnection(_connectionString))
                 {
                     connection.Open();
+                    UpgradeDatabase(connection);
                 }
                 
                 return true;
@@ -68,6 +69,14 @@ namespace SaleBillSystem.NET.Data
                 {
                     conn.Open();
                     
+                    // Create BrokerMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
+                        BrokerID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        BrokerName TEXT,
+                        Phone TEXT,
+                        Email TEXT
+                    )");
+
                     // Create PartyMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
                         PartyID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +87,9 @@ namespace SaleBillSystem.NET.Data
                         Email TEXT,
                         CreditLimit REAL,
                         CreditDays INTEGER,
-                        OutstandingAmount REAL
+                        OutstandingAmount REAL,
+                        BrokerID INTEGER,
+                        BrokerName TEXT
                     )");
                     
                     // Create ItemMaster table
@@ -97,11 +108,15 @@ namespace SaleBillSystem.NET.Data
                         BillID INTEGER PRIMARY KEY AUTOINCREMENT,
                         BillNo TEXT,
                         BillDate TEXT,
+                        DueDate TEXT,
                         PartyID INTEGER,
                         PartyName TEXT,
+                        BrokerID INTEGER,
+                        BrokerName TEXT,
                         TotalAmount REAL,
                         TotalCharges REAL,
-                        NetAmount REAL
+                        NetAmount REAL,
+                        PaidAmount REAL DEFAULT 0
                     )");
                     
                     // Create BillDetails table
@@ -116,6 +131,27 @@ namespace SaleBillSystem.NET.Data
                         Charges REAL,
                         TotalAmount REAL
                     )");
+
+                    // Create PaymentMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
+                        PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentDate TEXT,
+                        PaymentAmount REAL,
+                        PaymentMethod TEXT,
+                        Reference TEXT,
+                        Notes TEXT
+                    )");
+
+                    // Create PaymentDetails table
+                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
+                        PaymentDetailID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentID INTEGER,
+                        BillID INTEGER,
+                        PreviousPaid REAL,
+                        BalanceBefore REAL,
+                        AllocatedAmount REAL,
+                        BalanceAfter REAL
+                    )");
                 }
                 
                 return true;
@@ -126,6 +162,150 @@ namespace SaleBillSystem.NET.Data
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                 return false;
             }
+        }
+
+        // Upgrade database schema if needed
+        private static void UpgradeDatabase(SQLiteConnection conn)
+        {
+            try
+            {
+                // Check if BrokerMaster table exists
+                var tableInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='BrokerMaster'");
+                if (tableInfo.Rows.Count == 0)
+                {
+                    // Create BrokerMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
+                        BrokerID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        BrokerName TEXT,
+                        Phone TEXT,
+                        Email TEXT
+                    )");
+                }
+
+                // Check and add broker columns to PartyMaster
+                var partyTableInfo = ExecuteQuery(conn, "PRAGMA table_info(PartyMaster)");
+                bool brokerIdExistsInParty = false;
+                bool brokerNameExistsInParty = false;
+                foreach (DataRow row in partyTableInfo.Rows)
+                {
+                    string columnName = row["name"].ToString();
+                    if (columnName == "BrokerID") brokerIdExistsInParty = true;
+                    if (columnName == "BrokerName") brokerNameExistsInParty = true;
+                }
+
+                if (!brokerIdExistsInParty)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN BrokerID INTEGER");
+                }
+                if (!brokerNameExistsInParty)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN BrokerName TEXT");
+                }
+
+                // Check and add columns to BillMaster
+                var billTableInfo = ExecuteQuery(conn, "PRAGMA table_info(BillMaster)");
+                bool dueDateExists = false;
+                bool brokerIdExistsInBill = false;
+                bool brokerNameExistsInBill = false;
+                foreach (DataRow row in billTableInfo.Rows)
+                {
+                    string columnName = row["name"].ToString();
+                    if (columnName == "DueDate") dueDateExists = true;
+                    if (columnName == "BrokerID") brokerIdExistsInBill = true;
+                    if (columnName == "BrokerName") brokerNameExistsInBill = true;
+                }
+
+                // Add DueDate column if it doesn't exist
+                if (!dueDateExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DueDate TEXT");
+                    
+                    // Update existing bills with calculated due dates
+                    ExecuteNonQuery(conn, @"
+                        UPDATE BillMaster 
+                        SET DueDate = date(BillDate, '+30 days') 
+                        WHERE DueDate IS NULL OR DueDate = ''");
+                }
+
+                // Add broker columns to BillMaster
+                if (!brokerIdExistsInBill)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN BrokerID INTEGER");
+                }
+                if (!brokerNameExistsInBill)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN BrokerName TEXT");
+                }
+
+                // Check and add PaidAmount column to BillMaster
+                bool paidAmountExists = false;
+                foreach (DataRow row in billTableInfo.Rows)
+                {
+                    if (row["name"].ToString() == "PaidAmount")
+                    {
+                        paidAmountExists = true;
+                        break;
+                    }
+                }
+
+                if (!paidAmountExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN PaidAmount REAL DEFAULT 0");
+                }
+
+                // Check and create PaymentMaster table
+                var paymentMasterInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='PaymentMaster'");
+                if (paymentMasterInfo.Rows.Count == 0)
+                {
+                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
+                        PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentDate TEXT,
+                        PaymentAmount REAL,
+                        PaymentMethod TEXT,
+                        Reference TEXT,
+                        Notes TEXT
+                    )");
+                }
+
+                // Check and create PaymentDetails table
+                var paymentDetailsInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='PaymentDetails'");
+                if (paymentDetailsInfo.Rows.Count == 0)
+                {
+                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
+                        PaymentDetailID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentID INTEGER,
+                        BillID INTEGER,
+                        PreviousPaid REAL,
+                        BalanceBefore REAL,
+                        AllocatedAmount REAL,
+                        BalanceAfter REAL
+                    )");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error upgrading database: {ex.Message}", "Database Upgrade Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+            }
+        }
+
+        // Execute a query and return a DataTable (for connection-specific queries)
+        private static DataTable ExecuteQuery(SQLiteConnection conn, string sql, params SQLiteParameter[] parameters)
+        {
+            DataTable dt = new DataTable();
+            using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+            {
+                if (parameters != null)
+                {
+                    cmd.Parameters.AddRange(parameters);
+                }
+                
+                using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(cmd))
+                {
+                    adapter.Fill(dt);
+                }
+            }
+            return dt;
         }
         
         // Execute a non-query SQL command

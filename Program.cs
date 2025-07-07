@@ -27,6 +27,9 @@ namespace SaleBillSystem.NET
                 // Initialize database
                 if (DatabaseManager.Initialize())
                 {
+                    // Generate mock data if needed
+                    MockDataGenerator.GenerateMockData();
+                    
                     // Start the main form
                     Application.Run(new MainForm());
                 }

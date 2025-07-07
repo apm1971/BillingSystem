@@ -23,11 +23,15 @@ namespace SaleBillSystem.NET.Data
                     BillID = Convert.ToInt32(row["BillID"]),
                     BillNo = row["BillNo"].ToString(),
                     BillDate = Convert.ToDateTime(row["BillDate"]),
+                    DueDate = row["DueDate"] != DBNull.Value ? Convert.ToDateTime(row["DueDate"]) : Convert.ToDateTime(row["BillDate"]).AddDays(30),
                     PartyID = Convert.ToInt32(row["PartyID"]),
                     PartyName = row["PartyName"].ToString(),
+                    BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : null,
+                    BrokerName = row["BrokerName"]?.ToString() ?? string.Empty,
                     TotalAmount = Convert.ToDouble(row["TotalAmount"]),
                     TotalCharges = Convert.ToDouble(row["TotalCharges"]),
-                    NetAmount = Convert.ToDouble(row["NetAmount"])
+                    NetAmount = Convert.ToDouble(row["NetAmount"]),
+                    PaidAmount = row.Table.Columns.Contains("PaidAmount") ? Convert.ToDouble(row["PaidAmount"]) : 0
                 };
                 
                 // Get bill details
@@ -87,11 +91,15 @@ namespace SaleBillSystem.NET.Data
                     BillID = Convert.ToInt32(row["BillID"]),
                     BillNo = row["BillNo"].ToString(),
                     BillDate = Convert.ToDateTime(row["BillDate"]),
+                    DueDate = row["DueDate"] != DBNull.Value ? Convert.ToDateTime(row["DueDate"]) : Convert.ToDateTime(row["BillDate"]).AddDays(30),
                     PartyID = Convert.ToInt32(row["PartyID"]),
                     PartyName = row["PartyName"].ToString(),
+                    BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : null,
+                    BrokerName = row["BrokerName"]?.ToString() ?? string.Empty,
                     TotalAmount = Convert.ToDouble(row["TotalAmount"]),
                     TotalCharges = Convert.ToDouble(row["TotalCharges"]),
-                    NetAmount = Convert.ToDouble(row["NetAmount"])
+                    NetAmount = Convert.ToDouble(row["NetAmount"]),
+                    PaidAmount = row.Table.Columns.Contains("PaidAmount") ? Convert.ToDouble(row["PaidAmount"]) : 0
                 };
                 
                 // Get bill details
@@ -117,16 +125,19 @@ namespace SaleBillSystem.NET.Data
                         {
                             // Add new bill
                             string sql = @"INSERT INTO BillMaster (
-                                BillNo, BillDate, PartyID, PartyName, TotalAmount, TotalCharges, NetAmount
+                                BillNo, BillDate, DueDate, PartyID, PartyName, BrokerID, BrokerName, TotalAmount, TotalCharges, NetAmount
                             ) VALUES (
-                                @BillNo, @BillDate, @PartyID, @PartyName, @TotalAmount, @TotalCharges, @NetAmount
+                                @BillNo, @BillDate, @DueDate, @PartyID, @PartyName, @BrokerID, @BrokerName, @TotalAmount, @TotalCharges, @NetAmount
                             )";
                             
                             SQLiteParameter[] parameters = {
                                 new SQLiteParameter("@BillNo", bill.BillNo),
                                 new SQLiteParameter("@BillDate", bill.BillDate),
+                                new SQLiteParameter("@DueDate", bill.DueDate),
                                 new SQLiteParameter("@PartyID", bill.PartyID),
                                 new SQLiteParameter("@PartyName", bill.PartyName),
+                                new SQLiteParameter("@BrokerID", bill.BrokerID.HasValue ? (object)bill.BrokerID.Value : DBNull.Value),
+                                new SQLiteParameter("@BrokerName", bill.BrokerName ?? string.Empty),
                                 new SQLiteParameter("@TotalAmount", bill.TotalAmount),
                                 new SQLiteParameter("@TotalCharges", bill.TotalCharges),
                                 new SQLiteParameter("@NetAmount", bill.NetAmount)
@@ -145,8 +156,11 @@ namespace SaleBillSystem.NET.Data
                             string sql = @"UPDATE BillMaster SET 
                                 BillNo = @BillNo,
                                 BillDate = @BillDate,
+                                DueDate = @DueDate,
                                 PartyID = @PartyID,
                                 PartyName = @PartyName,
+                                BrokerID = @BrokerID,
+                                BrokerName = @BrokerName,
                                 TotalAmount = @TotalAmount,
                                 TotalCharges = @TotalCharges,
                                 NetAmount = @NetAmount
@@ -155,8 +169,11 @@ namespace SaleBillSystem.NET.Data
                             SQLiteParameter[] parameters = {
                                 new SQLiteParameter("@BillNo", bill.BillNo),
                                 new SQLiteParameter("@BillDate", bill.BillDate),
+                                new SQLiteParameter("@DueDate", bill.DueDate),
                                 new SQLiteParameter("@PartyID", bill.PartyID),
                                 new SQLiteParameter("@PartyName", bill.PartyName),
+                                new SQLiteParameter("@BrokerID", bill.BrokerID.HasValue ? (object)bill.BrokerID.Value : DBNull.Value),
+                                new SQLiteParameter("@BrokerName", bill.BrokerName ?? string.Empty),
                                 new SQLiteParameter("@TotalAmount", bill.TotalAmount),
                                 new SQLiteParameter("@TotalCharges", bill.TotalCharges),
                                 new SQLiteParameter("@NetAmount", bill.NetAmount),

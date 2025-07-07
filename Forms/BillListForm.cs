@@ -73,10 +73,27 @@ namespace SaleBillSystem.NET.Forms
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
+                Name = "DueDate",
+                HeaderText = "Due Date",
+                DataPropertyName = "DueDate",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+            });
+
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
                 Name = "PartyName",
                 HeaderText = "Party Name",
                 DataPropertyName = "PartyName",
-                Width = 200
+                Width = 180
+            });
+
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "BrokerName",
+                HeaderText = "Broker",
+                DataPropertyName = "BrokerName",
+                Width = 150
             });
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
@@ -90,9 +107,9 @@ namespace SaleBillSystem.NET.Forms
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "TotalGST",
-                HeaderText = "Total GST",
-                DataPropertyName = "TotalGST",
+                Name = "TotalCharges",
+                HeaderText = "Total Charges",
+                DataPropertyName = "TotalCharges",
                 Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
@@ -110,7 +127,35 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "ItemCount",
                 HeaderText = "Items",
+                DataPropertyName = "ItemCount",
                 Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            });
+
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaidAmount",
+                HeaderText = "Paid Amount",
+                DataPropertyName = "PaidAmount",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "BalanceAmount",
+                HeaderText = "Balance",
+                DataPropertyName = "BalanceAmount",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaymentStatus",
+                HeaderText = "Payment Status",
+                DataPropertyName = "PaymentStatusText",
+                Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
 
@@ -148,20 +193,26 @@ namespace SaleBillSystem.NET.Forms
                 {
                     filteredBills = filteredBills.Where(b =>
                         b.BillNo.ToLower().Contains(searchText) ||
-                        b.PartyName.ToLower().Contains(searchText)
+                        b.PartyName.ToLower().Contains(searchText) ||
+                        (!string.IsNullOrEmpty(b.BrokerName) && b.BrokerName.ToLower().Contains(searchText))
                     ).ToList();
                 }
 
-                // Add item count for display
+                // Add item count and payment info for display
                 var billsWithItemCount = filteredBills.Select(b => new
                 {
                     BillID = b.BillID,
                     BillNo = b.BillNo,
                     BillDate = b.BillDate,
+                    DueDate = b.DueDate,
                     PartyName = b.PartyName,
+                    BrokerName = string.IsNullOrEmpty(b.BrokerName) ? "No Broker" : b.BrokerName,
                     TotalAmount = b.TotalAmount,
                     TotalCharges = b.TotalCharges,
                     NetAmount = b.NetAmount,
+                    PaidAmount = b.PaidAmount,
+                    BalanceAmount = b.BalanceAmount,
+                    PaymentStatusText = b.PaymentStatusText,
                     ItemCount = b.BillItems.Count
                 }).ToList();
 
@@ -220,9 +271,12 @@ namespace SaleBillSystem.NET.Forms
             if (selectedBill != null)
             {
                 // Create a read-only view or detailed view of the bill
+                string overdueStatus = selectedBill.IsOverdue ? " (OVERDUE)" : 
+                                     selectedBill.DaysUntilDue <= 3 ? " (DUE SOON)" : "";
                 string billDetails = $"Bill Details:\n\n" +
                     $"Bill No: {selectedBill.BillNo}\n" +
-                    $"Date: {selectedBill.BillDate:dd/MM/yyyy}\n" +
+                    $"Bill Date: {selectedBill.BillDate:dd/MM/yyyy}\n" +
+                    $"Due Date: {selectedBill.DueDate:dd/MM/yyyy}{overdueStatus}\n" +
                     $"Party: {selectedBill.PartyName}\n" +
                     $"Total Amount: {selectedBill.TotalAmount:N2}\n" +
                     $"Total Charges: {selectedBill.TotalCharges:N2}\n" +

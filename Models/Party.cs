@@ -13,8 +13,11 @@ namespace SaleBillSystem.NET.Models
         public double CreditLimit { get; set; }
         public int CreditDays { get; set; }
         public double OutstandingAmount { get; set; }
+        public int? BrokerID { get; set; }
+        public string BrokerName { get; set; } = string.Empty;
 
         public string FullAddress => $"{Address}, {City}";
         public string ContactInfo => $"Phone: {Phone}, Email: {Email}";
+        public string BrokerInfo => string.IsNullOrEmpty(BrokerName) ? "No Broker" : $"Broker: {BrokerName}";
     }
 } 

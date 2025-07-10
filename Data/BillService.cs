@@ -152,6 +152,12 @@ namespace SaleBillSystem.NET.Data
                         }
                         else
                         {
+                            // Get the current PaidAmount before updating
+                            string getPaidSql = "SELECT PaidAmount FROM BillMaster WHERE BillID = @BillID";
+                            var getPaidCmd = new SQLiteCommand(getPaidSql, conn, transaction);
+                            getPaidCmd.Parameters.AddWithValue("@BillID", bill.BillID);
+                            double currentPaidAmount = Convert.ToDouble(getPaidCmd.ExecuteScalar());
+                            
                             // Update existing bill
                             string sql = @"UPDATE BillMaster SET 
                                 BillNo = @BillNo,
@@ -163,7 +169,8 @@ namespace SaleBillSystem.NET.Data
                                 BrokerName = @BrokerName,
                                 TotalAmount = @TotalAmount,
                                 TotalCharges = @TotalCharges,
-                                NetAmount = @NetAmount
+                                NetAmount = @NetAmount,
+                                PaidAmount = @PaidAmount
                             WHERE BillID = @BillID";
                             
                             SQLiteParameter[] parameters = {
@@ -177,14 +184,16 @@ namespace SaleBillSystem.NET.Data
                                 new SQLiteParameter("@TotalAmount", bill.TotalAmount),
                                 new SQLiteParameter("@TotalCharges", bill.TotalCharges),
                                 new SQLiteParameter("@NetAmount", bill.NetAmount),
+                                new SQLiteParameter("@PaidAmount", currentPaidAmount),
                                 new SQLiteParameter("@BillID", bill.BillID)
                             };
                             
                             ExecuteNonQuery(conn, sql, parameters);
                             
                             // Delete existing bill details
-                            sql = "DELETE FROM BillDetails WHERE BillID = @BillID";
-                            ExecuteNonQuery(conn, sql, new SQLiteParameter("@BillID", bill.BillID));
+                            string deleteSql = "DELETE FROM BillDetails WHERE BillID = @BillID";
+                            SQLiteParameter deleteParam = new SQLiteParameter("@BillID", bill.BillID);
+                            ExecuteNonQuery(conn, deleteSql, deleteParam);
                         }
                         
                         // Add bill details

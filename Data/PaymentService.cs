@@ -244,6 +244,29 @@ namespace SaleBillSystem.NET.Data
                                 detailCmd.ExecuteNonQuery();
                             }
                             
+                            // Update PaidAmount in BillMaster for each bill
+                            foreach (var detail in payment.PaymentDetails)
+                            {
+                                // Calculate total paid for this bill
+                                string totalPaidSql = @"SELECT COALESCE(SUM(AllocatedAmount), 0) 
+                                    FROM PaymentDetails 
+                                    WHERE BillID = @BillID";
+                                
+                                var totalPaidCmd = new SQLiteCommand(totalPaidSql, conn, transaction);
+                                totalPaidCmd.Parameters.AddWithValue("@BillID", detail.BillID);
+                                double totalPaid = Convert.ToDouble(totalPaidCmd.ExecuteScalar());
+                                
+                                // Update BillMaster with new PaidAmount
+                                string updateBillSql = @"UPDATE BillMaster 
+                                    SET PaidAmount = @PaidAmount 
+                                    WHERE BillID = @BillID";
+                                
+                                var updateBillCmd = new SQLiteCommand(updateBillSql, conn, transaction);
+                                updateBillCmd.Parameters.AddWithValue("@PaidAmount", totalPaid);
+                                updateBillCmd.Parameters.AddWithValue("@BillID", detail.BillID);
+                                updateBillCmd.ExecuteNonQuery();
+                            }
+                            
                             transaction.Commit();
                             return true;
                         }
@@ -273,6 +296,20 @@ namespace SaleBillSystem.NET.Data
                     {
                         try
                         {
+                            // First, get all bills affected by this payment
+                            string getBillsSql = "SELECT DISTINCT BillID FROM PaymentDetails WHERE PaymentID = @PaymentID";
+                            var getBillsCmd = new SQLiteCommand(getBillsSql, conn, transaction);
+                            getBillsCmd.Parameters.AddWithValue("@PaymentID", paymentID);
+                            
+                            var affectedBills = new List<int>();
+                            using (var reader = getBillsCmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    affectedBills.Add(reader.GetInt32(0));
+                                }
+                            }
+                            
                             // Delete payment details
                             string deleteDetailsSql = "DELETE FROM PaymentDetails WHERE PaymentID = @PaymentID";
                             var deleteDetailsCmd = new SQLiteCommand(deleteDetailsSql, conn, transaction);
@@ -284,6 +321,29 @@ namespace SaleBillSystem.NET.Data
                             var deletePaymentCmd = new SQLiteCommand(deletePaymentSql, conn, transaction);
                             deletePaymentCmd.Parameters.AddWithValue("@PaymentID", paymentID);
                             int result = deletePaymentCmd.ExecuteNonQuery();
+                            
+                            // Update PaidAmount for all affected bills
+                            foreach (int billID in affectedBills)
+                            {
+                                // Recalculate total paid for this bill
+                                string totalPaidSql = @"SELECT COALESCE(SUM(AllocatedAmount), 0) 
+                                    FROM PaymentDetails 
+                                    WHERE BillID = @BillID";
+                                
+                                var totalPaidCmd = new SQLiteCommand(totalPaidSql, conn, transaction);
+                                totalPaidCmd.Parameters.AddWithValue("@BillID", billID);
+                                double totalPaid = Convert.ToDouble(totalPaidCmd.ExecuteScalar());
+                                
+                                // Update BillMaster with new PaidAmount
+                                string updateBillSql = @"UPDATE BillMaster 
+                                    SET PaidAmount = @PaidAmount 
+                                    WHERE BillID = @BillID";
+                                
+                                var updateBillCmd = new SQLiteCommand(updateBillSql, conn, transaction);
+                                updateBillCmd.Parameters.AddWithValue("@PaidAmount", totalPaid);
+                                updateBillCmd.Parameters.AddWithValue("@BillID", billID);
+                                updateBillCmd.ExecuteNonQuery();
+                            }
                             
                             transaction.Commit();
                             return result > 0;

@@ -15,7 +15,96 @@ namespace SaleBillSystem.NET.Forms
         public PaymentListForm()
         {
             InitializeComponent();
+            SetupDataGrid();
             LoadPayments();
+        }
+
+        private void SetupDataGrid()
+        {
+            dgvPayments.AutoGenerateColumns = false;
+            dgvPayments.AllowUserToAddRows = false;
+            dgvPayments.AllowUserToDeleteRows = false;
+            dgvPayments.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvPayments.MultiSelect = false;
+            dgvPayments.ReadOnly = true;
+            
+            dgvPayments.Columns.Clear();
+            
+            // Hidden PaymentID column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaymentID",
+                DataPropertyName = "PaymentID",
+                Visible = false
+            });
+            
+            // Payment Date column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaymentDate",
+                HeaderText = "Date",
+                DataPropertyName = "PaymentDate",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+            });
+            
+            // Payment Amount column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaymentAmount",
+                HeaderText = "Amount",
+                DataPropertyName = "PaymentAmount",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+            
+            // Payment Method column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PaymentMethod",
+                HeaderText = "Method",
+                DataPropertyName = "PaymentMethod",
+                Width = 120
+            });
+            
+            // Reference column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Reference",
+                HeaderText = "Reference",
+                DataPropertyName = "Reference",
+                Width = 150
+            });
+            
+            // Bill Count column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "BillCount",
+                HeaderText = "Bills",
+                DataPropertyName = "BillCount",
+                Width = 60,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            });
+            
+            // Notes column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Notes",
+                HeaderText = "Notes",
+                DataPropertyName = "Notes",
+                Width = 200
+            });
+            
+            // Set up event handlers
+            dgvPayments.CellDoubleClick += dgvPayments_CellDoubleClick;
+            dgvPayments.SelectionChanged += DgvPayments_SelectionChanged;
+        }
+
+        private void DgvPayments_SelectionChanged(object sender, EventArgs e)
+        {
+            bool hasSelection = dgvPayments.SelectedRows.Count > 0;
+            btnView.Enabled = hasSelection;
+            btnDelete.Enabled = hasSelection;
         }
 
         private void LoadPayments()
@@ -25,6 +114,9 @@ namespace SaleBillSystem.NET.Forms
                 payments = PaymentService.GetAllPayments();
                 filteredPayments = payments;
                 RefreshGrid();
+                
+                // Initialize button states
+                DgvPayments_SelectionChanged(null, null);
             }
             catch (Exception ex)
             {
@@ -92,6 +184,54 @@ namespace SaleBillSystem.NET.Forms
         {
             ViewPaymentDetails();
         }
+        
+        private void btnDelete_Click(object sender, EventArgs e)
+        {
+            if (dgvPayments.SelectedRows.Count > 0)
+            {
+                int paymentId = Convert.ToInt32(dgvPayments.SelectedRows[0].Cells["PaymentID"].Value);
+                DeletePayment(paymentId);
+            }
+        }
+
+        private void DeletePayment(int paymentId)
+        {
+            var payment = payments.FirstOrDefault(p => p.PaymentID == paymentId);
+            if (payment == null) return;
+            
+            // Confirm deletion
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete Payment #{payment.PaymentID} for ₹{payment.PaymentAmount:N2} dated {payment.PaymentDate:dd/MM/yyyy}?\n\n" +
+                "This will revert the payment status of all associated bills.",
+                "Confirm Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+                
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    // Delete the payment
+                    if (PaymentService.DeletePayment(paymentId))
+                    {
+                        MessageBox.Show("Payment deleted successfully.", "Success", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        LoadPayments();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to delete payment.", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error deleting payment: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
 
         private void ViewPaymentDetails()
         {
@@ -139,53 +279,6 @@ namespace SaleBillSystem.NET.Forms
         private void btnClose_Click(object sender, EventArgs e)
         {
             this.Close();
-        }
-
-        private void btnDelete_Click(object sender, EventArgs e)
-        {
-            if (dgvPayments.SelectedRows.Count > 0)
-            {
-                int paymentId = Convert.ToInt32(dgvPayments.SelectedRows[0].Cells["PaymentID"].Value);
-                Payment payment = payments.First(p => p.PaymentID == paymentId);
-                
-                if (MessageBox.Show(
-                    $"Are you sure you want to delete payment #{paymentId}?\n\n" +
-                    $"Payment Date: {payment.PaymentDate:dd/MM/yyyy}\n" +
-                    $"Amount: ₹{payment.PaymentAmount:N2}\n" +
-                    $"Method: {payment.PaymentMethod}\n\n" +
-                    "This action cannot be undone!",
-                    "Confirm Delete Payment",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    try
-                    {
-                        if (PaymentService.DeletePayment(paymentId))
-                        {
-                            MessageBox.Show("Payment deleted successfully!", "Success", 
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            LoadPayments();
-                        }
-                        else
-                        {
-                            MessageBox.Show("Failed to delete payment.", "Error", 
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error deleting payment: {ex.Message}", "Error", 
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        private void dgvPayments_SelectionChanged(object sender, EventArgs e)
-        {
-            bool hasSelection = dgvPayments.SelectedRows.Count > 0;
-            btnView.Enabled = hasSelection;
-            btnDelete.Enabled = hasSelection;
         }
     }
 } 

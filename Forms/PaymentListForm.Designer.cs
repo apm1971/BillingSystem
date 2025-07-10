@@ -95,9 +95,10 @@ namespace SaleBillSystem.NET.Forms
             this.dgvPayments.Size = new System.Drawing.Size(900, 390);
             this.dgvPayments.TabIndex = 1;
             this.dgvPayments.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvPayments_CellDoubleClick);
-            this.dgvPayments.SelectionChanged += new System.EventHandler(this.dgvPayments_SelectionChanged);
+            this.dgvPayments.SelectionChanged += new System.EventHandler(this.DgvPayments_SelectionChanged);
 
             // panelBottom
+            this.panelBottom.Controls.Clear();
             this.panelBottom.Controls.Add(this.btnView);
             this.panelBottom.Controls.Add(this.btnDelete);
             this.panelBottom.Controls.Add(this.btnRefresh);
@@ -109,40 +110,39 @@ namespace SaleBillSystem.NET.Forms
             this.panelBottom.TabIndex = 2;
 
             // btnView
-            this.btnView.Enabled = false;
-            this.btnView.Location = new System.Drawing.Point(12, 10);
+            this.btnView.Location = new System.Drawing.Point(12, 14);
             this.btnView.Name = "btnView";
-            this.btnView.Size = new System.Drawing.Size(75, 30);
+            this.btnView.Size = new System.Drawing.Size(90, 23);
             this.btnView.TabIndex = 0;
-            this.btnView.Text = "View";
+            this.btnView.Text = "View Details";
             this.btnView.UseVisualStyleBackColor = true;
             this.btnView.Click += new System.EventHandler(this.btnView_Click);
-
+            
             // btnDelete
-            this.btnDelete.Enabled = false;
-            this.btnDelete.Location = new System.Drawing.Point(95, 10);
+            this.btnDelete.Location = new System.Drawing.Point(108, 14);
             this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(75, 30);
+            this.btnDelete.Size = new System.Drawing.Size(90, 23);
             this.btnDelete.TabIndex = 1;
             this.btnDelete.Text = "Delete";
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
 
             // btnRefresh
-            this.btnRefresh.Location = new System.Drawing.Point(650, 10);
+            this.btnRefresh.Location = new System.Drawing.Point(204, 14);
             this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(75, 30);
+            this.btnRefresh.Size = new System.Drawing.Size(90, 23);
             this.btnRefresh.TabIndex = 2;
             this.btnRefresh.Text = "Refresh";
             this.btnRefresh.UseVisualStyleBackColor = true;
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
 
             // btnClose
+            this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnClose.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnClose.Location = new System.Drawing.Point(730, 10);
+            this.btnClose.Location = new System.Drawing.Point(798, 14);
             this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(75, 30);
-            this.btnClose.TabIndex = 3;
+            this.btnClose.Size = new System.Drawing.Size(90, 23);
+            this.btnClose.TabIndex = 4;
             this.btnClose.Text = "Close";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);

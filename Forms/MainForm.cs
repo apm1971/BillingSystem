@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
+using System.Drawing;
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -15,169 +16,141 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeUI()
         {
             // Set form properties
-            this.Text = Program.APP_NAME;
-            this.Width = 1024;
-            this.Height = 768;
+            this.Text = Program.APP_NAME + " - Main Menu";
+            this.Width = 1200;
+            this.Height = 800;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.KeyPreview = true; // Enable form to receive key events first
+            this.WindowState = FormWindowState.Maximized;
+            this.BackColor = Color.FromArgb(240, 240, 240);
             
             // Create menu
             MenuStrip mainMenu = new MenuStrip();
             this.MainMenuStrip = mainMenu;
+            mainMenu.BackColor = Color.FromArgb(45, 45, 48);
+            mainMenu.ForeColor = Color.White;
+            mainMenu.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             
-            // File Menu
-            ToolStripMenuItem fileMenu = new ToolStripMenuItem("&File");
-            ToolStripMenuItem fileNewBill = new ToolStripMenuItem("&New Bill");
-            ToolStripMenuItem fileBillList = new ToolStripMenuItem("&Bill List");
-            ToolStripMenuItem filePaymentEntry = new ToolStripMenuItem("&Payment Entry");
-            ToolStripMenuItem filePaymentList = new ToolStripMenuItem("Payment &List");
-            ToolStripMenuItem fileExit = new ToolStripMenuItem("E&xit");
+            // === TRANSACTIONS MENU ===
+            ToolStripMenuItem transactionsMenu = new ToolStripMenuItem("&Transactions");
+            transactionsMenu.ForeColor = Color.White;
             
-            // Add keyboard shortcuts
-            fileNewBill.ShortcutKeys = Keys.Control | Keys.N;
-            fileBillList.ShortcutKeys = Keys.Control | Keys.B;
-            filePaymentEntry.ShortcutKeys = Keys.Control | Keys.P;
-            filePaymentList.ShortcutKeys = Keys.Control | Keys.L;
-            fileExit.ShortcutKeys = Keys.Alt | Keys.F4;
+            ToolStripMenuItem transSales = new ToolStripMenuItem("&Sales");
+            ToolStripMenuItem transSalesEntry = new ToolStripMenuItem("Sales &Entry");
+            ToolStripMenuItem transSalesList = new ToolStripMenuItem("Sales &List");
+            transSalesEntry.ShortcutKeys = Keys.F9;
+            transSalesList.ShortcutKeys = Keys.Control | Keys.F9;
             
-            fileMenu.DropDownItems.Add(fileNewBill);
-            fileMenu.DropDownItems.Add(fileBillList);
-            fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add(filePaymentEntry);
-            fileMenu.DropDownItems.Add(filePaymentList);
-            fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add(fileExit);
+            ToolStripMenuItem transPayments = new ToolStripMenuItem("&Payments");
+            ToolStripMenuItem transPaymentEntry = new ToolStripMenuItem("Payment &Entry");
+            ToolStripMenuItem transPaymentList = new ToolStripMenuItem("Payment &List");
+            transPaymentEntry.ShortcutKeys = Keys.F5;
+            transPaymentList.ShortcutKeys = Keys.Control | Keys.F5;
             
-            // Masters Menu
+            // Add sales submenu
+            transSales.DropDownItems.Add(transSalesEntry);
+            transSales.DropDownItems.Add(transSalesList);
+            
+            // Add payments submenu
+            transPayments.DropDownItems.Add(transPaymentEntry);
+            transPayments.DropDownItems.Add(transPaymentList);
+            
+            // Add to transactions menu
+            transactionsMenu.DropDownItems.Add(transSales);
+            transactionsMenu.DropDownItems.Add(new ToolStripSeparator());
+            transactionsMenu.DropDownItems.Add(transPayments);
+            
+            // === MASTERS MENU ===
             ToolStripMenuItem mastersMenu = new ToolStripMenuItem("&Masters");
+            mastersMenu.ForeColor = Color.White;
+            
             ToolStripMenuItem mastersParty = new ToolStripMenuItem("&Party Master");
             ToolStripMenuItem mastersItem = new ToolStripMenuItem("&Item Master");
             ToolStripMenuItem mastersBroker = new ToolStripMenuItem("&Broker Master");
             
             // Add keyboard shortcuts for masters
-            mastersParty.ShortcutKeys = Keys.Control | Keys.Shift | Keys.P;
-            mastersItem.ShortcutKeys = Keys.Control | Keys.Shift | Keys.I;
-            mastersBroker.ShortcutKeys = Keys.Control | Keys.Shift | Keys.B;
+            mastersParty.ShortcutKeys = Keys.Alt | Keys.F1;
+            mastersItem.ShortcutKeys = Keys.Alt | Keys.F2;
+            mastersBroker.ShortcutKeys = Keys.Alt | Keys.F3;
             
             mastersMenu.DropDownItems.Add(mastersParty);
             mastersMenu.DropDownItems.Add(mastersItem);
             mastersMenu.DropDownItems.Add(mastersBroker);
             
-            // Tools Menu
-            ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
-            ToolStripMenuItem toolsGenerateMockData = new ToolStripMenuItem("&Generate Mock Data");
-            ToolStripMenuItem toolsClearAllData = new ToolStripMenuItem("&Clear All Data");
+            // === REPORTS MENU ===
+            ToolStripMenuItem reportsMenu = new ToolStripMenuItem("&Reports");
+            reportsMenu.ForeColor = Color.White;
             
-            // Add keyboard shortcuts for tools
-            toolsGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
-            toolsClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
+            ToolStripMenuItem reportsOutstanding = new ToolStripMenuItem("&Outstanding Reports");
+            ToolStripMenuItem reportsPayment = new ToolStripMenuItem("&Payment Reports");
+            ToolStripMenuItem reportsSales = new ToolStripMenuItem("&Sales Reports");
             
-            toolsMenu.DropDownItems.Add(toolsGenerateMockData);
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(toolsClearAllData);
+            reportsMenu.DropDownItems.Add(reportsOutstanding);
+            reportsMenu.DropDownItems.Add(reportsPayment);
+            reportsMenu.DropDownItems.Add(reportsSales);
             
-            // Help Menu
+            // === UTILITIES MENU ===
+            ToolStripMenuItem utilitiesMenu = new ToolStripMenuItem("&Utilities");
+            utilitiesMenu.ForeColor = Color.White;
+            
+            ToolStripMenuItem utilitiesBackup = new ToolStripMenuItem("&Backup Data");
+            ToolStripMenuItem utilitiesRestore = new ToolStripMenuItem("&Restore Data");
+            ToolStripMenuItem utilitiesGenerateMockData = new ToolStripMenuItem("&Generate Mock Data");
+            ToolStripMenuItem utilitiesClearAllData = new ToolStripMenuItem("&Clear All Data");
+            
+            // Add keyboard shortcuts for utilities
+            utilitiesGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
+            utilitiesClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
+            
+            utilitiesMenu.DropDownItems.Add(utilitiesBackup);
+            utilitiesMenu.DropDownItems.Add(utilitiesRestore);
+            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
+            utilitiesMenu.DropDownItems.Add(utilitiesGenerateMockData);
+            utilitiesMenu.DropDownItems.Add(utilitiesClearAllData);
+            
+            // === HELP MENU ===
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("&Help");
-            ToolStripMenuItem helpAbout = new ToolStripMenuItem("&About");
+            helpMenu.ForeColor = Color.White;
+            
             ToolStripMenuItem helpKeyboardShortcuts = new ToolStripMenuItem("&Keyboard Shortcuts");
+            ToolStripMenuItem helpAbout = new ToolStripMenuItem("&About");
             
             // Add keyboard shortcuts for help
-            helpAbout.ShortcutKeys = Keys.F1;
-            helpKeyboardShortcuts.ShortcutKeys = Keys.F2;
+            helpKeyboardShortcuts.ShortcutKeys = Keys.F1;
+            helpAbout.ShortcutKeys = Keys.Control | Keys.F1;
             
             helpMenu.DropDownItems.Add(helpKeyboardShortcuts);
             helpMenu.DropDownItems.Add(new ToolStripSeparator());
             helpMenu.DropDownItems.Add(helpAbout);
             
             // Add menus to menu strip
-            mainMenu.Items.Add(fileMenu);
+            mainMenu.Items.Add(transactionsMenu);
             mainMenu.Items.Add(mastersMenu);
-            mainMenu.Items.Add(toolsMenu);
+            mainMenu.Items.Add(reportsMenu);
+            mainMenu.Items.Add(utilitiesMenu);
             mainMenu.Items.Add(helpMenu);
             
             // Add menu strip to form
             this.Controls.Add(mainMenu);
             
-            // Create toolbar
-            ToolStrip toolBar = new ToolStrip();
-            
-            // Add toolbar buttons
-            ToolStripButton btnNewBill = new ToolStripButton("New Bill");
-            ToolStripButton btnBillList = new ToolStripButton("Bill List");
-            ToolStripButton btnPaymentEntry = new ToolStripButton("Payment Entry");
-            ToolStripButton btnPartyMaster = new ToolStripButton("Party Master");
-            ToolStripButton btnItemMaster = new ToolStripButton("Item Master");
-            ToolStripButton btnBrokerMaster = new ToolStripButton("Broker Master");
-            ToolStripButton btnAbout = new ToolStripButton("About");
-            ToolStripButton btnExit = new ToolStripButton("Exit");
-            
-            // Add tooltips with keyboard shortcuts
-            btnNewBill.ToolTipText = "Create new bill (Ctrl+N)";
-            btnBillList.ToolTipText = "View bill list (Ctrl+B)";
-            btnPaymentEntry.ToolTipText = "Record payments against bills (Ctrl+P)";
-            btnPartyMaster.ToolTipText = "Manage parties (Ctrl+Shift+P)";
-            btnItemMaster.ToolTipText = "Manage items (Ctrl+Shift+I)";
-            btnBrokerMaster.ToolTipText = "Manage brokers (Ctrl+Shift+B)";
-            btnAbout.ToolTipText = "About this application (F1)";
-            btnExit.ToolTipText = "Exit application (Alt+F4)";
-            
-            // Add separators and buttons to toolbar
-            toolBar.Items.Add(btnNewBill);
-            toolBar.Items.Add(btnBillList);
-            toolBar.Items.Add(btnPaymentEntry);
-            toolBar.Items.Add(new ToolStripSeparator());
-            toolBar.Items.Add(btnPartyMaster);
-            toolBar.Items.Add(btnItemMaster);
-            toolBar.Items.Add(btnBrokerMaster);
-            toolBar.Items.Add(new ToolStripSeparator());
-            toolBar.Items.Add(btnAbout);
-            toolBar.Items.Add(btnExit);
-            
-            // Add toolbar to form
-            this.Controls.Add(toolBar);
+            // Create main dashboard panel
+            CreateDashboardPanel();
             
             // Create status bar
-            StatusStrip statusBar = new StatusStrip();
-            ToolStripStatusLabel statusLabel = new ToolStripStatusLabel(Program.APP_NAME);
-            ToolStripStatusLabel dateLabel = new ToolStripStatusLabel(DateTime.Now.ToShortDateString());
-            ToolStripStatusLabel timeLabel = new ToolStripStatusLabel(DateTime.Now.ToShortTimeString());
-            
-            // Set status bar properties
-            statusLabel.Spring = true;
-            statusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            dateLabel.Alignment = ToolStripItemAlignment.Right;
-            timeLabel.Alignment = ToolStripItemAlignment.Right;
-            
-            // Add labels to status bar
-            statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(dateLabel);
-            statusBar.Items.Add(timeLabel);
-            
-            // Add status bar to form
-            this.Controls.Add(statusBar);
+            CreateStatusBar();
             
             // Wire up event handlers
-            fileNewBill.Click += (s, e) => NewBill();
-            fileBillList.Click += (s, e) => ShowBillList();
-            filePaymentEntry.Click += (s, e) => ShowPaymentEntry();
-            filePaymentList.Click += (s, e) => ShowPaymentList();
-            fileExit.Click += (s, e) => this.Close();
+            transSalesEntry.Click += (s, e) => NewBill();
+            transSalesList.Click += (s, e) => ShowBillList();
+            transPaymentEntry.Click += (s, e) => ShowPaymentEntry();
+            transPaymentList.Click += (s, e) => ShowPaymentList();
             mastersParty.Click += (s, e) => ShowPartyMaster();
             mastersItem.Click += (s, e) => ShowItemMaster();
             mastersBroker.Click += (s, e) => ShowBrokerMaster();
-            toolsGenerateMockData.Click += (s, e) => GenerateMockData();
-            toolsClearAllData.Click += (s, e) => ClearAllData();
+            utilitiesGenerateMockData.Click += (s, e) => GenerateMockData();
+            utilitiesClearAllData.Click += (s, e) => ClearAllData();
             helpAbout.Click += (s, e) => ShowAbout();
             helpKeyboardShortcuts.Click += (s, e) => ShowKeyboardShortcuts();
-            
-            btnNewBill.Click += (s, e) => NewBill();
-            btnBillList.Click += (s, e) => ShowBillList();
-            btnPaymentEntry.Click += (s, e) => ShowPaymentEntry();
-            btnPartyMaster.Click += (s, e) => ShowPartyMaster();
-            btnItemMaster.Click += (s, e) => ShowItemMaster();
-            btnBrokerMaster.Click += (s, e) => ShowBrokerMaster();
-            btnAbout.Click += (s, e) => ShowAbout();
-            btnExit.Click += (s, e) => this.Close();
             
             // Add KeyDown event handler for global shortcuts
             this.KeyDown += MainForm_KeyDown;
@@ -185,11 +158,7 @@ namespace SaleBillSystem.NET.Forms
             // Timer for updating date/time
             System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
             timer.Interval = 1000;
-            timer.Tick += (s, e) =>
-            {
-                dateLabel.Text = DateTime.Now.ToShortDateString();
-                timeLabel.Text = DateTime.Now.ToShortTimeString();
-            };
+            timer.Tick += (s, e) => UpdateStatusBar();
             timer.Start();
         }
         
@@ -301,48 +270,47 @@ namespace SaleBillSystem.NET.Forms
         private void ShowKeyboardShortcuts()
         {
             MessageBox.Show(
-                "GLOBAL KEYBOARD SHORTCUTS:\n\n" +
-                "=== MAIN MENU ===\n" +
-                "Ctrl+N: New Bill\n" +
-                "Ctrl+B: Bill List\n" +
-                "Ctrl+P: Payment Entry\n" +
-                "Ctrl+L: Payment List\n" +
-                "Ctrl+Shift+P: Party Master\n" +
-                "Ctrl+Shift+I: Item Master\n" +
-                "Ctrl+Shift+B: Broker Master\n" +
+                "ACCOUNTING SOFTWARE KEYBOARD SHORTCUTS\n\n" +
+                "=== TRANSACTIONS ===\n" +
+                "F9: New Sales Entry\n" +
+                "Ctrl+F9: Sales List\n" +
+                "F5: Payment Entry\n" +
+                "Ctrl+F5: Payment List\n\n" +
+                "=== MASTERS ===\n" +
+                "Alt+F1: Party Master\n" +
+                "Alt+F2: Item Master\n" +
+                "Alt+F3: Broker Master\n\n" +
+                "=== UTILITIES ===\n" +
                 "Ctrl+G: Generate Mock Data\n" +
-                "Alt+F4: Exit\n" +
-                "F1: About\n" +
-                "F2: Show Keyboard Shortcuts\n\n" +
+                "Ctrl+Shift+Delete: Clear All Data\n\n" +
+                "=== HELP & SYSTEM ===\n" +
+                "F1: Show Keyboard Shortcuts\n" +
+                "Ctrl+F1: About\n" +
+                "Alt+F4: Exit Application\n\n" +
+                "=== FORM NAVIGATION ===\n" +
+                "Tab: Next Field\n" +
+                "Shift+Tab: Previous Field\n" +
+                "Enter: Confirm/Next Cell\n" +
+                "Escape: Cancel/Close\n" +
+                "F4: Open Dropdown\n" +
+                "Arrow Keys: Navigate in Grids\n" +
+                "Page Up/Down: Scroll Lists\n" +
+                "Home/End: First/Last Item\n" +
+                "Delete: Delete Selected Item\n" +
+                "F2: Edit Selected Item\n" +
+                "F5: Refresh (in lists)\n" +
+                "Ctrl+F: Find/Search\n\n" +
                 "=== BILL ENTRY ===\n" +
                 "Ctrl+S: Save Bill\n" +
-                "Escape: Cancel\n" +
                 "F2: Focus on Party\n" +
                 "F3: Focus on Items Grid\n" +
-                "Ctrl+N: Add New Row (in grid)\n" +
-                "Delete: Delete Row (in grid)\n\n" +
+                "Ctrl+N: Add New Row\n\n" +
                 "=== PAYMENT ENTRY ===\n" +
                 "Ctrl+S: Save Payment\n" +
                 "Ctrl+A: Auto Allocate\n" +
                 "Ctrl+R: Clear Allocation\n" +
-                "Alt+P: Switch to Party Filter\n" +
-                "Alt+B: Switch to Broker Filter\n" +
-                "F5: Refresh Bill List\n\n" +
-                "=== LIST FORMS ===\n" +
-                "F5: Refresh List\n" +
-                "Enter/F2: Edit/View Selected\n" +
-                "Delete: Delete Selected\n" +
-                "Ctrl+F: Focus on Search\n" +
-                "Escape: Close\n\n" +
-                "=== GENERAL NAVIGATION ===\n" +
-                "Tab: Next Field\n" +
-                "Shift+Tab: Previous Field\n" +
-                "Arrow Keys: Navigate in Grids\n" +
-                "Page Up/Down: Scroll Lists\n" +
-                "Home/End: First/Last Item\n" +
-                "F4: Open Dropdown\n" +
-                "Enter: Confirm/Next Cell\n" +
-                "F1: Context Help",
+                "Alt+P: Party Filter\n" +
+                "Alt+B: Broker Filter",
                 "Complete Keyboard Shortcuts Reference",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
@@ -351,50 +319,263 @@ namespace SaleBillSystem.NET.Forms
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control && e.KeyCode == Keys.N)
+            if (e.KeyCode == Keys.F9)
             {
+                // F9: New Sales Entry
                 NewBill();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.KeyCode == Keys.B)
+            else if (e.Control && e.KeyCode == Keys.F9)
             {
+                // Ctrl+F9: Sales List
                 ShowBillList();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.KeyCode == Keys.P)
+            else if (e.KeyCode == Keys.F5)
             {
+                // F5: Payment Entry
                 ShowPaymentEntry();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.KeyCode == Keys.L)
+            else if (e.Control && e.KeyCode == Keys.F5)
             {
+                // Ctrl+F5: Payment List
                 ShowPaymentList();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Alt && e.KeyCode == Keys.F1)
+            {
+                // Alt+F1: Party Master
+                ShowPartyMaster();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Alt && e.KeyCode == Keys.F2)
+            {
+                // Alt+F2: Item Master
+                ShowItemMaster();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Alt && e.KeyCode == Keys.F3)
+            {
+                // Alt+F3: Broker Master
+                ShowBrokerMaster();
+                e.SuppressKeyPress = true;
             }
             else if (e.Alt && e.KeyCode == Keys.F4)
             {
+                // Alt+F4: Exit
                 this.Close();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
             else if (e.Control && e.KeyCode == Keys.G)
             {
+                // Ctrl+G: Generate Mock Data
                 GenerateMockData();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.KeyCode == Keys.Shift && e.KeyCode == Keys.Delete)
+            else if (e.Control && e.Shift && e.KeyCode == Keys.Delete)
             {
+                // Ctrl+Shift+Delete: Clear All Data
                 ClearAllData();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
             }
             else if (e.KeyCode == Keys.F1)
             {
-                ShowAbout();
-                e.SuppressKeyPress = true; // Suppress default behavior
-            }
-            else if (e.KeyCode == Keys.F2)
-            {
+                // F1: Keyboard Shortcuts
                 ShowKeyboardShortcuts();
-                e.SuppressKeyPress = true; // Suppress default behavior
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.F1)
+            {
+                // Ctrl+F1: About
+                ShowAbout();
+                e.SuppressKeyPress = true;
+            }
+        }
+        
+        private void CreateDashboardPanel()
+        {
+            // Create main dashboard panel
+            Panel dashboardPanel = new Panel();
+            dashboardPanel.Dock = DockStyle.Fill;
+            dashboardPanel.BackColor = Color.FromArgb(250, 250, 250);
+            dashboardPanel.Padding = new Padding(20);
+            
+            // Create title label
+            Label titleLabel = new Label();
+            titleLabel.Text = Program.APP_NAME;
+            titleLabel.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
+            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
+            titleLabel.AutoSize = true;
+            titleLabel.Location = new Point(50, 50);
+            
+            // Create subtitle label
+            Label subtitleLabel = new Label();
+            subtitleLabel.Text = "Complete Billing & Accounting Solution";
+            subtitleLabel.Font = new Font("Segoe UI", 12F, FontStyle.Regular);
+            subtitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
+            subtitleLabel.AutoSize = true;
+            subtitleLabel.Location = new Point(50, 90);
+            
+            // Create quick access panel
+            Panel quickAccessPanel = CreateQuickAccessPanel();
+            quickAccessPanel.Location = new Point(50, 150);
+            
+            // Create recent activities panel
+            Panel recentPanel = CreateRecentActivitiesPanel();
+            recentPanel.Location = new Point(450, 150);
+            
+            // Add controls to dashboard
+            dashboardPanel.Controls.Add(titleLabel);
+            dashboardPanel.Controls.Add(subtitleLabel);
+            dashboardPanel.Controls.Add(quickAccessPanel);
+            dashboardPanel.Controls.Add(recentPanel);
+            
+            // Add dashboard to form
+            this.Controls.Add(dashboardPanel);
+        }
+        
+        private Panel CreateQuickAccessPanel()
+        {
+            Panel panel = new Panel();
+            panel.Size = new Size(350, 400);
+            panel.BackColor = Color.White;
+            panel.BorderStyle = BorderStyle.FixedSingle;
+            
+            // Title
+            Label titleLabel = new Label();
+            titleLabel.Text = "Quick Access";
+            titleLabel.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
+            titleLabel.Location = new Point(15, 15);
+            titleLabel.AutoSize = true;
+            
+            // Create buttons
+            Button btnNewBill = CreateQuickAccessButton("New Sales Entry", "F9", 50);
+            Button btnPayment = CreateQuickAccessButton("Payment Entry", "F5", 90);
+            Button btnBillList = CreateQuickAccessButton("Sales List", "Ctrl+F9", 130);
+            Button btnPaymentList = CreateQuickAccessButton("Payment List", "Ctrl+F5", 170);
+            Button btnPartyMaster = CreateQuickAccessButton("Party Master", "Alt+F1", 210);
+            Button btnItemMaster = CreateQuickAccessButton("Item Master", "Alt+F2", 250);
+            
+            // Wire up events
+            btnNewBill.Click += (s, e) => NewBill();
+            btnPayment.Click += (s, e) => ShowPaymentEntry();
+            btnBillList.Click += (s, e) => ShowBillList();
+            btnPaymentList.Click += (s, e) => ShowPaymentList();
+            btnPartyMaster.Click += (s, e) => ShowPartyMaster();
+            btnItemMaster.Click += (s, e) => ShowItemMaster();
+            
+            // Add controls
+            panel.Controls.Add(titleLabel);
+            panel.Controls.Add(btnNewBill);
+            panel.Controls.Add(btnPayment);
+            panel.Controls.Add(btnBillList);
+            panel.Controls.Add(btnPaymentList);
+            panel.Controls.Add(btnPartyMaster);
+            panel.Controls.Add(btnItemMaster);
+            
+            return panel;
+        }
+        
+        private Button CreateQuickAccessButton(string text, string shortcut, int top)
+        {
+            Button btn = new Button();
+            btn.Text = $"{text} ({shortcut})";
+            btn.Size = new Size(320, 30);
+            btn.Location = new Point(15, top);
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
+            btn.BackColor = Color.FromArgb(245, 245, 245);
+            btn.ForeColor = Color.FromArgb(45, 45, 48);
+            btn.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            btn.TextAlign = ContentAlignment.MiddleLeft;
+            btn.Cursor = Cursors.Hand;
+            
+            // Hover effects
+            btn.MouseEnter += (s, e) => {
+                btn.BackColor = Color.FromArgb(230, 230, 230);
+                btn.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
+            };
+            btn.MouseLeave += (s, e) => {
+                btn.BackColor = Color.FromArgb(245, 245, 245);
+                btn.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
+            };
+            
+            return btn;
+        }
+        
+        private Panel CreateRecentActivitiesPanel()
+        {
+            Panel panel = new Panel();
+            panel.Size = new Size(350, 400);
+            panel.BackColor = Color.White;
+            panel.BorderStyle = BorderStyle.FixedSingle;
+            
+            // Title
+            Label titleLabel = new Label();
+            titleLabel.Text = "Recent Activities";
+            titleLabel.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
+            titleLabel.Location = new Point(15, 15);
+            titleLabel.AutoSize = true;
+            
+            // Placeholder content
+            Label placeholderLabel = new Label();
+            placeholderLabel.Text = "No recent activities to display.\nStart by creating a new bill or payment.";
+            placeholderLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            placeholderLabel.ForeColor = Color.FromArgb(150, 150, 150);
+            placeholderLabel.Location = new Point(15, 60);
+            placeholderLabel.Size = new Size(320, 40);
+            
+            panel.Controls.Add(titleLabel);
+            panel.Controls.Add(placeholderLabel);
+            
+            return panel;
+        }
+        
+        private void CreateStatusBar()
+        {
+            StatusStrip statusBar = new StatusStrip();
+            statusBar.BackColor = Color.FromArgb(45, 45, 48);
+            statusBar.ForeColor = Color.White;
+            
+            ToolStripStatusLabel statusLabel = new ToolStripStatusLabel(Program.APP_NAME);
+            ToolStripStatusLabel userLabel = new ToolStripStatusLabel("User: Administrator");
+            ToolStripStatusLabel dateLabel = new ToolStripStatusLabel(DateTime.Now.ToString("dd/MM/yyyy"));
+            ToolStripStatusLabel timeLabel = new ToolStripStatusLabel(DateTime.Now.ToString("HH:mm:ss"));
+            
+            // Set status bar properties
+            statusLabel.Spring = true;
+            statusLabel.TextAlign = ContentAlignment.MiddleLeft;
+            statusLabel.ForeColor = Color.White;
+            userLabel.ForeColor = Color.White;
+            dateLabel.ForeColor = Color.White;
+            timeLabel.ForeColor = Color.White;
+            
+            // Add labels to status bar
+            statusBar.Items.Add(statusLabel);
+            statusBar.Items.Add(userLabel);
+            statusBar.Items.Add(dateLabel);
+            statusBar.Items.Add(timeLabel);
+            
+            // Store references for updating
+            this.statusDateLabel = dateLabel;
+            this.statusTimeLabel = timeLabel;
+            
+            // Add status bar to form
+            this.Controls.Add(statusBar);
+        }
+        
+        private ToolStripStatusLabel statusDateLabel;
+        private ToolStripStatusLabel statusTimeLabel;
+        
+        private void UpdateStatusBar()
+        {
+            if (statusDateLabel != null && statusTimeLabel != null)
+            {
+                statusDateLabel.Text = DateTime.Now.ToString("dd/MM/yyyy");
+                statusTimeLabel.Text = DateTime.Now.ToString("HH:mm:ss");
             }
         }
         

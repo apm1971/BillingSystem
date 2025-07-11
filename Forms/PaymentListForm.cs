@@ -17,6 +17,88 @@ namespace SaleBillSystem.NET.Forms
             InitializeComponent();
             SetupDataGrid();
             LoadPayments();
+            this.KeyPreview = true; // Enable form to receive key events first
+            this.KeyDown += PaymentListForm_KeyDown;
+        }
+        
+        private void PaymentListForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F5)
+            {
+                // F5: Refresh
+                LoadPayments();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.F2)
+            {
+                // Enter or F2: View details
+                if (dgvPayments.SelectedRows.Count > 0)
+                {
+                    btnView_Click(sender, e);
+                    e.SuppressKeyPress = true;
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                // Delete: Delete selected payment
+                if (dgvPayments.SelectedRows.Count > 0)
+                {
+                    btnDelete_Click(sender, e);
+                    e.SuppressKeyPress = true;
+                }
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Ctrl+N: New payment
+                var paymentForm = new PaymentEntryForm();
+                paymentForm.ShowDialog();
+                if (paymentForm.DialogResult == DialogResult.OK)
+                {
+                    LoadPayments();
+                }
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Escape: Close
+                this.Close();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.F)
+            {
+                // Ctrl+F: Focus on search
+                txtSearch.Focus();
+                txtSearch.SelectAll();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F1)
+            {
+                // F1: Help
+                ShowPaymentListHelp();
+                e.SuppressKeyPress = true;
+            }
+        }
+        
+        private void ShowPaymentListHelp()
+        {
+            MessageBox.Show(
+                "Payment List Keyboard Shortcuts:\n\n" +
+                "F5: Refresh List\n" +
+                "Enter or F2: View Payment Details\n" +
+                "Delete: Delete Selected Payment\n" +
+                "Ctrl+N: New Payment\n" +
+                "Ctrl+F: Focus on Search\n" +
+                "Escape: Close\n" +
+                "F1: Show this help\n\n" +
+                "Navigation:\n" +
+                "Arrow Keys: Navigate in list\n" +
+                "Page Up/Down: Scroll list\n" +
+                "Home/End: Go to first/last item\n" +
+                "Tab: Move between controls",
+                "Payment List Help",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
 
         private void SetupDataGrid()

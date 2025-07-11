@@ -48,6 +48,7 @@ namespace SaleBillSystem.NET.Forms
         private void SetupForm()
         {
             this.Text = isEditMode ? "Edit Sale Bill" : "New Sale Bill";
+            this.KeyPreview = true; // Enable form to receive key events first
             
             // Create and setup due date controls
             CreateDueDateControls();
@@ -90,11 +91,129 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
             dtpBillDate.ValueChanged += DtpBillDate_ValueChanged;
             
+            // Add KeyDown event handler for keyboard shortcuts
+            this.KeyDown += SaleBillForm_KeyDown;
+            
             // Set tooltips for add buttons
             var toolTip = new ToolTip();
-            toolTip.SetToolTip(btnAddParty, "Add New Party");
-            toolTip.SetToolTip(btnAddItem, "Add New Item");
+            toolTip.SetToolTip(btnAddParty, "Add New Party (Ctrl+Shift+P)");
+            toolTip.SetToolTip(btnAddItem, "Add New Item (Ctrl+Shift+I)");
             toolTip.SetToolTip(dtpDueDate, "Due date for payment (auto-calculated based on party's credit days)");
+            toolTip.SetToolTip(btnSave, "Save Bill (Ctrl+S)");
+            toolTip.SetToolTip(btnCancel, "Cancel (Escape)");
+            
+            // Set tab order for better keyboard navigation
+            SetTabOrder();
+        }
+        
+        private void SetTabOrder()
+        {
+            // Set tab order for logical keyboard navigation
+            txtBillNo.TabIndex = 0;
+            dtpBillDate.TabIndex = 1;
+            cmbParty.TabIndex = 2;
+            dtpDueDate.TabIndex = 3;
+            cmbBroker.TabIndex = 4;
+            dgvItems.TabIndex = 5;
+            btnSave.TabIndex = 6;
+            btnCancel.TabIndex = 7;
+            btnAddParty.TabIndex = 8;
+            btnAddItem.TabIndex = 9;
+        }
+        
+        private void SaleBillForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Ctrl+S: Save
+                btnSave_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Escape: Cancel
+                btnCancel_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.Shift && e.KeyCode == Keys.P)
+            {
+                // Ctrl+Shift+P: Add Party
+                btnAddParty_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.Shift && e.KeyCode == Keys.I)
+            {
+                // Ctrl+Shift+I: Add Item
+                btnAddItem_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F1)
+            {
+                // F1: Help
+                ShowBillEntryHelp();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                // F2: Focus on Party
+                cmbParty.Focus();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F3)
+            {
+                // F3: Focus on Items grid
+                dgvItems.Focus();
+                if (dgvItems.Rows.Count > 0)
+                {
+                    dgvItems.CurrentCell = dgvItems.Rows[0].Cells[0];
+                }
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Ctrl+N: Add New row in items grid
+                if (dgvItems.Focused)
+                {
+                    dgvItems.Rows.Add();
+                    dgvItems.CurrentCell = dgvItems.Rows[dgvItems.Rows.Count - 1].Cells[0];
+                    e.SuppressKeyPress = true;
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                // Delete: Delete current row in items grid
+                if (dgvItems.Focused && dgvItems.CurrentRow != null && !dgvItems.CurrentRow.IsNewRow)
+                {
+                    dgvItems.Rows.Remove(dgvItems.CurrentRow);
+                    CalculateTotals();
+                    e.SuppressKeyPress = true;
+                }
+            }
+        }
+        
+        private void ShowBillEntryHelp()
+        {
+            MessageBox.Show(
+                "Bill Entry Keyboard Shortcuts:\n\n" +
+                "Ctrl+S: Save Bill\n" +
+                "Escape: Cancel\n" +
+                "Ctrl+Shift+P: Add New Party\n" +
+                "Ctrl+Shift+I: Add New Item\n" +
+                "F2: Focus on Party Selection\n" +
+                "F3: Focus on Items Grid\n" +
+                "Ctrl+N: Add New Row (in Items Grid)\n" +
+                "Delete: Delete Current Row (in Items Grid)\n" +
+                "F1: Show this help\n\n" +
+                "Navigation:\n" +
+                "Tab: Move to next field\n" +
+                "Shift+Tab: Move to previous field\n" +
+                "Enter: In grid, move to next cell\n" +
+                "Arrow Keys: Navigate in grid\n" +
+                "F4: Open dropdown (in combo boxes)",
+                "Bill Entry Help",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
 
         private void CreateDueDateControls()

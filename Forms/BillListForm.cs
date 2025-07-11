@@ -16,13 +16,156 @@ namespace SaleBillSystem.NET.Forms
         public BillListForm()
         {
             InitializeComponent();
-            ConfigureControls();
             SetupDataGrid();
-        }
-
-        private void BillListForm_Load(object sender, EventArgs e)
-        {
+            SetupEventHandlers();
             LoadBills();
+            this.KeyPreview = true; // Enable form to receive key events first
+            this.KeyDown += BillListForm_KeyDown;
+        }
+        
+        private void SetupEventHandlers()
+        {
+            // Setup search event handler
+            txtSearch.TextChanged += txtSearch_TextChanged;
+            dtpFromDate.ValueChanged += DateFilter_Changed;
+            dtpToDate.ValueChanged += DateFilter_Changed;
+            
+            // Setup grid event handlers
+            dgvBills.SelectionChanged += dgvBills_SelectionChanged;
+            dgvBills.CellDoubleClick += dgvBills_CellDoubleClick;
+            dgvBills.KeyDown += dgvBills_KeyDown;
+        }
+        
+        private void BillListForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F5)
+            {
+                // F5: Refresh
+                LoadBills();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.F2)
+            {
+                // Enter or F2: Edit selected bill
+                if (dgvBills.SelectedRows.Count > 0)
+                {
+                    EditBill();
+                    e.SuppressKeyPress = true;
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                // Delete: Delete selected bill
+                if (dgvBills.SelectedRows.Count > 0)
+                {
+                    DeleteBill();
+                    e.SuppressKeyPress = true;
+                }
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Ctrl+N: New bill
+                NewBill();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Escape: Close
+                this.Close();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.F)
+            {
+                // Ctrl+F: Focus on search
+                txtSearch.Focus();
+                txtSearch.SelectAll();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F1)
+            {
+                // F1: Help
+                ShowBillListHelp();
+                e.SuppressKeyPress = true;
+            }
+        }
+        
+        private void ShowBillListHelp()
+        {
+            MessageBox.Show(
+                "Bill List Keyboard Shortcuts:\n\n" +
+                "F5: Refresh List\n" +
+                "Enter or F2: Edit Selected Bill\n" +
+                "Delete: Delete Selected Bill\n" +
+                "Ctrl+N: New Bill\n" +
+                "Ctrl+F: Focus on Search\n" +
+                "Escape: Close\n" +
+                "F1: Show this help\n\n" +
+                "Navigation:\n" +
+                "Arrow Keys: Navigate in list\n" +
+                "Page Up/Down: Scroll list\n" +
+                "Home/End: Go to first/last item\n" +
+                "Tab: Move between controls",
+                "Bill List Help",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+        
+        private void EditBill()
+        {
+            if (dgvBills.SelectedRows.Count > 0)
+            {
+                int billId = Convert.ToInt32(dgvBills.SelectedRows[0].Cells["BillID"].Value);
+                Bill bill = BillService.GetBillByID(billId);
+                if (bill != null)
+                {
+                    var form = new SaleBillForm(bill);
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        LoadBills();
+                    }
+                }
+            }
+        }
+        
+        private void DeleteBill()
+        {
+            if (dgvBills.SelectedRows.Count > 0)
+            {
+                int billId = Convert.ToInt32(dgvBills.SelectedRows[0].Cells["BillID"].Value);
+                string billNo = dgvBills.SelectedRows[0].Cells["BillNo"].Value.ToString();
+                
+                var result = MessageBox.Show(
+                    $"Are you sure you want to delete Bill No: {billNo}?\n\nThis action cannot be undone.",
+                    "Confirm Delete",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning
+                );
+                
+                if (result == DialogResult.Yes)
+                {
+                    if (BillService.DeleteBill(billId))
+                    {
+                        MessageBox.Show("Bill deleted successfully.", "Success", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        LoadBills();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to delete bill.", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        
+        private void NewBill()
+        {
+            var form = new SaleBillForm();
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                LoadBills();
+            }
         }
 
         private void ConfigureControls()

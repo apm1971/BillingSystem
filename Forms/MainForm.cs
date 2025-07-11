@@ -19,6 +19,7 @@ namespace SaleBillSystem.NET.Forms
             this.Width = 1024;
             this.Height = 768;
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.KeyPreview = true; // Enable form to receive key events first
             
             // Create menu
             MenuStrip mainMenu = new MenuStrip();
@@ -31,6 +32,13 @@ namespace SaleBillSystem.NET.Forms
             ToolStripMenuItem filePaymentEntry = new ToolStripMenuItem("&Payment Entry");
             ToolStripMenuItem filePaymentList = new ToolStripMenuItem("Payment &List");
             ToolStripMenuItem fileExit = new ToolStripMenuItem("E&xit");
+            
+            // Add keyboard shortcuts
+            fileNewBill.ShortcutKeys = Keys.Control | Keys.N;
+            fileBillList.ShortcutKeys = Keys.Control | Keys.B;
+            filePaymentEntry.ShortcutKeys = Keys.Control | Keys.P;
+            filePaymentList.ShortcutKeys = Keys.Control | Keys.L;
+            fileExit.ShortcutKeys = Keys.Alt | Keys.F4;
             
             fileMenu.DropDownItems.Add(fileNewBill);
             fileMenu.DropDownItems.Add(fileBillList);
@@ -46,6 +54,11 @@ namespace SaleBillSystem.NET.Forms
             ToolStripMenuItem mastersItem = new ToolStripMenuItem("&Item Master");
             ToolStripMenuItem mastersBroker = new ToolStripMenuItem("&Broker Master");
             
+            // Add keyboard shortcuts for masters
+            mastersParty.ShortcutKeys = Keys.Control | Keys.Shift | Keys.P;
+            mastersItem.ShortcutKeys = Keys.Control | Keys.Shift | Keys.I;
+            mastersBroker.ShortcutKeys = Keys.Control | Keys.Shift | Keys.B;
+            
             mastersMenu.DropDownItems.Add(mastersParty);
             mastersMenu.DropDownItems.Add(mastersItem);
             mastersMenu.DropDownItems.Add(mastersBroker);
@@ -55,6 +68,10 @@ namespace SaleBillSystem.NET.Forms
             ToolStripMenuItem toolsGenerateMockData = new ToolStripMenuItem("&Generate Mock Data");
             ToolStripMenuItem toolsClearAllData = new ToolStripMenuItem("&Clear All Data");
             
+            // Add keyboard shortcuts for tools
+            toolsGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
+            toolsClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
+            
             toolsMenu.DropDownItems.Add(toolsGenerateMockData);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(toolsClearAllData);
@@ -62,7 +79,14 @@ namespace SaleBillSystem.NET.Forms
             // Help Menu
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("&Help");
             ToolStripMenuItem helpAbout = new ToolStripMenuItem("&About");
+            ToolStripMenuItem helpKeyboardShortcuts = new ToolStripMenuItem("&Keyboard Shortcuts");
             
+            // Add keyboard shortcuts for help
+            helpAbout.ShortcutKeys = Keys.F1;
+            helpKeyboardShortcuts.ShortcutKeys = Keys.F2;
+            
+            helpMenu.DropDownItems.Add(helpKeyboardShortcuts);
+            helpMenu.DropDownItems.Add(new ToolStripSeparator());
             helpMenu.DropDownItems.Add(helpAbout);
             
             // Add menus to menu strip
@@ -87,15 +111,15 @@ namespace SaleBillSystem.NET.Forms
             ToolStripButton btnAbout = new ToolStripButton("About");
             ToolStripButton btnExit = new ToolStripButton("Exit");
             
-            // Add tooltips
-            btnNewBill.ToolTipText = "Create new bill";
-            btnBillList.ToolTipText = "View bill list";
-            btnPaymentEntry.ToolTipText = "Record payments against bills";
-            btnPartyMaster.ToolTipText = "Manage parties";
-            btnItemMaster.ToolTipText = "Manage items";
-            btnBrokerMaster.ToolTipText = "Manage brokers";
-            btnAbout.ToolTipText = "About this application";
-            btnExit.ToolTipText = "Exit application";
+            // Add tooltips with keyboard shortcuts
+            btnNewBill.ToolTipText = "Create new bill (Ctrl+N)";
+            btnBillList.ToolTipText = "View bill list (Ctrl+B)";
+            btnPaymentEntry.ToolTipText = "Record payments against bills (Ctrl+P)";
+            btnPartyMaster.ToolTipText = "Manage parties (Ctrl+Shift+P)";
+            btnItemMaster.ToolTipText = "Manage items (Ctrl+Shift+I)";
+            btnBrokerMaster.ToolTipText = "Manage brokers (Ctrl+Shift+B)";
+            btnAbout.ToolTipText = "About this application (F1)";
+            btnExit.ToolTipText = "Exit application (Alt+F4)";
             
             // Add separators and buttons to toolbar
             toolBar.Items.Add(btnNewBill);
@@ -144,6 +168,7 @@ namespace SaleBillSystem.NET.Forms
             toolsGenerateMockData.Click += (s, e) => GenerateMockData();
             toolsClearAllData.Click += (s, e) => ClearAllData();
             helpAbout.Click += (s, e) => ShowAbout();
+            helpKeyboardShortcuts.Click += (s, e) => ShowKeyboardShortcuts();
             
             btnNewBill.Click += (s, e) => NewBill();
             btnBillList.Click += (s, e) => ShowBillList();
@@ -153,6 +178,9 @@ namespace SaleBillSystem.NET.Forms
             btnBrokerMaster.Click += (s, e) => ShowBrokerMaster();
             btnAbout.Click += (s, e) => ShowAbout();
             btnExit.Click += (s, e) => this.Close();
+            
+            // Add KeyDown event handler for global shortcuts
+            this.KeyDown += MainForm_KeyDown;
             
             // Timer for updating date/time
             System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
@@ -268,6 +296,106 @@ namespace SaleBillSystem.NET.Forms
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
+        }
+
+        private void ShowKeyboardShortcuts()
+        {
+            MessageBox.Show(
+                "GLOBAL KEYBOARD SHORTCUTS:\n\n" +
+                "=== MAIN MENU ===\n" +
+                "Ctrl+N: New Bill\n" +
+                "Ctrl+B: Bill List\n" +
+                "Ctrl+P: Payment Entry\n" +
+                "Ctrl+L: Payment List\n" +
+                "Ctrl+Shift+P: Party Master\n" +
+                "Ctrl+Shift+I: Item Master\n" +
+                "Ctrl+Shift+B: Broker Master\n" +
+                "Ctrl+G: Generate Mock Data\n" +
+                "Alt+F4: Exit\n" +
+                "F1: About\n" +
+                "F2: Show Keyboard Shortcuts\n\n" +
+                "=== BILL ENTRY ===\n" +
+                "Ctrl+S: Save Bill\n" +
+                "Escape: Cancel\n" +
+                "F2: Focus on Party\n" +
+                "F3: Focus on Items Grid\n" +
+                "Ctrl+N: Add New Row (in grid)\n" +
+                "Delete: Delete Row (in grid)\n\n" +
+                "=== PAYMENT ENTRY ===\n" +
+                "Ctrl+S: Save Payment\n" +
+                "Ctrl+A: Auto Allocate\n" +
+                "Ctrl+R: Clear Allocation\n" +
+                "Alt+P: Switch to Party Filter\n" +
+                "Alt+B: Switch to Broker Filter\n" +
+                "F5: Refresh Bill List\n\n" +
+                "=== LIST FORMS ===\n" +
+                "F5: Refresh List\n" +
+                "Enter/F2: Edit/View Selected\n" +
+                "Delete: Delete Selected\n" +
+                "Ctrl+F: Focus on Search\n" +
+                "Escape: Close\n\n" +
+                "=== GENERAL NAVIGATION ===\n" +
+                "Tab: Next Field\n" +
+                "Shift+Tab: Previous Field\n" +
+                "Arrow Keys: Navigate in Grids\n" +
+                "Page Up/Down: Scroll Lists\n" +
+                "Home/End: First/Last Item\n" +
+                "F4: Open Dropdown\n" +
+                "Enter: Confirm/Next Cell\n" +
+                "F1: Context Help",
+                "Complete Keyboard Shortcuts Reference",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.N)
+            {
+                NewBill();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Control && e.KeyCode == Keys.B)
+            {
+                ShowBillList();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Control && e.KeyCode == Keys.P)
+            {
+                ShowPaymentEntry();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Control && e.KeyCode == Keys.L)
+            {
+                ShowPaymentList();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Alt && e.KeyCode == Keys.F4)
+            {
+                this.Close();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Control && e.KeyCode == Keys.G)
+            {
+                GenerateMockData();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.Control && e.KeyCode == Keys.Shift && e.KeyCode == Keys.Delete)
+            {
+                ClearAllData();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.KeyCode == Keys.F1)
+            {
+                ShowAbout();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                ShowKeyboardShortcuts();
+                e.SuppressKeyPress = true; // Suppress default behavior
+            }
         }
         
         // Required by Windows Forms designer

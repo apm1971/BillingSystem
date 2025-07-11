@@ -14,6 +14,7 @@ namespace SaleBillSystem.NET.Forms
         private List<Bill> outstandingBills;
         private Payment currentPayment;
         private bool isEditMode = false;
+        private bool isAutoAllocating = false; // Flag to prevent multiple updates during auto-allocation
 
         // Default constructor for new payments
         public PaymentEntryForm()
@@ -72,12 +73,38 @@ namespace SaleBillSystem.NET.Forms
                 txtReference.Text = currentPayment.Reference;
                 txtNotes.Text = currentPayment.Notes;
                 
+                // Auto-select party or broker based on the payment details
+                if (currentPayment.PaymentDetails.Count > 0)
+                {
+                    var firstDetail = currentPayment.PaymentDetails.First();
+                    var bill = BillService.GetBillByID(firstDetail.BillID);
+                    
+                    if (bill != null)
+                    {
+                        // Try to select by party first
+                        if (bill.PartyID > 0)
+                        {
+                            rbFilterByParty.Checked = true;
+                            cmbParty.SelectedValue = bill.PartyID;
+                        }
+                        // If no party, try broker
+                        else if (bill.BrokerID > 0)
+                        {
+                            rbFilterByBroker.Checked = true;
+                            cmbBroker.SelectedValue = bill.BrokerID;
+                        }
+                    }
+                }
+                
                 // Load all associated bills
                 LoadAssociatedBills();
                 
-                // Auto-allocate is disabled in edit mode - allocations from the saved payment will be used
-                txtPaymentAmount.ReadOnly = true;
-                btnAutoAllocate.Enabled = false;
+                // Keep payment amount editable in edit mode
+                txtPaymentAmount.ReadOnly = false;
+                btnAutoAllocate.Enabled = true;
+                
+                // Update form title
+                this.Text = "Edit Payment";
             }
             catch (Exception ex)
             {
@@ -91,27 +118,40 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
-                // Get all bills that are either already allocated in this payment 
-                // or are still outstanding
-                var billIds = currentPayment.PaymentDetails.Select(pd => pd.BillID).ToList();
                 outstandingBills = new List<Bill>();
                 
-                // Add currently paid bills
-                foreach (var detail in currentPayment.PaymentDetails)
+                if (isEditMode)
                 {
-                    Bill bill = BillService.GetBillByID(detail.BillID);
-                    if (bill != null)
+                    // In edit mode, load bills that are either:
+                    // 1. Already allocated in this payment
+                    // 2. Currently outstanding for the selected party/broker
+                    
+                    // First, get all bills that are already allocated in this payment
+                    foreach (var detail in currentPayment.PaymentDetails)
                     {
-                        // Adjust paid amount to exclude this payment's allocation
-                        bill.PaidAmount -= detail.AllocatedAmount;
-                        outstandingBills.Add(bill);
+                        Bill bill = BillService.GetBillByID(detail.BillID);
+                        if (bill != null)
+                        {
+                            // Temporarily adjust paid amount to exclude this payment's allocation
+                            // so we can see the correct balance for editing
+                            bill.PaidAmount -= detail.AllocatedAmount;
+                            // Note: BalanceAmount is automatically calculated as NetAmount - PaidAmount
+                            outstandingBills.Add(bill);
+                        }
                     }
-                }
-                
-                // Also add other outstanding bills
-                if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
-                {
-                    var additionalBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                    
+                    // Then, add any other outstanding bills for the same party/broker
+                    List<Bill> additionalBills = new List<Bill>();
+                    if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
+                    {
+                        additionalBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                    }
+                    else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
+                    {
+                        additionalBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                    }
+                    
+                    // Add bills that aren't already in the list
                     foreach (var bill in additionalBills)
                     {
                         if (!outstandingBills.Any(b => b.BillID == bill.BillID))
@@ -119,35 +159,52 @@ namespace SaleBillSystem.NET.Forms
                             outstandingBills.Add(bill);
                         }
                     }
-                }
-                else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
-                {
-                    var additionalBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
-                    foreach (var bill in additionalBills)
+                    
+                    // Create display data with existing payment allocations
+                    var billData = outstandingBills.Select(b => new
                     {
-                        if (!outstandingBills.Any(b => b.BillID == bill.BillID))
-                        {
-                            outstandingBills.Add(bill);
-                        }
-                    }
-                }
-                
-                // Create display data with payment amount column
-                var billData = outstandingBills.Select(b => new
-                {
-                    BillID = b.BillID,
-                    BillNo = b.BillNo,
-                    BillDate = b.BillDate,
-                    PartyName = b.PartyName,
-                    NetAmount = b.NetAmount,
-                    PaidAmount = b.PaidAmount,
-                    BalanceAmount = b.BalanceAmount,
-                    PaymentAmount = currentPayment.PaymentDetails
-                        .FirstOrDefault(pd => pd.BillID == b.BillID)?.AllocatedAmount ?? 0.0
-                }).ToList();
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        BillDate = b.BillDate,
+                        PartyName = b.PartyName,
+                        NetAmount = b.NetAmount,
+                        PaidAmount = b.PaidAmount,
+                        BalanceAmount = b.BalanceAmount,
+                        PaymentAmount = currentPayment.PaymentDetails
+                            .FirstOrDefault(pd => pd.BillID == b.BillID)?.AllocatedAmount ?? 0.0
+                    }).ToList();
 
-                dgvBills.DataSource = billData;
-                groupBoxBills.Enabled = true;
+                    dgvBills.DataSource = billData;
+                }
+                else
+                {
+                    // In new payment mode, load outstanding bills normally
+                    if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
+                    {
+                        outstandingBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                    }
+                    else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
+                    {
+                        outstandingBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                    }
+
+                    // Create display data with payment amount column
+                    var billData = outstandingBills.Select(b => new
+                    {
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        BillDate = b.BillDate,
+                        PartyName = b.PartyName,
+                        NetAmount = b.NetAmount,
+                        PaidAmount = b.PaidAmount,
+                        BalanceAmount = b.BalanceAmount,
+                        PaymentAmount = 0.0
+                    }).ToList();
+
+                    dgvBills.DataSource = billData;
+                }
+                
+                groupBoxBills.Enabled = outstandingBills.Count > 0;
                 
                 lblTotalBills.Text = $"Bills: {outstandingBills.Count}";
                 lblTotalOutstanding.Text = $"Total Outstanding: ₹{outstandingBills.Sum(b => b.BalanceAmount):N2}";
@@ -164,6 +221,7 @@ namespace SaleBillSystem.NET.Forms
         private void SetupForm()
         {
             this.Text = "Payment Entry";
+            this.KeyPreview = true; // Enable form to receive key events first
             
             // Setup party combo box
             SetupPartyComboBox();
@@ -191,6 +249,108 @@ namespace SaleBillSystem.NET.Forms
             cmbBroker.SelectedIndexChanged += Broker_SelectedIndexChanged;
             txtPaymentAmount.TextChanged += PaymentAmount_TextChanged;
             dgvBills.CellValueChanged += DgvBills_CellValueChanged;
+            
+            // Add KeyDown event handler for keyboard shortcuts
+            this.KeyDown += PaymentEntryForm_KeyDown;
+            
+            // Set tab order for better keyboard navigation
+            SetTabOrder();
+        }
+        
+        private void SetTabOrder()
+        {
+            // Set tab order for logical keyboard navigation
+            dtpPaymentDate.TabIndex = 0;
+            txtPaymentAmount.TabIndex = 1;
+            cmbPaymentMethod.TabIndex = 2;
+            txtReference.TabIndex = 3;
+            rbFilterByParty.TabIndex = 4;
+            rbFilterByBroker.TabIndex = 5;
+            cmbParty.TabIndex = 6;
+            cmbBroker.TabIndex = 7;
+            dgvBills.TabIndex = 8;
+            btnAutoAllocate.TabIndex = 9;
+            btnClearAllocation.TabIndex = 10;
+            txtNotes.TabIndex = 11;
+            btnSave.TabIndex = 12;
+            btnCancel.TabIndex = 13;
+        }
+        
+        private void PaymentEntryForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Ctrl+S: Save
+                btnSave_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Escape: Cancel
+                btnCancel_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.A)
+            {
+                // Ctrl+A: Auto Allocate
+                btnAutoAllocate_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.R)
+            {
+                // Ctrl+R: Clear Allocation
+                btnClearAllocation_Click(sender, e);
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F1)
+            {
+                // F1: Help
+                ShowPaymentEntryHelp();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.KeyCode == Keys.F5)
+            {
+                // F5: Refresh bill list
+                LoadOutstandingBills();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Alt && e.KeyCode == Keys.P)
+            {
+                // Alt+P: Switch to Party filter
+                rbFilterByParty.Checked = true;
+                cmbParty.Focus();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Alt && e.KeyCode == Keys.B)
+            {
+                // Alt+B: Switch to Broker filter
+                rbFilterByBroker.Checked = true;
+                cmbBroker.Focus();
+                e.SuppressKeyPress = true;
+            }
+        }
+        
+        private void ShowPaymentEntryHelp()
+        {
+            MessageBox.Show(
+                "Payment Entry Keyboard Shortcuts:\n\n" +
+                "Ctrl+S: Save Payment\n" +
+                "Escape: Cancel\n" +
+                "Ctrl+A: Auto Allocate Payment\n" +
+                "Ctrl+R: Clear Allocation\n" +
+                "F5: Refresh Bill List\n" +
+                "Alt+P: Switch to Party Filter\n" +
+                "Alt+B: Switch to Broker Filter\n" +
+                "F1: Show this help\n\n" +
+                "Navigation:\n" +
+                "Tab: Move to next field\n" +
+                "Shift+Tab: Move to previous field\n" +
+                "Enter: In DataGrid, move to next cell\n" +
+                "Arrow Keys: Navigate in DataGrid",
+                "Payment Entry Help",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
 
         private void SetupPartyComboBox()
@@ -345,6 +505,13 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
+                if (isEditMode)
+                {
+                    // In edit mode, use the specialized method that handles existing allocations
+                    LoadAssociatedBills();
+                    return;
+                }
+                
                 outstandingBills = new List<Bill>();
 
                 if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
@@ -384,29 +551,63 @@ namespace SaleBillSystem.NET.Forms
 
         private void PaymentAmount_TextChanged(object sender, EventArgs e)
         {
-            AutoAllocatePayment();
+            // Only auto-allocate for new payments, not when editing existing payments
+            if (!isEditMode)
+            {
+                AutoAllocatePayment();
+            }
+            else
+            {
+                // In edit mode, just update the summary without auto-allocating
+                UpdatePaymentSummary();
+            }
         }
 
         private void AutoAllocatePayment()
         {
-            if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
-                return;
-
-            double remainingAmount = paymentAmount;
-
-            // Auto-allocate payment to bills (FIFO - oldest first)
-            foreach (DataGridViewRow row in dgvBills.Rows)
+            if (isAutoAllocating) return; // Prevent recursive calls
+            
+            isAutoAllocating = true;
+            
+            try
             {
-                if (remainingAmount <= 0) break;
+                if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
+                {
+                    // Clear all allocations if payment amount is invalid
+                    foreach (DataGridViewRow row in dgvBills.Rows)
+                    {
+                        row.Cells["PaymentAmount"].Value = 0.0;
+                    }
+                    UpdatePaymentSummary();
+                    return;
+                }
 
-                double balanceAmount = Convert.ToDouble(row.Cells["BalanceAmount"].Value);
-                double allocationAmount = Math.Min(remainingAmount, balanceAmount);
-                
-                row.Cells["PaymentAmount"].Value = allocationAmount;
-                remainingAmount -= allocationAmount;
+                // First, clear all existing allocations
+                foreach (DataGridViewRow row in dgvBills.Rows)
+                {
+                    row.Cells["PaymentAmount"].Value = 0.0;
+                }
+
+                double remainingAmount = paymentAmount;
+
+                // Auto-allocate payment to bills (FIFO - oldest first)
+                foreach (DataGridViewRow row in dgvBills.Rows)
+                {
+                    if (remainingAmount <= 0) break;
+
+                    double balanceAmount = Convert.ToDouble(row.Cells["BalanceAmount"].Value);
+                    double allocationAmount = Math.Min(remainingAmount, balanceAmount);
+                    
+                    row.Cells["PaymentAmount"].Value = allocationAmount;
+                    remainingAmount -= allocationAmount;
+                }
+
+                UpdatePaymentSummary();
             }
-
-            UpdatePaymentSummary();
+            finally
+            {
+                isAutoAllocating = false;
+            }
         }
 
         private void btnAutoAllocate_Click(object sender, EventArgs e)
@@ -416,16 +617,27 @@ namespace SaleBillSystem.NET.Forms
         
         private void btnClearAllocation_Click(object sender, EventArgs e)
         {
-            foreach (DataGridViewRow row in dgvBills.Rows)
-            {
-                row.Cells["PaymentAmount"].Value = 0.0;
-            }
+            isAutoAllocating = true;
             
-            UpdatePaymentSummary();
+            try
+            {
+                foreach (DataGridViewRow row in dgvBills.Rows)
+                {
+                    row.Cells["PaymentAmount"].Value = 0.0;
+                }
+                
+                UpdatePaymentSummary();
+            }
+            finally
+            {
+                isAutoAllocating = false;
+            }
         }
 
         private void DgvBills_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
+            if (isAutoAllocating) return; // Skip updates during auto-allocation
+            
             if (e.ColumnIndex >= 0 && dgvBills.Columns[e.ColumnIndex].Name == "PaymentAmount")
             {
                 UpdatePaymentSummary();

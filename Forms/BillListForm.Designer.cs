@@ -282,7 +282,6 @@ namespace SaleBillSystem.NET.Forms
             this.Name = "BillListForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Bill List";
-            this.Load += new System.EventHandler(this.BillListForm_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);

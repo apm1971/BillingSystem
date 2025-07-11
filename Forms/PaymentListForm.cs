@@ -76,6 +76,15 @@ namespace SaleBillSystem.NET.Forms
                 Width = 150
             });
             
+            // Party column
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "PartyInfo",
+                HeaderText = "Party",
+                DataPropertyName = "PartyInfo",
+                Width = 200
+            });
+            
             // Bill Count column
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -104,6 +113,7 @@ namespace SaleBillSystem.NET.Forms
         {
             bool hasSelection = dgvPayments.SelectedRows.Count > 0;
             btnView.Enabled = hasSelection;
+            btnEdit.Enabled = hasSelection;
             btnDelete.Enabled = hasSelection;
         }
 
@@ -135,6 +145,7 @@ namespace SaleBillSystem.NET.Forms
                 PaymentAmount = p.PaymentAmount,
                 PaymentMethod = p.PaymentMethod,
                 Reference = p.Reference,
+                PartyInfo = p.PartyInfo,
                 BillCount = p.PaymentDetails.Count,
                 Notes = p.Notes
             }).ToList();
@@ -164,6 +175,7 @@ namespace SaleBillSystem.NET.Forms
                     p.PaymentMethod.ToLower().Contains(searchText) ||
                     p.Reference.ToLower().Contains(searchText) ||
                     p.Notes.ToLower().Contains(searchText) ||
+                    p.PrimaryPartyName.ToLower().Contains(searchText) ||
                     p.PaymentDetails.Any(pd => pd.BillNo.ToLower().Contains(searchText) || 
                                               pd.PartyName.ToLower().Contains(searchText))
                 ).ToList();
@@ -183,6 +195,15 @@ namespace SaleBillSystem.NET.Forms
         private void btnView_Click(object sender, EventArgs e)
         {
             ViewPaymentDetails();
+        }
+        
+        private void btnEdit_Click(object sender, EventArgs e)
+        {
+            if (dgvPayments.SelectedRows.Count > 0)
+            {
+                int paymentId = Convert.ToInt32(dgvPayments.SelectedRows[0].Cells["PaymentID"].Value);
+                EditPayment(paymentId);
+            }
         }
         
         private void btnDelete_Click(object sender, EventArgs e)
@@ -241,6 +262,31 @@ namespace SaleBillSystem.NET.Forms
                 Payment payment = payments.First(p => p.PaymentID == paymentId);
                 
                 ShowPaymentDetails(payment);
+            }
+        }
+
+        private void EditPayment(int paymentId)
+        {
+            try
+            {
+                // Open the PaymentEntryForm in edit mode
+                using (var editForm = new PaymentEntryForm(paymentId))
+                {
+                    var result = editForm.ShowDialog(this);
+                    
+                    // If the payment was saved, refresh the list
+                    if (result == DialogResult.OK)
+                    {
+                        LoadPayments();
+                        MessageBox.Show("Payment updated successfully.", "Success", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening payment for editing: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

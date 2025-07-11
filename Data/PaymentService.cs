@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
+using System.Linq;
 using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET.Data
@@ -37,6 +38,19 @@ namespace SaleBillSystem.NET.Data
                 
                 // Load payment details
                 payment.PaymentDetails = GetPaymentDetails(payment.PaymentID);
+                
+                // Calculate party information
+                if (payment.PaymentDetails.Count > 0)
+                {
+                    var uniqueParties = payment.PaymentDetails
+                        .Where(pd => !string.IsNullOrEmpty(pd.PartyName))
+                        .Select(pd => pd.PartyName)
+                        .Distinct()
+                        .ToList();
+                    
+                    payment.PrimaryPartyName = uniqueParties.FirstOrDefault() ?? string.Empty;
+                    payment.UniquePartyCount = uniqueParties.Count;
+                }
                 
                 payments.Add(payment);
             }
@@ -216,6 +230,27 @@ namespace SaleBillSystem.NET.Data
                                 
                                 // Get the new payment ID
                                 payment.PaymentID = Convert.ToInt32(conn.LastInsertRowId);
+                            }
+                            else
+                            {
+                                // Update existing payment
+                                string updateSql = @"UPDATE PaymentMaster SET 
+                                    PaymentDate = @PaymentDate,
+                                    PaymentAmount = @PaymentAmount,
+                                    PaymentMethod = @PaymentMethod,
+                                    Reference = @Reference,
+                                    Notes = @Notes
+                                WHERE PaymentID = @PaymentID";
+                                
+                                var updateCmd = new SQLiteCommand(updateSql, conn, transaction);
+                                updateCmd.Parameters.AddWithValue("@PaymentDate", payment.PaymentDate);
+                                updateCmd.Parameters.AddWithValue("@PaymentAmount", payment.PaymentAmount);
+                                updateCmd.Parameters.AddWithValue("@PaymentMethod", payment.PaymentMethod);
+                                updateCmd.Parameters.AddWithValue("@Reference", payment.Reference ?? string.Empty);
+                                updateCmd.Parameters.AddWithValue("@Notes", payment.Notes ?? string.Empty);
+                                updateCmd.Parameters.AddWithValue("@PaymentID", payment.PaymentID);
+                                
+                                updateCmd.ExecuteNonQuery();
                             }
                             
                             // Delete existing payment details

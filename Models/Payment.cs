@@ -13,6 +13,11 @@ namespace SaleBillSystem.NET.Models
         public string Notes { get; set; } = string.Empty;
         public List<PaymentDetail> PaymentDetails { get; set; } = new List<PaymentDetail>();
 
+        // Party information properties (populated by service)
+        public string PrimaryPartyName { get; set; } = string.Empty;
+        public int UniquePartyCount { get; set; } = 0;
+        public string PartyInfo => UniquePartyCount > 1 ? $"{PrimaryPartyName} (+{UniquePartyCount - 1} others)" : PrimaryPartyName;
+
         // Helper properties
         public string PaymentInfo => $"Payment #{PaymentID} - ₹{PaymentAmount:N2} on {PaymentDate:dd/MM/yyyy}";
         public string MethodInfo => string.IsNullOrEmpty(Reference) ? PaymentMethod : $"{PaymentMethod} ({Reference})";

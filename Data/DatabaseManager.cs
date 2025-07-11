@@ -116,7 +116,12 @@ namespace SaleBillSystem.NET.Data
                         TotalAmount REAL,
                         TotalCharges REAL,
                         NetAmount REAL,
-                        PaidAmount REAL DEFAULT 0
+                        PaidAmount REAL DEFAULT 0,
+                        InterestRate REAL DEFAULT 0,
+                        DiscountRate REAL DEFAULT 0,
+                        InterestAmount REAL DEFAULT 0,
+                        DiscountAmount REAL DEFAULT 0,
+                        NetPayableAmount REAL DEFAULT 0
                     )");
                     
                     // Create BillDetails table
@@ -152,6 +157,21 @@ namespace SaleBillSystem.NET.Data
                         AllocatedAmount REAL,
                         BalanceAfter REAL
                     )");
+
+                    // Create Settings table
+                    ExecuteNonQuery(conn, @"CREATE TABLE Settings (
+                        SettingID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        SettingKey TEXT UNIQUE,
+                        SettingValue TEXT,
+                        Description TEXT
+                    )");
+
+                    // Insert default settings
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills'),
+                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment'),
+                        ('CompanyName', 'Your Company Name', 'Company name for reports'),
+                        ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
                 }
                 
                 return true;
@@ -239,18 +259,46 @@ namespace SaleBillSystem.NET.Data
 
                 // Check and add PaidAmount column to BillMaster
                 bool paidAmountExists = false;
+                bool interestRateExists = false;
+                bool discountRateExists = false;
+                bool interestAmountExists = false;
+                bool discountAmountExists = false;
+                bool netPayableAmountExists = false;
+                
                 foreach (DataRow row in billTableInfo.Rows)
                 {
-                    if (row["name"].ToString() == "PaidAmount")
-                    {
-                        paidAmountExists = true;
-                        break;
-                    }
+                    string columnName = row["name"].ToString();
+                    if (columnName == "PaidAmount") paidAmountExists = true;
+                    if (columnName == "InterestRate") interestRateExists = true;
+                    if (columnName == "DiscountRate") discountRateExists = true;
+                    if (columnName == "InterestAmount") interestAmountExists = true;
+                    if (columnName == "DiscountAmount") discountAmountExists = true;
+                    if (columnName == "NetPayableAmount") netPayableAmountExists = true;
                 }
 
                 if (!paidAmountExists)
                 {
                     ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN PaidAmount REAL DEFAULT 0");
+                }
+                if (!interestRateExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN InterestRate REAL DEFAULT 0");
+                }
+                if (!discountRateExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DiscountRate REAL DEFAULT 0");
+                }
+                if (!interestAmountExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN InterestAmount REAL DEFAULT 0");
+                }
+                if (!discountAmountExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DiscountAmount REAL DEFAULT 0");
+                }
+                if (!netPayableAmountExists)
+                {
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN NetPayableAmount REAL DEFAULT 0");
                 }
 
                 // Check and create PaymentMaster table
@@ -280,6 +328,25 @@ namespace SaleBillSystem.NET.Data
                         AllocatedAmount REAL,
                         BalanceAfter REAL
                     )");
+                }
+
+                // Check and create Settings table
+                var settingsInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='Settings'");
+                if (settingsInfo.Rows.Count == 0)
+                {
+                    ExecuteNonQuery(conn, @"CREATE TABLE Settings (
+                        SettingID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        SettingKey TEXT UNIQUE,
+                        SettingValue TEXT,
+                        Description TEXT
+                    )");
+
+                    // Insert default settings
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills'),
+                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment'),
+                        ('CompanyName', 'Your Company Name', 'Company name for reports'),
+                        ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
                 }
             }
             catch (Exception ex)

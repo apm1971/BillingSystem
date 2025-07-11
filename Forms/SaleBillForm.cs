@@ -21,6 +21,7 @@ namespace SaleBillSystem.NET.Forms
         private Label lblBroker;
         private List<Broker> brokers;
 
+
         public SaleBillForm(Bill? bill = null)
         {
             InitializeComponent();
@@ -47,30 +48,34 @@ namespace SaleBillSystem.NET.Forms
 
         private void SetupForm()
         {
-            this.Text = isEditMode ? "Edit Sale Bill" : "New Sale Bill";
-            this.KeyPreview = true; // Enable form to receive key events first
+            // Set form properties for responsive design
+            this.Text = isEditMode ? "Edit Bill" : "New Bill";
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.WindowState = FormWindowState.Maximized;
+            this.MinimumSize = new Size(1000, 700);
             
-            // Create and setup due date controls
-            CreateDueDateControls();
+            // Enable auto-scaling for different screen sizes
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
             
-            // Create and setup broker controls
-            CreateBrokerControls();
+            // Set up form resize handling
+            this.Resize += SaleBillForm_Resize;
             
-            // Setup party combo box
-            cmbParty.DataSource = parties;
-            cmbParty.DisplayMember = "PartyName";
-            cmbParty.ValueMember = "PartyID";
-            cmbParty.SelectedIndex = -1;
-
-            // Setup broker combo box
-            SetupBrokerComboBox();
-
-            // Setup item combo box in grid
-            var itemColumn = (DataGridViewComboBoxColumn)dgvItems.Columns["ItemName"];
-            itemColumn.DataSource = items;
-            itemColumn.DisplayMember = "ItemName";
-            itemColumn.ValueMember = "ItemID";
-
+            // Add missing controls that aren't in Designer
+            AddMissingControls();
+            
+            // Configure existing controls
+            ConfigureExistingControls();
+            
+            // Setup responsive layout
+            SetupResponsiveLayout();
+            
+            // Load combo boxes
+            LoadComboBoxes();
+            
+            // Setup event handlers
+            SetupEventHandlers();
+            
             // Load bill data if editing
             if (isEditMode)
             {
@@ -80,30 +85,163 @@ namespace SaleBillSystem.NET.Forms
             {
                 // Generate new bill number
                 txtBillNo.Text = GenerateNewBillNumber();
-                dtpBillDate.Value = DateTime.Today;
-                dtpDueDate.Value = DateTime.Today.AddDays(30); // Default 30 days
             }
+        }
 
-            // Setup event handlers
+        private void AddMissingControls()
+        {
+            // Add Due Date controls to groupBox1
+            lblDueDate = new Label
+            {
+                Text = "Due Date:",
+                Location = new Point(270, 57),
+                Size = new Size(60, 15),
+                Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
+            };
+            
+            dtpDueDate = new DateTimePicker
+            {
+                Location = new Point(340, 53),
+                Size = new Size(120, 23),
+                Format = DateTimePickerFormat.Short
+            };
+            
+            // Add Broker controls to groupBox1
+            lblBroker = new Label
+            {
+                Text = "Broker:",
+                Location = new Point(270, 85),
+                Size = new Size(60, 15),
+                Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
+            };
+            
+            cmbBroker = new ComboBox
+            {
+                Location = new Point(340, 82),
+                Size = new Size(130, 23),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            
+            // Add controls to groupBox1
+            groupBox1.Controls.AddRange(new Control[] {
+                lblDueDate, dtpDueDate, lblBroker, cmbBroker
+            });
+        }
+
+        private void ConfigureExistingControls()
+        {
+            // Configure txtBillNo
+            txtBillNo.ReadOnly = true;
+            txtBillNo.BackColor = Color.LightGray;
+            
+            // Configure buttons with better styling
+            btnSave.BackColor = Color.FromArgb(0, 122, 204);
+            btnSave.ForeColor = Color.White;
+            btnSave.FlatStyle = FlatStyle.Flat;
+            btnSave.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            
+            btnCancel.BackColor = Color.FromArgb(204, 82, 0);
+            btnCancel.ForeColor = Color.White;
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            
+            // Configure labels with better styling
+            lblTotalAmount.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            lblTotalCharges.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            lblNetAmount.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
+            lblNetAmount.ForeColor = Color.Blue;
+            
+            // Setup DataGridView
+            SetupDataGridView();
+        }
+
+        private void SetupResponsiveLayout()
+        {
+            // Set anchors for responsive behavior
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox3.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            
+            // Set button anchors
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            
+            // Set up initial layout
+            PerformResponsiveLayout();
+        }
+
+        private void SetupEventHandlers()
+        {
+            // Add event handlers
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+            dtpBillDate.ValueChanged += DtpBillDate_ValueChanged;
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
             dgvItems.CellEndEdit += DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
-            dtpBillDate.ValueChanged += DtpBillDate_ValueChanged;
-            
-            // Add KeyDown event handler for keyboard shortcuts
             this.KeyDown += SaleBillForm_KeyDown;
+            this.KeyPreview = true;
+        }
+
+        private void SaleBillForm_Resize(object sender, EventArgs e)
+        {
+            PerformResponsiveLayout();
+        }
+
+        private void PerformResponsiveLayout()
+        {
+            if (this.Width < 1000 || this.Height < 700) return;
             
-            // Set tooltips for add buttons
-            var toolTip = new ToolTip();
-            toolTip.SetToolTip(btnAddParty, "Add New Party (Ctrl+Shift+P)");
-            toolTip.SetToolTip(btnAddItem, "Add New Item (Ctrl+Shift+I)");
-            toolTip.SetToolTip(dtpDueDate, "Due date for payment (auto-calculated based on party's credit days)");
-            toolTip.SetToolTip(btnSave, "Save Bill (Ctrl+S)");
-            toolTip.SetToolTip(btnCancel, "Cancel (Escape)");
+            // Calculate margins
+            int margin = 12;
+            int buttonHeight = 35;
+            int groupBoxSpacing = 10;
             
-            // Set tab order for better keyboard navigation
-            SetTabOrder();
+            // Resize groupBox1 (header)
+            groupBox1.Location = new Point(margin, margin);
+            groupBox1.Size = new Size(this.Width - (margin * 2), 120);
+            
+            // Resize groupBox2 (items)
+            int group2Top = groupBox1.Bottom + groupBoxSpacing;
+            int group2Height = this.Height - group2Top - 120 - (margin * 2); // Leave space for totals and buttons
+            groupBox2.Location = new Point(margin, group2Top);
+            groupBox2.Size = new Size(this.Width - (margin * 2), group2Height);
+            
+            // Resize DataGridView within groupBox2
+            dgvItems.Location = new Point(15, 22);
+            dgvItems.Size = new Size(groupBox2.Width - 70, groupBox2.Height - 35);
+            
+            // Position Add Item button
+            btnAddItem.Location = new Point(groupBox2.Width - 50, 22);
+            
+            // Resize groupBox3 (totals)
+            int group3Top = groupBox2.Bottom + groupBoxSpacing;
+            groupBox3.Location = new Point(margin, group3Top);
+            groupBox3.Size = new Size(this.Width - (margin * 2), 70);
+            
+            // Position total labels within groupBox3
+            int labelWidth = 200;
+            int labelSpacing = (groupBox3.Width - (labelWidth * 3)) / 4;
+            
+            lblTotalAmount.Location = new Point(labelSpacing, 25);
+            lblTotalAmount.Size = new Size(labelWidth, 20);
+            
+            lblTotalCharges.Location = new Point(labelSpacing + labelWidth + labelSpacing, 25);
+            lblTotalCharges.Size = new Size(labelWidth, 20);
+            
+            lblNetAmount.Location = new Point(labelSpacing + (labelWidth * 2) + (labelSpacing * 2), 25);
+            lblNetAmount.Size = new Size(labelWidth, 20);
+            
+            // Position buttons at bottom
+            int buttonY = groupBox3.Bottom + groupBoxSpacing;
+            btnCancel.Location = new Point(this.Width - margin - 120, buttonY);
+            btnCancel.Size = new Size(100, buttonHeight);
+            
+            btnSave.Location = new Point(btnCancel.Left - 110, buttonY);
+            btnSave.Size = new Size(100, buttonHeight);
+            
+            // Adjust party details label size
+            lblPartyDetails.Size = new Size(groupBox1.Width - 500, 80);
         }
         
         private void SetTabOrder()
@@ -216,55 +354,9 @@ namespace SaleBillSystem.NET.Forms
             );
         }
 
-        private void CreateDueDateControls()
-        {
-            // Create Due Date label
-            lblDueDate = new Label
-            {
-                Text = "Due Date:",
-                Location = new Point(270, 65),
-                Size = new Size(60, 15),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
 
-            // Create Due Date picker
-            dtpDueDate = new DateTimePicker
-            {
-                Format = DateTimePickerFormat.Short,
-                Location = new Point(320, 65),
-                Size = new Size(120, 23),
-                TabIndex = 4
-            };
 
-            // Add to the first group box (Bill Header)
-            groupBox1.Controls.Add(lblDueDate);
-            groupBox1.Controls.Add(dtpDueDate);
-        }
 
-        private void CreateBrokerControls()
-        {
-            // Create Broker label
-            lblBroker = new Label
-            {
-                Text = "Broker:",
-                Location = new Point(450, 65),
-                Size = new Size(50, 15),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            // Create Broker combo box
-            cmbBroker = new ComboBox
-            {
-                Location = new Point(505, 62),
-                Size = new Size(150, 23),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                TabIndex = 5
-            };
-
-            // Add to the first group box (Bill Header)
-            groupBox1.Controls.Add(lblBroker);
-            groupBox1.Controls.Add(cmbBroker);
-        }
 
         private void SetupBrokerComboBox()
         {
@@ -315,59 +407,41 @@ namespace SaleBillSystem.NET.Forms
 
         private void LoadBillData()
         {
+            if (currentBill == null) return;
+
             txtBillNo.Text = currentBill.BillNo;
             dtpBillDate.Value = currentBill.BillDate;
-            
-            // Select party
+            dtpDueDate.Value = currentBill.DueDate;
+
+            // Set party
             cmbParty.SelectedValue = currentBill.PartyID;
-            
-            // Select broker if available
-            if (currentBill.BrokerID.HasValue && currentBill.BrokerID.Value > 0)
+
+            // Set broker
+            if (currentBill.BrokerID.HasValue)
             {
                 cmbBroker.SelectedValue = currentBill.BrokerID.Value;
             }
-            else
-            {
-                cmbBroker.SelectedValue = 0; // No Broker
-            }
-            
-            // Set due date if available
-            if (currentBill.DueDate != DateTime.MinValue)
-            {
-                dtpDueDate.Value = currentBill.DueDate;
-            }
-            else
-            {
-                // Calculate due date for existing bills that don't have one
-                if (cmbParty.SelectedValue is int partyId)
-                {
-                    var party = parties.FirstOrDefault(p => p.PartyID == partyId);
-                    if (party != null)
-                    {
-                        CalculateDueDate(party.CreditDays);
-                    }
-                }
-            }
-            
+
             // Load items
-            foreach (var billItem in currentBill.BillItems)
+            foreach (var item in currentBill.BillItems)
             {
                 int rowIndex = dgvItems.Rows.Add();
-                var row = dgvItems.Rows[rowIndex];
-                row.Cells["ItemName"].Value = billItem.ItemID;
-                row.Cells["Quantity"].Value = billItem.Quantity;
-                row.Cells["Rate"].Value = billItem.Rate;
-                row.Cells["Amount"].Value = billItem.Amount;
-                row.Cells["Charges"].Value = billItem.Charges;
-                row.Cells["TotalAmount"].Value = billItem.TotalAmount;
+                DataGridViewRow row = dgvItems.Rows[rowIndex];
+                
+                row.Cells["ItemName"].Value = item.ItemID;
+                row.Cells["Quantity"].Value = item.Quantity;
+                row.Cells["Rate"].Value = item.Rate;
+                row.Cells["Amount"].Value = item.Amount;
+                row.Cells["Charges"].Value = item.Charges;
+                row.Cells["TotalAmount"].Value = item.TotalAmount;
             }
-            
+
             CalculateTotals();
         }
 
         private string GenerateNewBillNumber()
         {
-            return $"BILL-{DateTime.Now:yyyyMMdd}-{DateTime.Now:HHmmss}";
+            return BillService.GenerateNewBillNumber();
         }
 
         private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
@@ -496,9 +570,113 @@ namespace SaleBillSystem.NET.Forms
                 }
             }
 
-            lblTotalAmount.Text = $"Total Amount: {totalAmount:F2}";
-            lblTotalCharges.Text = $"Total Charges: {totalCharges:F2}";
-            lblNetAmount.Text = $"Net Amount: {netAmount:F2}";
+            // Update the current bill amounts
+            currentBill.TotalAmount = totalAmount;
+            currentBill.TotalCharges = totalCharges;
+            currentBill.NetAmount = netAmount;
+
+            // Update labels
+            lblTotalAmount.Text = $"Total Amount: ₹{totalAmount:N2}";
+            lblTotalCharges.Text = $"Total Charges: ₹{totalCharges:N2}";
+            lblNetAmount.Text = $"Net Amount: ₹{netAmount:N2}";
+        }
+
+        private void LoadComboBoxes()
+        {
+            // Setup party combo box
+            cmbParty.DataSource = parties;
+            cmbParty.DisplayMember = "PartyName";
+            cmbParty.ValueMember = "PartyID";
+            cmbParty.SelectedIndex = -1;
+
+            // Setup broker combo box
+            SetupBrokerComboBox();
+        }
+
+        private void SetupDataGridView()
+        {
+            dgvItems.AutoGenerateColumns = false;
+            dgvItems.AllowUserToAddRows = true;
+            dgvItems.AllowUserToDeleteRows = true;
+            dgvItems.RowHeadersVisible = false;
+            dgvItems.BackgroundColor = Color.White;
+            dgvItems.BorderStyle = BorderStyle.Fixed3D;
+            dgvItems.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvItems.DefaultCellStyle.SelectionBackColor = Color.LightBlue;
+            dgvItems.DefaultCellStyle.SelectionForeColor = Color.Black;
+            dgvItems.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(64, 64, 64);
+            dgvItems.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvItems.ColumnHeadersDefaultCellStyle.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            dgvItems.EnableHeadersVisualStyles = false;
+            dgvItems.GridColor = Color.LightGray;
+            dgvItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+
+            // Clear existing columns
+            dgvItems.Columns.Clear();
+
+            // Item Name (ComboBox)
+            var itemColumn = new DataGridViewComboBoxColumn
+            {
+                Name = "ItemName",
+                HeaderText = "Item",
+                DataSource = items,
+                DisplayMember = "ItemName",
+                ValueMember = "ItemID",
+                Width = 200
+            };
+            dgvItems.Columns.Add(itemColumn);
+
+            // Quantity
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Quantity",
+                HeaderText = "Quantity",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            // Rate
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Rate",
+                HeaderText = "Rate",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            // Amount
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Amount",
+                HeaderText = "Amount",
+                Width = 100,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray }
+            });
+
+            // Charges
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "Charges",
+                HeaderText = "Charges",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            // Total Amount
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "TotalAmount",
+                HeaderText = "Total",
+                Width = 100,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
+            });
+
+            // Event handlers
+            dgvItems.CellValueChanged += DgvItems_CellValueChanged;
+            dgvItems.CellEndEdit += DgvItems_CellEndEdit;
+            dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
         }
 
         private void btnSave_Click(object sender, EventArgs e)

@@ -47,35 +47,26 @@ namespace SaleBillSystem.NET.Models
         // Check if bill is overdue
         public bool IsOverdue => DateTime.Today > DueDate;
 
-        // Payment status properties
-        public PaymentStatus PaymentStatus
-        {
-            get
-            {
-                if (PaidAmount <= 0.01)
-                    return PaymentStatus.Unpaid;
-                else if (PaidAmount >= NetAmount - 0.01)
-                    return PaidAmount > NetAmount + 0.01 ? PaymentStatus.Overpaid : PaymentStatus.Paid;
-                else
-                    return PaymentStatus.Partial;
-            }
-        }
+        // Get days overdue
+        public int DaysOverdue => IsOverdue ? (DateTime.Today - DueDate).Days : 0;
 
+        // Payment status text for display
         public string PaymentStatusText
         {
             get
             {
-                return PaymentStatus switch
-                {
-                    PaymentStatus.Unpaid => "Unpaid",
-                    PaymentStatus.Partial => "Partial",
-                    PaymentStatus.Paid => "Paid",
-                    PaymentStatus.Overpaid => "Overpaid",
-                    _ => "Unknown"
-                };
+                if (BalanceAmount <= 0.01)
+                    return "Paid";
+                else if (IsOverdue)
+                    return $"Overdue ({DaysOverdue} days)";
+                else if (DaysUntilDue > 0)
+                    return $"Due in {DaysUntilDue} days";
+                else
+                    return "Due Today";
             }
         }
 
-        public string PaymentSummary => $"Paid: ₹{PaidAmount:N2} | Balance: ₹{BalanceAmount:N2}";
+        // Item count for display
+        public int ItemCount => BillItems.Count;
     }
 } 

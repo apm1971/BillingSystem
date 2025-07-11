@@ -16,7 +16,7 @@ namespace SaleBillSystem.NET.Forms
         public BillListForm()
         {
             InitializeComponent();
-            SetupDataGrid();
+            SetupDataGridView();
             SetupEventHandlers();
             LoadBills();
             this.KeyPreview = true; // Enable form to receive key events first
@@ -185,7 +185,7 @@ namespace SaleBillSystem.NET.Forms
             dtpToDate.ValueChanged += DateFilter_Changed;
         }
 
-        private void SetupDataGrid()
+        private void SetupDataGridView()
         {
             dgvBills.AutoGenerateColumns = false;
             dgvBills.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -193,18 +193,41 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.ReadOnly = true;
             dgvBills.AllowUserToAddRows = false;
             dgvBills.AllowUserToDeleteRows = false;
-
-            // Configure columns
+            dgvBills.RowHeadersVisible = false;
+            dgvBills.BackgroundColor = Color.White;
+            dgvBills.BorderStyle = BorderStyle.Fixed3D;
+            dgvBills.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvBills.DefaultCellStyle.SelectionBackColor = Color.LightBlue;
+            dgvBills.DefaultCellStyle.SelectionForeColor = Color.Black;
+            dgvBills.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(64, 64, 64);
+            dgvBills.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgvBills.ColumnHeadersDefaultCellStyle.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            dgvBills.EnableHeadersVisualStyles = false;
+            dgvBills.GridColor = Color.LightGray;
+            dgvBills.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+            
+            // Clear existing columns
             dgvBills.Columns.Clear();
 
+            // Bill ID (Hidden)
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "BillID",
+                HeaderText = "Bill ID",
+                DataPropertyName = "BillID",
+                Visible = false
+            });
+
+            // Bill Number
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BillNo",
                 HeaderText = "Bill No",
                 DataPropertyName = "BillNo",
-                Width = 120
+                Width = 100
             });
 
+            // Bill Date
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BillDate",
@@ -214,6 +237,7 @@ namespace SaleBillSystem.NET.Forms
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
             });
 
+            // Due Date
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "DueDate",
@@ -223,31 +247,35 @@ namespace SaleBillSystem.NET.Forms
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
             });
 
+            // Party Name
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "PartyName",
-                HeaderText = "Party Name",
+                HeaderText = "Party",
                 DataPropertyName = "PartyName",
                 Width = 180
             });
 
+            // Broker Name
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BrokerName",
                 HeaderText = "Broker",
                 DataPropertyName = "BrokerName",
-                Width = 150
+                Width = 120
             });
 
+            // Total Amount
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "TotalAmount",
                 HeaderText = "Total Amount",
                 DataPropertyName = "TotalAmount",
-                Width = 120,
+                Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
+            // Total Charges
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "TotalCharges",
@@ -257,13 +285,14 @@ namespace SaleBillSystem.NET.Forms
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
+            // Net Amount
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "NetAmount",
                 HeaderText = "Net Amount",
                 DataPropertyName = "NetAmount",
-                Width = 120,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
             });
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
@@ -271,7 +300,7 @@ namespace SaleBillSystem.NET.Forms
                 Name = "ItemCount",
                 HeaderText = "Items",
                 DataPropertyName = "ItemCount",
-                Width = 80,
+                Width = 60,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
 
@@ -290,22 +319,16 @@ namespace SaleBillSystem.NET.Forms
                 HeaderText = "Balance",
                 DataPropertyName = "BalanceAmount",
                 Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
             });
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "PaymentStatus",
-                HeaderText = "Payment Status",
+                Name = "PaymentStatusText",
+                HeaderText = "Status",
                 DataPropertyName = "PaymentStatusText",
-                Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+                Width = 120
             });
-
-            // Event handlers
-            dgvBills.SelectionChanged += dgvBills_SelectionChanged;
-            dgvBills.CellDoubleClick += dgvBills_CellDoubleClick;
-            dgvBills.KeyDown += dgvBills_KeyDown;
         }
 
         private void LoadBills()

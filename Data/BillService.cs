@@ -197,15 +197,15 @@ namespace SaleBillSystem.NET.Data
                         }
                         
                         // Add bill details
-                        foreach (BillItem item in bill.BillItems)
+                        foreach (var item in bill.BillItems)
                         {
-                            string sql = @"INSERT INTO BillDetails (
+                            string itemSql = @"INSERT INTO BillDetails (
                                 BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, TotalAmount
                             ) VALUES (
                                 @BillID, @ItemID, @ItemName, @Quantity, @Rate, @Amount, @Charges, @TotalAmount
                             )";
                             
-                            SQLiteParameter[] parameters = {
+                            SQLiteParameter[] itemParameters = {
                                 new SQLiteParameter("@BillID", bill.BillID),
                                 new SQLiteParameter("@ItemID", item.ItemID),
                                 new SQLiteParameter("@ItemName", item.ItemName),
@@ -216,18 +216,16 @@ namespace SaleBillSystem.NET.Data
                                 new SQLiteParameter("@TotalAmount", item.TotalAmount)
                             };
                             
-                            ExecuteNonQuery(conn, sql, parameters);
+                            ExecuteNonQuery(conn, itemSql, itemParameters);
                         }
                         
                         transaction.Commit();
                         return true;
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         transaction.Rollback();
-                        System.Windows.Forms.MessageBox.Show($"Error saving bill: {ex.Message}", "Database Error",
-                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-                        return false;
+                        throw;
                     }
                 }
             }
@@ -243,52 +241,56 @@ namespace SaleBillSystem.NET.Data
                 {
                     try
                     {
-                        // Delete bill details
-                        string sql = "DELETE FROM BillDetails WHERE BillID = @BillID";
-                        ExecuteNonQuery(conn, sql, new SQLiteParameter("@BillID", billID));
+                        // Delete bill details first
+                        string deleteDetailsSql = "DELETE FROM BillDetails WHERE BillID = @BillID";
+                        SQLiteParameter param1 = new SQLiteParameter("@BillID", billID);
+                        ExecuteNonQuery(conn, deleteDetailsSql, param1);
                         
                         // Delete bill master
-                        sql = "DELETE FROM BillMaster WHERE BillID = @BillID";
-                        ExecuteNonQuery(conn, sql, new SQLiteParameter("@BillID", billID));
+                        string deleteBillSql = "DELETE FROM BillMaster WHERE BillID = @BillID";
+                        SQLiteParameter param2 = new SQLiteParameter("@BillID", billID);
+                        ExecuteNonQuery(conn, deleteBillSql, param2);
                         
                         transaction.Commit();
                         return true;
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         transaction.Rollback();
-                        System.Windows.Forms.MessageBox.Show($"Error deleting bill: {ex.Message}", "Database Error",
-                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-                        return false;
+                        throw;
                     }
                 }
             }
         }
         
-        // Execute non-query with transaction
+        // Generate new bill number
+        public static string GenerateNewBillNumber()
+        {
+            string sql = "SELECT COUNT(*) FROM BillMaster";
+            object result = DatabaseManager.ExecuteScalar(sql);
+            int count = Convert.ToInt32(result);
+            return $"BILL-{(count + 1):D4}";
+        }
+        
+        // Helper methods for database operations
         private static int ExecuteNonQuery(SQLiteConnection conn, string sql, params SQLiteParameter[] parameters)
         {
             using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
             {
                 if (parameters != null)
-                {
                     cmd.Parameters.AddRange(parameters);
-                }
                 return cmd.ExecuteNonQuery();
             }
         }
         
-        // Execute scalar with transaction
         private static object ExecuteScalar(SQLiteConnection conn, string sql, params SQLiteParameter[] parameters)
         {
             using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
             {
                 if (parameters != null)
-                {
                     cmd.Parameters.AddRange(parameters);
-                }
                 return cmd.ExecuteScalar();
             }
         }
     }
-} 
+}

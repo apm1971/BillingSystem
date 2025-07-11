@@ -93,15 +93,21 @@ namespace SaleBillSystem.NET.Forms
             ToolStripMenuItem utilitiesMenu = new ToolStripMenuItem("&Utilities");
             utilitiesMenu.ForeColor = Color.White;
             
+            ToolStripMenuItem utilitiesSettings = new ToolStripMenuItem("&Settings");
+
             ToolStripMenuItem utilitiesBackup = new ToolStripMenuItem("&Backup Data");
             ToolStripMenuItem utilitiesRestore = new ToolStripMenuItem("&Restore Data");
             ToolStripMenuItem utilitiesGenerateMockData = new ToolStripMenuItem("&Generate Mock Data");
             ToolStripMenuItem utilitiesClearAllData = new ToolStripMenuItem("&Clear All Data");
             
             // Add keyboard shortcuts for utilities
+            utilitiesSettings.ShortcutKeys = Keys.Control | Keys.Alt | Keys.S;
             utilitiesGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
             utilitiesClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
             
+            utilitiesMenu.DropDownItems.Add(utilitiesSettings);
+
+            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             utilitiesMenu.DropDownItems.Add(utilitiesBackup);
             utilitiesMenu.DropDownItems.Add(utilitiesRestore);
             utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -147,6 +153,8 @@ namespace SaleBillSystem.NET.Forms
             mastersParty.Click += (s, e) => ShowPartyMaster();
             mastersItem.Click += (s, e) => ShowItemMaster();
             mastersBroker.Click += (s, e) => ShowBrokerMaster();
+            utilitiesSettings.Click += (s, e) => ShowSettings();
+
             utilitiesGenerateMockData.Click += (s, e) => GenerateMockData();
             utilitiesClearAllData.Click += (s, e) => ClearAllData();
             helpAbout.Click += (s, e) => ShowAbout();
@@ -191,6 +199,19 @@ namespace SaleBillSystem.NET.Forms
             var form = new BrokerListForm();
             form.ShowDialog();
         }
+
+        private void ShowSettings()
+        {
+            var settingsForm = new SettingsForm();
+            if (settingsForm.ShowDialog() == DialogResult.OK)
+            {
+                // Settings were updated, you might want to refresh any cached values
+                MessageBox.Show("Settings updated successfully! Changes will take effect for new bills.", 
+                    "Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+
 
         private void ShowPaymentEntry()
         {
@@ -281,6 +302,7 @@ namespace SaleBillSystem.NET.Forms
                 "Alt+F2: Item Master\n" +
                 "Alt+F3: Broker Master\n\n" +
                 "=== UTILITIES ===\n" +
+                "Ctrl+Alt+S: Settings\n" +
                 "Ctrl+G: Generate Mock Data\n" +
                 "Ctrl+Shift+Delete: Clear All Data\n\n" +
                 "=== HELP & SYSTEM ===\n" +
@@ -365,6 +387,12 @@ namespace SaleBillSystem.NET.Forms
             {
                 // Alt+F4: Exit
                 this.Close();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.Alt && e.KeyCode == Keys.S)
+            {
+                // Ctrl+Alt+S: Settings
+                ShowSettings();
                 e.SuppressKeyPress = true;
             }
             else if (e.Control && e.KeyCode == Keys.G)

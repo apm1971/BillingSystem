@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using System.Drawing; // Added for Color
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -132,11 +133,10 @@ namespace SaleBillSystem.NET.Forms
                         Bill bill = BillService.GetBillByID(detail.BillID);
                         if (bill != null)
                         {
-                            // Temporarily adjust paid amount to exclude this payment's allocation
-                            // so we can see the correct balance for editing
-                            bill.PaidAmount -= detail.AllocatedAmount;
-                            // Note: BalanceAmount is automatically calculated as NetAmount - PaidAmount
-                            outstandingBills.Add(bill);
+                                                    // Temporarily adjust paid amount to exclude this payment's allocation
+                        // so we can see the correct balance for editing
+                        bill.PaidAmount -= detail.AllocatedAmount;
+                        outstandingBills.Add(bill);
                         }
                     }
                     
@@ -161,17 +161,25 @@ namespace SaleBillSystem.NET.Forms
                     }
                     
                     // Create display data with existing payment allocations
-                    var billData = outstandingBills.Select(b => new
+                    var billData = outstandingBills.Select(b => 
                     {
-                        BillID = b.BillID,
-                        BillNo = b.BillNo,
-                        BillDate = b.BillDate,
-                        PartyName = b.PartyName,
-                        NetAmount = b.NetAmount,
-                        PaidAmount = b.PaidAmount,
-                        BalanceAmount = b.BalanceAmount,
-                        PaymentAmount = currentPayment.PaymentDetails
-                            .FirstOrDefault(pd => pd.BillID == b.BillID)?.AllocatedAmount ?? 0.0
+                        var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
+                        
+                        return new
+                        {
+                            BillID = b.BillID,
+                            BillNo = b.BillNo,
+                            BillDate = b.BillDate,
+                            PartyName = b.PartyName,
+                            NetAmount = b.NetAmount,
+                            InterestAmount = interestAmount,
+                            DiscountAmount = discountAmount,
+                            NetPayableAmount = netPayableAmount,
+                            PaidAmount = b.PaidAmount,
+                            BalanceAmount = netPayableAmount - b.PaidAmount,
+                            PaymentAmount = currentPayment.PaymentDetails
+                                .FirstOrDefault(pd => pd.BillID == b.BillID)?.AllocatedAmount ?? 0.0
+                        };
                     }).ToList();
 
                     dgvBills.DataSource = billData;
@@ -189,16 +197,24 @@ namespace SaleBillSystem.NET.Forms
                     }
 
                     // Create display data with payment amount column
-                    var billData = outstandingBills.Select(b => new
+                    var billData = outstandingBills.Select(b => 
                     {
-                        BillID = b.BillID,
-                        BillNo = b.BillNo,
-                        BillDate = b.BillDate,
-                        PartyName = b.PartyName,
-                        NetAmount = b.NetAmount,
-                        PaidAmount = b.PaidAmount,
-                        BalanceAmount = b.BalanceAmount,
-                        PaymentAmount = 0.0
+                        var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
+                        
+                        return new
+                        {
+                            BillID = b.BillID,
+                            BillNo = b.BillNo,
+                            BillDate = b.BillDate,
+                            PartyName = b.PartyName,
+                            NetAmount = b.NetAmount,
+                            InterestAmount = interestAmount,
+                            DiscountAmount = discountAmount,
+                            NetPayableAmount = netPayableAmount,
+                            PaidAmount = b.PaidAmount,
+                            BalanceAmount = netPayableAmount - b.PaidAmount,
+                            PaymentAmount = 0.0
+                        };
                     }).ToList();
 
                     dgvBills.DataSource = billData;
@@ -249,6 +265,7 @@ namespace SaleBillSystem.NET.Forms
             cmbBroker.SelectedIndexChanged += Broker_SelectedIndexChanged;
             txtPaymentAmount.TextChanged += PaymentAmount_TextChanged;
             dgvBills.CellValueChanged += DgvBills_CellValueChanged;
+            dtpPaymentDate.ValueChanged += DtpPaymentDate_ValueChanged; // Added for date change
             
             // Add KeyDown event handler for keyboard shortcuts
             this.KeyDown += PaymentEntryForm_KeyDown;
@@ -436,9 +453,42 @@ namespace SaleBillSystem.NET.Forms
                 Name = "NetAmount",
                 HeaderText = "Bill Amount",
                 DataPropertyName = "NetAmount",
-                Width = 100,
+                Width = 90,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            // Interest Amount
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "InterestAmount",
+                HeaderText = "Interest",
+                DataPropertyName = "InterestAmount",
+                Width = 80,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.Red }
+            });
+
+            // Discount Amount
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "DiscountAmount",
+                HeaderText = "Discount",
+                DataPropertyName = "DiscountAmount",
+                Width = 80,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, ForeColor = Color.Green }
+            });
+
+            // Net Payable Amount
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "NetPayableAmount",
+                HeaderText = "Net Payable",
+                DataPropertyName = "NetPayableAmount",
+                Width = 100,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
             });
 
             // Previous Paid
@@ -523,24 +573,46 @@ namespace SaleBillSystem.NET.Forms
                     outstandingBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
                 }
 
-                // Create display data with payment amount column
-                var billData = outstandingBills.Select(b => new
+                // Use the new RefreshBillsList method to calculate interest/discount
+                RefreshBillsList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading bills: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RefreshBillsList()
+        {
+            try
+            {
+                // Create display data with calculated interest/discount based on payment date
+                var billData = outstandingBills.Select(b => 
                 {
-                    BillID = b.BillID,
-                    BillNo = b.BillNo,
-                    BillDate = b.BillDate,
-                    PartyName = b.PartyName,
-                    NetAmount = b.NetAmount,
-                    PaidAmount = b.PaidAmount,
-                    BalanceAmount = b.BalanceAmount,
-                    PaymentAmount = 0.0
+                    var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
+                    
+                    return new
+                    {
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        BillDate = b.BillDate,
+                        PartyName = b.PartyName,
+                        NetAmount = b.NetAmount,
+                        InterestAmount = interestAmount,
+                        DiscountAmount = discountAmount,
+                        NetPayableAmount = netPayableAmount,
+                        PaidAmount = b.PaidAmount,
+                        BalanceAmount = netPayableAmount - b.PaidAmount,
+                        PaymentAmount = 0.0
+                    };
                 }).ToList();
 
                 dgvBills.DataSource = billData;
                 groupBoxBills.Enabled = outstandingBills.Count > 0;
                 
                 lblTotalBills.Text = $"Outstanding Bills: {outstandingBills.Count}";
-                lblTotalOutstanding.Text = $"Total Outstanding: ₹{outstandingBills.Sum(b => b.BalanceAmount):N2}";
+                lblTotalOutstanding.Text = $"Total Outstanding: ₹{billData.Sum(b => b.BalanceAmount):N2}";
             }
             catch (Exception ex)
             {
@@ -565,49 +637,52 @@ namespace SaleBillSystem.NET.Forms
 
         private void AutoAllocatePayment()
         {
-            if (isAutoAllocating) return; // Prevent recursive calls
-            
-            isAutoAllocating = true;
-            
-            try
+            if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
             {
-                if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
+                // Clear all payment amounts if invalid
+                foreach (DataGridViewRow row in dgvBills.Rows)
                 {
-                    // Clear all allocations if payment amount is invalid
-                    foreach (DataGridViewRow row in dgvBills.Rows)
+                    if (row.Cells["PaymentAmount"] != null)
                     {
                         row.Cells["PaymentAmount"].Value = 0.0;
                     }
-                    UpdatePaymentSummary();
-                    return;
                 }
+                UpdatePaymentSummary();
+                return;
+            }
 
-                // First, clear all existing allocations
-                foreach (DataGridViewRow row in dgvBills.Rows)
+            double remainingAmount = paymentAmount;
+
+            // Get current bill data with calculated interest/discount
+            var billData = dgvBills.DataSource as IEnumerable<dynamic>;
+            if (billData == null) return;
+
+            var billList = billData.ToList();
+
+            // Allocate payment to bills in order (oldest first)
+            for (int i = 0; i < dgvBills.Rows.Count && remainingAmount > 0; i++)
+            {
+                var row = dgvBills.Rows[i];
+                var billInfo = billList[i];
+                
+                double balanceAmount = billInfo.BalanceAmount;
+                double allocationAmount = Math.Min(remainingAmount, balanceAmount);
+                
+                row.Cells["PaymentAmount"].Value = allocationAmount;
+                remainingAmount -= allocationAmount;
+            }
+
+            // Clear remaining rows if payment is less than total outstanding
+            for (int i = 0; i < dgvBills.Rows.Count; i++)
+            {
+                var row = dgvBills.Rows[i];
+                if (row.Cells["PaymentAmount"].Value == null)
                 {
                     row.Cells["PaymentAmount"].Value = 0.0;
                 }
-
-                double remainingAmount = paymentAmount;
-
-                // Auto-allocate payment to bills (FIFO - oldest first)
-                foreach (DataGridViewRow row in dgvBills.Rows)
-                {
-                    if (remainingAmount <= 0) break;
-
-                    double balanceAmount = Convert.ToDouble(row.Cells["BalanceAmount"].Value);
-                    double allocationAmount = Math.Min(remainingAmount, balanceAmount);
-                    
-                    row.Cells["PaymentAmount"].Value = allocationAmount;
-                    remainingAmount -= allocationAmount;
-                }
-
-                UpdatePaymentSummary();
             }
-            finally
-            {
-                isAutoAllocating = false;
-            }
+
+            UpdatePaymentSummary();
         }
 
         private void btnAutoAllocate_Click(object sender, EventArgs e)
@@ -647,12 +722,12 @@ namespace SaleBillSystem.NET.Forms
         private void UpdatePaymentSummary()
         {
             double totalAllocated = 0;
+            
             foreach (DataGridViewRow row in dgvBills.Rows)
             {
-                if (row.Cells["PaymentAmount"].Value != null && 
-                    double.TryParse(row.Cells["PaymentAmount"].Value.ToString(), out double amount))
+                if (row.Cells["PaymentAmount"].Value != null)
                 {
-                    totalAllocated += amount;
+                    totalAllocated += Convert.ToDouble(row.Cells["PaymentAmount"].Value);
                 }
             }
 
@@ -660,9 +735,26 @@ namespace SaleBillSystem.NET.Forms
             
             if (double.TryParse(txtPaymentAmount.Text, out double paymentAmount))
             {
-                double unallocated = paymentAmount - totalAllocated;
-                lblUnallocatedAmount.Text = $"Unallocated: ₹{unallocated:N2}";
-                lblUnallocatedAmount.ForeColor = unallocated >= 0 ? System.Drawing.Color.Green : System.Drawing.Color.Red;
+                double unallocatedAmount = paymentAmount - totalAllocated;
+                lblUnallocatedAmount.Text = $"Unallocated: ₹{unallocatedAmount:N2}";
+                lblUnallocatedAmount.ForeColor = unallocatedAmount == 0 ? Color.Green : Color.Red;
+            }
+            else
+            {
+                lblUnallocatedAmount.Text = "Unallocated: ₹0.00";
+                lblUnallocatedAmount.ForeColor = Color.Black;
+            }
+        }
+
+        private void DtpPaymentDate_ValueChanged(object sender, EventArgs e)
+        {
+            // Recalculate interest and discount when payment date changes
+            RefreshBillsList();
+            
+            // Re-allocate payment if there's an amount entered
+            if (!string.IsNullOrWhiteSpace(txtPaymentAmount.Text))
+            {
+                PaymentAmount_TextChanged(txtPaymentAmount, EventArgs.Empty);
             }
         }
 
@@ -694,16 +786,19 @@ namespace SaleBillSystem.NET.Forms
                             int billId = Convert.ToInt32(row.Cells["BillID"].Value);
                             Bill bill = outstandingBills.First(b => b.BillID == billId);
 
+                            // Calculate interest and discount for this bill
+                            var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(bill, dtpPaymentDate.Value);
+                            
                             PaymentDetail detail = new PaymentDetail
                             {
                                 BillID = billId,
                                 BillNo = bill.BillNo,
                                 PartyName = bill.PartyName,
-                                BillAmount = bill.NetAmount,
+                                BillAmount = netPayableAmount, // Use calculated net payable amount
                                 PreviousPaid = bill.PaidAmount,
-                                BalanceBefore = bill.BalanceAmount,
+                                BalanceBefore = netPayableAmount - bill.PaidAmount,
                                 AllocatedAmount = amount,
-                                BalanceAfter = bill.BalanceAmount - amount
+                                BalanceAfter = (netPayableAmount - bill.PaidAmount) - amount
                             };
 
                             currentPayment.PaymentDetails.Add(detail);

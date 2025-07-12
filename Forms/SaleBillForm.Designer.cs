@@ -40,12 +40,6 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.dgvItems = new System.Windows.Forms.DataGridView();
             this.btnAddItem = new System.Windows.Forms.Button();
-            this.ItemName = new System.Windows.Forms.DataGridViewComboBoxColumn();
-            this.Quantity = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Rate = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Amount = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Charges = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.TotalAmount = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.lblNetAmount = new System.Windows.Forms.Label();
             this.lblTotalCharges = new System.Windows.Forms.Label();
@@ -70,7 +64,7 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(960, 120);
+            this.groupBox1.Size = new System.Drawing.Size(960, 145);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Bill Header";
@@ -79,9 +73,9 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.lblPartyDetails.BackColor = System.Drawing.Color.LightGray;
             this.lblPartyDetails.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.lblPartyDetails.Location = new System.Drawing.Point(480, 25);
+            this.lblPartyDetails.Location = new System.Drawing.Point(550, 25);
             this.lblPartyDetails.Name = "lblPartyDetails";
-            this.lblPartyDetails.Size = new System.Drawing.Size(460, 80);
+            this.lblPartyDetails.Size = new System.Drawing.Size(390, 105);
             this.lblPartyDetails.TabIndex = 6;
             this.lblPartyDetails.Text = "Party details will appear here";
             this.lblPartyDetails.TextAlign = System.Drawing.ContentAlignment.TopLeft;
@@ -153,7 +147,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.groupBox2.Controls.Add(this.dgvItems);
             this.groupBox2.Controls.Add(this.btnAddItem);
-            this.groupBox2.Location = new System.Drawing.Point(12, 138);
+            this.groupBox2.Location = new System.Drawing.Point(12, 170);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(960, 350);
             this.groupBox2.TabIndex = 1;
@@ -166,119 +160,71 @@ namespace SaleBillSystem.NET.Forms
             this.dgvItems.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dgvItems.BackgroundColor = System.Drawing.SystemColors.Window;
             this.dgvItems.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvItems.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.ItemName,
-            this.Quantity,
-            this.Rate,
-            this.Amount,
-            this.Charges,
-            this.TotalAmount});
             this.dgvItems.Location = new System.Drawing.Point(15, 22);
             this.dgvItems.Name = "dgvItems";
-            this.dgvItems.Size = new System.Drawing.Size(880, 315);
+            this.dgvItems.Size = new System.Drawing.Size(890, 315);
             this.dgvItems.TabIndex = 0;
             // 
             // btnAddItem
             // 
             this.btnAddItem.BackColor = System.Drawing.Color.LightBlue;
             this.btnAddItem.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnAddItem.Location = new System.Drawing.Point(905, 22);
+            this.btnAddItem.Location = new System.Drawing.Point(915, 22);
             this.btnAddItem.Name = "btnAddItem";
-            this.btnAddItem.Size = new System.Drawing.Size(40, 30);
+            this.btnAddItem.Size = new System.Drawing.Size(30, 30);
             this.btnAddItem.TabIndex = 1;
-            this.btnAddItem.Text = "+ Item";
+            this.btnAddItem.Text = "+";
             this.btnAddItem.UseVisualStyleBackColor = false;
             this.btnAddItem.Click += new System.EventHandler(this.btnAddItem_Click);
-            // 
-            // ItemName
-            // 
-            this.ItemName.FillWeight = 120F;
-            this.ItemName.HeaderText = "Item Name";
-            this.ItemName.Name = "ItemName";
-            this.ItemName.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.ItemName.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            // 
-            // Quantity
-            // 
-            this.Quantity.FillWeight = 80F;
-            this.Quantity.HeaderText = "Quantity";
-            this.Quantity.Name = "Quantity";
-            // 
-            // Rate
-            // 
-            this.Rate.FillWeight = 80F;
-            this.Rate.HeaderText = "Rate";
-            this.Rate.Name = "Rate";
-            // 
-            // Amount
-            // 
-            this.Amount.FillWeight = 80F;
-            this.Amount.HeaderText = "Amount";
-            this.Amount.Name = "Amount";
-            this.Amount.ReadOnly = true;
-            // 
-            // Charges
-            // 
-            this.Charges.FillWeight = 80F;
-            this.Charges.HeaderText = "Charges";
-            this.Charges.Name = "Charges";
-            // 
-            // TotalAmount
-            // 
-            this.TotalAmount.FillWeight = 80F;
-            this.TotalAmount.HeaderText = "Total Amount";
-            this.TotalAmount.Name = "TotalAmount";
-            this.TotalAmount.ReadOnly = true;
             // 
             // groupBox3
             // 
             this.groupBox3.Controls.Add(this.lblNetAmount);
             this.groupBox3.Controls.Add(this.lblTotalCharges);
             this.groupBox3.Controls.Add(this.lblTotalAmount);
-            this.groupBox3.Location = new System.Drawing.Point(12, 494);
+            this.groupBox3.Location = new System.Drawing.Point(12, 530);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(960, 80);
+            this.groupBox3.Size = new System.Drawing.Size(960, 70);
             this.groupBox3.TabIndex = 2;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Bill Totals";
             // 
             // lblNetAmount
             // 
-            this.lblNetAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblNetAmount.Location = new System.Drawing.Point(650, 25);
+            this.lblNetAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.lblNetAmount.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
+            this.lblNetAmount.Location = new System.Drawing.Point(400, 22);
             this.lblNetAmount.Name = "lblNetAmount";
-            this.lblNetAmount.Size = new System.Drawing.Size(280, 40);
+            this.lblNetAmount.Size = new System.Drawing.Size(400, 30);
             this.lblNetAmount.TabIndex = 2;
-            this.lblNetAmount.Text = "Net Amount: 0.00";
-            this.lblNetAmount.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblNetAmount.Text = "Net Amount: ₹0.00";
+            this.lblNetAmount.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // lblTotalCharges
             // 
-            this.lblTotalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.lblTotalCharges.Location = new System.Drawing.Point(350, 25);
             this.lblTotalCharges.Name = "lblTotalCharges";
-            this.lblTotalCharges.Size = new System.Drawing.Size(280, 40);
+            this.lblTotalCharges.Size = new System.Drawing.Size(280, 25);
             this.lblTotalCharges.TabIndex = 1;
-            this.lblTotalCharges.Text = "Total Charges: 0.00";
-            this.lblTotalCharges.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblTotalCharges.Text = "Total Charges: ₹0.00";
+            this.lblTotalCharges.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // lblTotalAmount
             // 
-            this.lblTotalAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.lblTotalAmount.Location = new System.Drawing.Point(50, 25);
+            this.lblTotalAmount.Location = new System.Drawing.Point(25, 25);
             this.lblTotalAmount.Name = "lblTotalAmount";
-            this.lblTotalAmount.Size = new System.Drawing.Size(280, 40);
+            this.lblTotalAmount.Size = new System.Drawing.Size(280, 25);
             this.lblTotalAmount.TabIndex = 0;
-            this.lblTotalAmount.Text = "Total Amount: 0.00";
-            this.lblTotalAmount.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblTotalAmount.Text = "Total Amount: ₹0.00";
+            this.lblTotalAmount.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // btnSave
             // 
-            this.btnSave.BackColor = System.Drawing.Color.LightGreen;
-            this.btnSave.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnSave.Location = new System.Drawing.Point(750, 590);
+            this.btnSave.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(122)))), ((int)(((byte)(204)))));
+            this.btnSave.ForeColor = System.Drawing.Color.White;
+            this.btnSave.Location = new System.Drawing.Point(752, 560);
             this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(100, 40);
+            this.btnSave.Size = new System.Drawing.Size(100, 35);
             this.btnSave.TabIndex = 3;
             this.btnSave.Text = "Save";
             this.btnSave.UseVisualStyleBackColor = false;
@@ -286,11 +232,11 @@ namespace SaleBillSystem.NET.Forms
             // 
             // btnCancel
             // 
-            this.btnCancel.BackColor = System.Drawing.Color.LightCoral;
-            this.btnCancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnCancel.Location = new System.Drawing.Point(872, 590);
+            this.btnCancel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(204)))), ((int)(((byte)(82)))), ((int)(((byte)(0)))));
+            this.btnCancel.ForeColor = System.Drawing.Color.White;
+            this.btnCancel.Location = new System.Drawing.Point(872, 560);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(100, 40);
+            this.btnCancel.Size = new System.Drawing.Size(100, 35);
             this.btnCancel.TabIndex = 4;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = false;
@@ -298,20 +244,21 @@ namespace SaleBillSystem.NET.Forms
             // 
             // SaleBillForm
             // 
+            this.AcceptButton = this.btnSave;
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(984, 651);
+            this.CancelButton = this.btnCancel;
+            this.ClientSize = new System.Drawing.Size(984, 661);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.MinimumSize = new System.Drawing.Size(1000, 700);
             this.Name = "SaleBillForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Sale Bill Entry";
+            this.Text = "New Bill";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
@@ -334,12 +281,6 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.DataGridView dgvItems;
         private System.Windows.Forms.Button btnAddItem;
-        private System.Windows.Forms.DataGridViewComboBoxColumn ItemName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Quantity;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Rate;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Amount;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Charges;
-        private System.Windows.Forms.DataGridViewTextBoxColumn TotalAmount;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Label lblNetAmount;
         private System.Windows.Forms.Label lblTotalCharges;

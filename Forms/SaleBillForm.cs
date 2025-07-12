@@ -51,7 +51,8 @@ namespace SaleBillSystem.NET.Forms
             // Set form properties for responsive design
             this.Text = isEditMode ? "Edit Bill" : "New Bill";
             this.StartPosition = FormStartPosition.CenterParent;
-            this.WindowState = FormWindowState.Maximized;
+            this.WindowState = FormWindowState.Normal; // Start normal instead of maximized
+            this.Size = new Size(1000, 700); // Set default size
             this.MinimumSize = new Size(1000, 700);
             
             // Enable auto-scaling for different screen sizes
@@ -94,14 +95,14 @@ namespace SaleBillSystem.NET.Forms
             lblDueDate = new Label
             {
                 Text = "Due Date:",
-                Location = new Point(270, 57),
+                Location = new Point(360, 57),
                 Size = new Size(60, 15),
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
             };
             
             dtpDueDate = new DateTimePicker
             {
-                Location = new Point(340, 53),
+                Location = new Point(425, 53),
                 Size = new Size(120, 23),
                 Format = DateTimePickerFormat.Short
             };
@@ -110,15 +111,15 @@ namespace SaleBillSystem.NET.Forms
             lblBroker = new Label
             {
                 Text = "Broker:",
-                Location = new Point(270, 85),
+                Location = new Point(20, 112),
                 Size = new Size(60, 15),
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
             };
             
             cmbBroker = new ComboBox
             {
-                Location = new Point(340, 82),
-                Size = new Size(130, 23),
+                Location = new Point(100, 109),
+                Size = new Size(250, 23),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             
@@ -148,8 +149,11 @@ namespace SaleBillSystem.NET.Forms
             // Configure labels with better styling
             lblTotalAmount.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
             lblTotalCharges.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
-            lblNetAmount.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold);
-            lblNetAmount.ForeColor = Color.Blue;
+            
+            // Ensure Net Amount is properly styled and initialized
+            lblNetAmount.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold);
+            lblNetAmount.ForeColor = Color.FromArgb(0, 0, 192); // Deep blue color
+            lblNetAmount.Text = "Net Amount: ₹0.00";
             
             // Setup DataGridView
             SetupDataGridView();
@@ -179,6 +183,9 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
             dgvItems.CellEndEdit += DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
+            dgvItems.DefaultValuesNeeded += DgvItems_DefaultValuesNeeded;
+            dgvItems.DataError += DgvItems_DataError;
+            dgvItems.RowsAdded += DgvItems_RowsAdded;
             this.KeyDown += SaleBillForm_KeyDown;
             this.KeyPreview = true;
         }
@@ -199,11 +206,11 @@ namespace SaleBillSystem.NET.Forms
             
             // Resize groupBox1 (header)
             groupBox1.Location = new Point(margin, margin);
-            groupBox1.Size = new Size(this.Width - (margin * 2), 120);
+            groupBox1.Size = new Size(this.Width - (margin * 2), 145); // Increased height for broker controls
             
             // Resize groupBox2 (items)
             int group2Top = groupBox1.Bottom + groupBoxSpacing;
-            int group2Height = this.Height - group2Top - 120 - (margin * 2); // Leave space for totals and buttons
+            int group2Height = this.Height - group2Top - 160; // Reduced height to leave more space for bottom controls
             groupBox2.Location = new Point(margin, group2Top);
             groupBox2.Size = new Size(this.Width - (margin * 2), group2Height);
             
@@ -221,27 +228,36 @@ namespace SaleBillSystem.NET.Forms
             
             // Position total labels within groupBox3
             int labelWidth = 200;
-            int labelSpacing = (groupBox3.Width - (labelWidth * 3)) / 4;
-            
+            int labelSpacing = 20;
+
             lblTotalAmount.Location = new Point(labelSpacing, 25);
             lblTotalAmount.Size = new Size(labelWidth, 20);
-            
-            lblTotalCharges.Location = new Point(labelSpacing + labelWidth + labelSpacing, 25);
+            lblTotalAmount.TextAlign = ContentAlignment.MiddleLeft;
+
+            // Position net amount label in the center with more width for better visibility
+            lblNetAmount.Location = new Point((groupBox3.Width - 400) / 2, 20);
+            lblNetAmount.Size = new Size(400, 30);
+            lblNetAmount.TextAlign = ContentAlignment.MiddleCenter;
+
+            // Position total charges label on the right
+            lblTotalCharges.Location = new Point(groupBox3.Width - labelWidth - labelSpacing, 25);
             lblTotalCharges.Size = new Size(labelWidth, 20);
+            lblTotalCharges.TextAlign = ContentAlignment.MiddleRight;
             
-            lblNetAmount.Location = new Point(labelSpacing + (labelWidth * 2) + (labelSpacing * 2), 25);
-            lblNetAmount.Size = new Size(labelWidth, 20);
-            
-            // Position buttons at bottom
+            // Position buttons below the totals group box, ensuring visibility
             int buttonY = groupBox3.Bottom + groupBoxSpacing;
+            // Ensure buttons don't go beyond visible area - limit to form height minus some margin
+            buttonY = Math.Min(buttonY, this.ClientSize.Height - buttonHeight - margin);
+            
             btnCancel.Location = new Point(this.Width - margin - 120, buttonY);
             btnCancel.Size = new Size(100, buttonHeight);
             
             btnSave.Location = new Point(btnCancel.Left - 110, buttonY);
             btnSave.Size = new Size(100, buttonHeight);
             
-            // Adjust party details label size
-            lblPartyDetails.Size = new Size(groupBox1.Width - 500, 80);
+            // Adjust party details label size and position
+            lblPartyDetails.Location = new Point(550, 25);
+            lblPartyDetails.Size = new Size(groupBox1.Width - 570, 105);
         }
         
         private void SetTabOrder()
@@ -492,9 +508,62 @@ namespace SaleBillSystem.NET.Forms
 
         private void DgvItems_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
+            // Ignore events for header row or out of range
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+            
+            // Ignore the "new row" at the end
+            if (e.RowIndex >= dgvItems.Rows.Count || dgvItems.Rows[e.RowIndex].IsNewRow)
+                return;
+            
+            try
             {
+                var row = dgvItems.Rows[e.RowIndex];
+                var columnName = dgvItems.Columns[e.ColumnIndex].Name;
+                
+                // Handle ItemName selection specifically - auto-fill rate and charges
+                if (columnName == "ItemName" && row.Cells["ItemName"].Value != null)
+                {
+                    int itemId = Convert.ToInt32(row.Cells["ItemName"].Value);
+                    var item = items.FirstOrDefault(i => i.ItemID == itemId);
+                    if (item != null)
+                    {
+                        // Set default quantity if it's not already set
+                        if (row.Cells["Quantity"].Value == null || Convert.ToDouble(row.Cells["Quantity"].Value) == 0)
+                        {
+                            row.Cells["Quantity"].Value = 1.0;
+                        }
+                        
+                        // Set item rate and charges
+                        row.Cells["Rate"].Value = item.Rate;
+                        row.Cells["Charges"].Value = item.Charges;
+                    }
+                }
+                
+                // Calculate row totals
                 CalculateRowTotal(e.RowIndex);
+                
+                // If this is the last non-new row and we're adding a new item, tab to the next row automatically
+                if (e.RowIndex == dgvItems.Rows.Count - 2 && columnName == "TotalAmount")
+                {
+                    // Add focus to the new row if needed
+                    if (dgvItems.Rows.Count < 20) // Limit automatic row addition
+                    {
+                        try
+                        {
+                            dgvItems.CurrentCell = dgvItems.Rows[e.RowIndex + 1].Cells["ItemName"];
+                            dgvItems.BeginEdit(true);
+                        }
+                        catch
+                        {
+                            // Ignore errors
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in cell value changed: {ex.Message}");
             }
         }
 
@@ -511,10 +580,69 @@ namespace SaleBillSystem.NET.Forms
             CalculateTotals();
         }
 
+        private void DgvItems_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            // Prevent error dialogs from showing
+            e.ThrowException = false;
+            
+            // Try to set the cell value to null or default
+            if (e.ColumnIndex >= 0 && e.RowIndex >= 0)
+            {
+                var column = dgvItems.Columns[e.ColumnIndex];
+                if (column != null)
+                {
+                    try
+                    {
+                        if (column.Name == "ItemName")
+                        {
+                            dgvItems.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = null;
+                        }
+                        else if (column.Name == "Quantity" || column.Name == "Rate" || column.Name == "Charges")
+                        {
+                            dgvItems.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 0;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore any errors in error handling
+                    }
+                }
+            }
+        }
+
+        private void DgvItems_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
+        {
+            e.Row.Cells["Quantity"].Value = 1.0;
+            e.Row.Cells["Rate"].Value = 0.0;
+            e.Row.Cells["Charges"].Value = 0.0;
+            e.Row.Cells["Amount"].Value = 0.0;
+            e.Row.Cells["TotalAmount"].Value = 0.0;
+        }
+
+        private void DgvItems_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        {
+            // Focus on the item cell of the new row for easier data entry
+            if (e.RowIndex == dgvItems.Rows.Count - 2) // Second to last row (last is the "new row" placeholder)
+            {
+                try
+                {
+                    dgvItems.CurrentCell = dgvItems.Rows[e.RowIndex].Cells["ItemName"];
+                    dgvItems.BeginEdit(true);
+                }
+                catch
+                {
+                    // Ignore errors
+                }
+            }
+        }
+
         private void CalculateRowTotal(int rowIndex)
         {
             try
             {
+                if (rowIndex < 0 || rowIndex >= dgvItems.Rows.Count || dgvItems.Rows[rowIndex].IsNewRow)
+                    return;
+
                 var row = dgvItems.Rows[rowIndex];
                 
                 // Auto-fill item details when item is selected
@@ -524,10 +652,19 @@ namespace SaleBillSystem.NET.Forms
                     var item = items.FirstOrDefault(i => i.ItemID == itemId);
                     if (item != null)
                     {
+                        // Set default quantity to 1 if it's empty or 0
+                        if (row.Cells["Quantity"].Value == null || Convert.ToDouble(row.Cells["Quantity"].Value) == 0)
+                        {
+                            row.Cells["Quantity"].Value = 1.0;
+                        }
+                        
+                        // Set rate from item if empty
                         if (row.Cells["Rate"].Value == null || Convert.ToDouble(row.Cells["Rate"].Value) == 0)
                         {
                             row.Cells["Rate"].Value = item.Rate;
                         }
+                        
+                        // Set charges from item if empty
                         if (row.Cells["Charges"].Value == null || Convert.ToDouble(row.Cells["Charges"].Value) == 0)
                         {
                             row.Cells["Charges"].Value = item.Charges;
@@ -535,10 +672,15 @@ namespace SaleBillSystem.NET.Forms
                     }
                 }
 
+                // Ensure numeric values
+                if (row.Cells["Quantity"].Value == null) row.Cells["Quantity"].Value = 0;
+                if (row.Cells["Rate"].Value == null) row.Cells["Rate"].Value = 0;
+                if (row.Cells["Charges"].Value == null) row.Cells["Charges"].Value = 0;
+
                 // Calculate amounts
-                double quantity = Convert.ToDouble(row.Cells["Quantity"].Value ?? 0);
-                double rate = Convert.ToDouble(row.Cells["Rate"].Value ?? 0);
-                double charges = Convert.ToDouble(row.Cells["Charges"].Value ?? 0);
+                double quantity = Convert.ToDouble(row.Cells["Quantity"].Value);
+                double rate = Convert.ToDouble(row.Cells["Rate"].Value);
+                double charges = Convert.ToDouble(row.Cells["Charges"].Value);
 
                 double amount = quantity * rate;
                 double totalAmount = amount + charges;
@@ -550,7 +692,8 @@ namespace SaleBillSystem.NET.Forms
             }
             catch (Exception ex)
             {
-                // Handle conversion errors silently
+                // Log error but don't show message box to prevent disrupting user experience
+                System.Diagnostics.Debug.WriteLine($"Error calculating row total: {ex.Message}");
             }
         }
 
@@ -571,14 +714,28 @@ namespace SaleBillSystem.NET.Forms
             }
 
             // Update the current bill amounts
-            currentBill.TotalAmount = totalAmount;
-            currentBill.TotalCharges = totalCharges;
-            currentBill.NetAmount = netAmount;
+            currentBill.TotalAmount = Math.Round(totalAmount, 2);
+            currentBill.TotalCharges = Math.Round(totalCharges, 2);
+            currentBill.NetAmount = Math.Round(netAmount, 2);
 
-            // Update labels
+            // Update labels with proper formatting
             lblTotalAmount.Text = $"Total Amount: ₹{totalAmount:N2}";
             lblTotalCharges.Text = $"Total Charges: ₹{totalCharges:N2}";
-            lblNetAmount.Text = $"Net Amount: ₹{netAmount:N2}";
+            
+            // Make net amount more prominent with explicit value
+            lblNetAmount.Text = $"NET AMOUNT: ₹{netAmount:N2}";
+            
+            // Ensure visibility by setting a minimum width based on content
+            using (Graphics g = lblNetAmount.CreateGraphics())
+            {
+                SizeF textSize = g.MeasureString(lblNetAmount.Text, lblNetAmount.Font);
+                lblNetAmount.MinimumSize = new Size((int)textSize.Width + 20, lblNetAmount.Height);
+            }
+            
+            // Force immediate refresh of the labels
+            lblTotalAmount.Refresh();
+            lblTotalCharges.Refresh();
+            lblNetAmount.Refresh();
         }
 
         private void LoadComboBoxes()
@@ -610,6 +767,8 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.EnableHeadersVisualStyles = false;
             dgvItems.GridColor = Color.LightGray;
             dgvItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
+            dgvItems.EditMode = DataGridViewEditMode.EditOnEnter;
+            dgvItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
             // Clear existing columns
             dgvItems.Columns.Clear();
@@ -622,7 +781,9 @@ namespace SaleBillSystem.NET.Forms
                 DataSource = items,
                 DisplayMember = "ItemName",
                 ValueMember = "ItemID",
-                Width = 200
+                FillWeight = 200,
+                DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox,
+                FlatStyle = FlatStyle.Flat
             };
             dgvItems.Columns.Add(itemColumn);
 
@@ -631,7 +792,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "Quantity",
                 HeaderText = "Quantity",
-                Width = 80,
+                FillWeight = 80,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
@@ -640,7 +801,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "Rate",
                 HeaderText = "Rate",
-                Width = 80,
+                FillWeight = 80,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
@@ -649,7 +810,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "Amount",
                 HeaderText = "Amount",
-                Width = 100,
+                FillWeight = 100,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray }
             });
@@ -659,7 +820,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "Charges",
                 HeaderText = "Charges",
-                Width = 80,
+                FillWeight = 80,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
@@ -668,12 +829,17 @@ namespace SaleBillSystem.NET.Forms
             {
                 Name = "TotalAmount",
                 HeaderText = "Total",
-                Width = 100,
+                FillWeight = 100,
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
             });
 
-            // Event handlers
+            // Remove previous handlers to prevent duplicate subscriptions
+            dgvItems.CellValueChanged -= DgvItems_CellValueChanged;
+            dgvItems.CellEndEdit -= DgvItems_CellEndEdit;
+            dgvItems.UserDeletedRow -= DgvItems_UserDeletedRow;
+            
+            // Add event handlers
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
             dgvItems.CellEndEdit += DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;

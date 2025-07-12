@@ -222,20 +222,24 @@ namespace SaleBillSystem.NET.Data
                                 @PaymentDate, @PaymentAmount, @PaymentMethod, @Reference, @Notes
                             )";
                             
-                            SQLiteParameter[] parameters = {
-                                new SQLiteParameter("@PaymentDate", payment.PaymentDate),
-                                new SQLiteParameter("@PaymentAmount", payment.PaymentAmount),
-                                new SQLiteParameter("@PaymentMethod", payment.PaymentMethod),
-                                new SQLiteParameter("@Reference", payment.Reference ?? string.Empty),
-                                new SQLiteParameter("@Notes", payment.Notes ?? string.Empty)
-                            };
-                            
-                            DatabaseManager.ExecuteNonQuery(sql, parameters);
+                            using (SQLiteCommand cmd = new SQLiteCommand(sql, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PaymentDate", payment.PaymentDate);
+                                cmd.Parameters.AddWithValue("@PaymentAmount", payment.PaymentAmount);
+                                cmd.Parameters.AddWithValue("@PaymentMethod", payment.PaymentMethod);
+                                cmd.Parameters.AddWithValue("@Reference", payment.Reference ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@Notes", payment.Notes ?? string.Empty);
+                                
+                                cmd.ExecuteNonQuery();
+                            }
                             
                             // Get the new payment ID
                             sql = "SELECT last_insert_rowid()";
-                            object result = DatabaseManager.ExecuteScalar(sql);
-                            payment.PaymentID = Convert.ToInt32(result);
+                            using (SQLiteCommand cmd = new SQLiteCommand(sql, conn, transaction))
+                            {
+                                object result = cmd.ExecuteScalar();
+                                payment.PaymentID = Convert.ToInt32(result);
+                            }
                         }
                         else
                         {
@@ -248,21 +252,25 @@ namespace SaleBillSystem.NET.Data
                                 Notes = @Notes
                             WHERE PaymentID = @PaymentID";
                             
-                            SQLiteParameter[] parameters = {
-                                new SQLiteParameter("@PaymentDate", payment.PaymentDate),
-                                new SQLiteParameter("@PaymentAmount", payment.PaymentAmount),
-                                new SQLiteParameter("@PaymentMethod", payment.PaymentMethod),
-                                new SQLiteParameter("@Reference", payment.Reference ?? string.Empty),
-                                new SQLiteParameter("@Notes", payment.Notes ?? string.Empty),
-                                new SQLiteParameter("@PaymentID", payment.PaymentID)
-                            };
-                            
-                            DatabaseManager.ExecuteNonQuery(sql, parameters);
+                            using (SQLiteCommand cmd = new SQLiteCommand(sql, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PaymentDate", payment.PaymentDate);
+                                cmd.Parameters.AddWithValue("@PaymentAmount", payment.PaymentAmount);
+                                cmd.Parameters.AddWithValue("@PaymentMethod", payment.PaymentMethod);
+                                cmd.Parameters.AddWithValue("@Reference", payment.Reference ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@Notes", payment.Notes ?? string.Empty);
+                                cmd.Parameters.AddWithValue("@PaymentID", payment.PaymentID);
+                                
+                                cmd.ExecuteNonQuery();
+                            }
                             
                             // Delete existing payment details
                             string deleteSql = "DELETE FROM PaymentDetails WHERE PaymentID = @PaymentID";
-                            SQLiteParameter deleteParam = new SQLiteParameter("@PaymentID", payment.PaymentID);
-                            DatabaseManager.ExecuteNonQuery(deleteSql, deleteParam);
+                            using (SQLiteCommand cmd = new SQLiteCommand(deleteSql, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PaymentID", payment.PaymentID);
+                                cmd.ExecuteNonQuery();
+                            }
                         }
                         
                         // Save payment details
@@ -274,16 +282,17 @@ namespace SaleBillSystem.NET.Data
                                 @PaymentID, @BillID, @PreviousPaid, @BalanceBefore, @AllocatedAmount, @BalanceAfter
                             )";
                             
-                            SQLiteParameter[] detailParameters = {
-                                new SQLiteParameter("@PaymentID", payment.PaymentID),
-                                new SQLiteParameter("@BillID", detail.BillID),
-                                new SQLiteParameter("@PreviousPaid", detail.PreviousPaid),
-                                new SQLiteParameter("@BalanceBefore", detail.BalanceBefore),
-                                new SQLiteParameter("@AllocatedAmount", detail.AllocatedAmount),
-                                new SQLiteParameter("@BalanceAfter", detail.BalanceAfter)
-                            };
-                            
-                            DatabaseManager.ExecuteNonQuery(detailSql, detailParameters);
+                            using (SQLiteCommand cmd = new SQLiteCommand(detailSql, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PaymentID", payment.PaymentID);
+                                cmd.Parameters.AddWithValue("@BillID", detail.BillID);
+                                cmd.Parameters.AddWithValue("@PreviousPaid", detail.PreviousPaid);
+                                cmd.Parameters.AddWithValue("@BalanceBefore", detail.BalanceBefore);
+                                cmd.Parameters.AddWithValue("@AllocatedAmount", detail.AllocatedAmount);
+                                cmd.Parameters.AddWithValue("@BalanceAfter", detail.BalanceAfter);
+                                
+                                cmd.ExecuteNonQuery();
+                            }
                         }
                         
                         transaction.Commit();
@@ -310,13 +319,19 @@ namespace SaleBillSystem.NET.Data
                     {
                         // Delete payment details first
                         string deleteDetailsSql = "DELETE FROM PaymentDetails WHERE PaymentID = @PaymentID";
-                        SQLiteParameter param1 = new SQLiteParameter("@PaymentID", paymentID);
-                        DatabaseManager.ExecuteNonQuery(deleteDetailsSql, param1);
+                        using (SQLiteCommand cmd = new SQLiteCommand(deleteDetailsSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentID", paymentID);
+                            cmd.ExecuteNonQuery();
+                        }
                         
                         // Delete payment master
                         string deletePaymentSql = "DELETE FROM PaymentMaster WHERE PaymentID = @PaymentID";
-                        SQLiteParameter param2 = new SQLiteParameter("@PaymentID", paymentID);
-                        DatabaseManager.ExecuteNonQuery(deletePaymentSql, param2);
+                        using (SQLiteCommand cmd = new SQLiteCommand(deletePaymentSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@PaymentID", paymentID);
+                            cmd.ExecuteNonQuery();
+                        }
                         
                         transaction.Commit();
                         return true;

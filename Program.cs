@@ -4,6 +4,7 @@ using System.IO;
 using System.Diagnostics;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Forms;
+using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET
 {
@@ -11,6 +12,10 @@ namespace SaleBillSystem.NET
     {
         // Application-wide constants
         public const string APP_NAME = "Sale Bill System";
+        
+        // Application-wide state
+        public static User CurrentUser { get; set; }
+        public static Company ActiveCompany { get; set; }
         
         /// <summary>
         ///  The main entry point for the application.
@@ -27,11 +32,89 @@ namespace SaleBillSystem.NET
                 // Initialize database
                 if (DatabaseManager.Initialize())
                 {
-                    // Generate mock data if needed
-                    MockDataGenerator.GenerateMockData();
+                    // Create necessary tables if they don't exist
+                    DatabaseManager.CreateTablesIfNeeded();
                     
-                    // Start the main form
-                    Application.Run(new MainForm());
+                    // Show login screen
+                    using (var loginForm = new LoginForm())
+                    {
+                        if (loginForm.ShowDialog() == DialogResult.OK)
+                        {
+                            // Authentication successful, set current user
+                            CurrentUser = loginForm.AuthenticatedUser;
+                            
+                            // Get active company
+                            ActiveCompany = CompanyService.GetActiveCompany();
+                            
+                            // If no companies exist, prompt to create one
+                            if (ActiveCompany == null)
+                            {
+                                MessageBox.Show(
+                                    "Welcome to Sale Bill System!\n\nNo companies found. Please create a company to continue.",
+                                    APP_NAME,
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Information);
+                                
+                                using (var companyForm = new CompanyForm())
+                                {
+                                    if (companyForm.ShowDialog() == DialogResult.OK)
+                                    {
+                                        // Refresh active company
+                                        ActiveCompany = CompanyService.GetActiveCompany();
+                                        
+                                        // If still no active company, show company list to select one
+                                        if (ActiveCompany == null)
+                                        {
+                                            MessageBox.Show(
+                                                "Please select an active company to continue.",
+                                                APP_NAME,
+                                                MessageBoxButtons.OK,
+                                                MessageBoxIcon.Information);
+                                                
+                                            using (var companyListForm = new CompanyListForm())
+                                            {
+                                                if (companyListForm.ShowDialog() == DialogResult.OK)
+                                                {
+                                                    // Refresh active company again
+                                                    ActiveCompany = CompanyService.GetActiveCompany();
+                                                }
+                                            }
+                                            
+                                            // If still no active company, exit application
+                                            if (ActiveCompany == null)
+                                            {
+                                                MessageBox.Show(
+                                                    "No active company selected. The application will now exit.",
+                                                    APP_NAME,
+                                                    MessageBoxButtons.OK,
+                                                    MessageBoxIcon.Warning);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // User cancelled company creation, exit application
+                                        return;
+                                    }
+                                }
+                            }
+                            
+                            // Start the main form only if an active company exists
+                            if (ActiveCompany != null)
+                            {
+                                Application.Run(new MainForm());
+                            }
+                            else
+                            {
+                                MessageBox.Show(
+                                    "No active company selected. The application will now exit.",
+                                    APP_NAME,
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Warning);
+                            }
+                        }
+                    }
                 }
                 else
                 {

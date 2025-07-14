@@ -1,6 +1,6 @@
 using System;
 using System.Data;
-using System.Data.SQLite;
+using System.Data.OleDb; // Changed from SQLite to OleDb
 
 namespace SaleBillSystem.NET.Data
 {
@@ -11,8 +11,8 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                string sql = "SELECT SettingValue FROM Settings WHERE SettingKey = @SettingKey";
-                SQLiteParameter param = new SQLiteParameter("@SettingKey", key);
+                string sql = "SELECT SettingValue FROM Settings WHERE SettingKey = ?";
+                OleDbParameter param = new OleDbParameter("SettingKey", key);
                 
                 object result = DatabaseManager.ExecuteScalar(sql, param);
                 
@@ -29,13 +29,26 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                string sql = @"INSERT OR REPLACE INTO Settings (SettingKey, SettingValue, Description) 
-                              VALUES (@SettingKey, @SettingValue, @Description)";
+                string sql = @"INSERT INTO Settings (SettingKey, SettingValue, Description) 
+                              VALUES (?, ?, ?)";
                 
-                SQLiteParameter[] parameters = {
-                    new SQLiteParameter("@SettingKey", key),
-                    new SQLiteParameter("@SettingValue", value),
-                    new SQLiteParameter("@Description", description)
+                // Check if the setting already exists
+                string checkSql = "SELECT COUNT(*) FROM Settings WHERE SettingKey = ?";
+                OleDbParameter checkParam = new OleDbParameter("SettingKey", key);
+                
+                int count = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkSql, checkParam));
+                
+                if (count > 0)
+                {
+                    // Update existing setting
+                    sql = @"UPDATE Settings SET SettingValue = ?, Description = ? 
+                           WHERE SettingKey = ?";
+                }
+                
+                OleDbParameter[] parameters = {
+                    new OleDbParameter("SettingKey", key),
+                    new OleDbParameter("SettingValue", value),
+                    new OleDbParameter("Description", description)
                 };
                 
                 int result = DatabaseManager.ExecuteNonQuery(sql, parameters);

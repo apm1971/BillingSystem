@@ -1,5 +1,5 @@
 using System;
-using System.Data.SQLite;
+using System.Data.OleDb; // Changed from SQLite
 using SaleBillSystem.NET.Models;
 using System.Collections.Generic;
 
@@ -86,18 +86,18 @@ namespace SaleBillSystem.NET.Data
 
         private static void GenerateParties()
         {
-            var parties = new List<(string name, string address, string city, string phone, string email, double creditLimit, int creditDays, double outstanding)>
+            var parties = new List<(string name, string address, string city, string phone, string email, string gst, string pan, double openingBalance)>
             {
-                ("ABC Electronics Ltd", "123 Main Street", "Mumbai", "022-12345678", "contact@abcelectronics.com", 50000, 30, 15000),
-                ("XYZ Trading Co", "456 Business Park", "Delhi", "011-87654321", "info@xyztrading.com", 75000, 45, 22000),
-                ("Tech Solutions Pvt Ltd", "789 IT Hub", "Bangalore", "080-11223344", "sales@techsolutions.com", 100000, 60, 35000),
-                ("Global Supplies Inc", "321 Industrial Area", "Chennai", "044-55667788", "orders@globalsupplies.com", 80000, 30, 18000),
-                ("Metro Distributors", "654 Commercial Zone", "Pune", "020-99887766", "contact@metrodist.com", 60000, 15, 8000),
-                ("Prime Enterprises", "987 Trade Center", "Hyderabad", "040-44556677", "info@primeent.com", 90000, 45, 28000),
-                ("Sunrise Industries", "147 Manufacturing Hub", "Ahmedabad", "079-33221100", "sales@sunriseindustries.com", 70000, 30, 12000),
-                ("Crystal Corp", "258 Business District", "Kolkata", "033-77889900", "orders@crystalcorp.com", 55000, 60, 31000),
-                ("Dynamic Systems", "369 Tech Park", "Noida", "0120-1234567", "contact@dynamicsys.com", 85000, 45, 19500),
-                ("United Traders", "741 Market Square", "Jaipur", "0141-9876543", "info@unitedtraders.com", 65000, 30, 14500)
+                ("ABC Electronics Ltd", "123 Main Street", "Mumbai", "022-12345678", "contact@abcelectronics.com", "27AADCB2230M1ZT", "AADCB2230M", 50000),
+                ("XYZ Trading Co", "456 Business Park", "Delhi", "011-87654321", "info@xyztrading.com", "07AABCU9603R1ZP", "AABCU9603R", 75000),
+                ("Tech Solutions Pvt Ltd", "789 IT Hub", "Bangalore", "080-11223344", "sales@techsolutions.com", "29AABCU1234R1ZU", "AABCU1234R", 100000),
+                ("Global Supplies Inc", "321 Industrial Area", "Chennai", "044-55667788", "orders@globalsupplies.com", "33AADCB4567M1ZT", "AADCB4567M", 80000),
+                ("Metro Distributors", "654 Commercial Zone", "Pune", "020-99887766", "contact@metrodist.com", "27AABCU7890R1ZP", "AABCU7890R", 60000),
+                ("Prime Enterprises", "987 Trade Center", "Hyderabad", "040-44556677", "info@primeent.com", "36AADCP9876M1ZT", "AADCP9876M", 90000),
+                ("Sunrise Industries", "147 Manufacturing Hub", "Ahmedabad", "079-33221100", "sales@sunriseindustries.com", "24AABCS5432R1ZU", "AABCS5432R", 70000),
+                ("Crystal Corp", "258 Business District", "Kolkata", "033-77889900", "orders@crystalcorp.com", "19AADCC1122M1ZT", "AADCC1122M", 55000),
+                ("Dynamic Systems", "369 Tech Park", "Noida", "0120-1234567", "contact@dynamicsys.com", "09AABCD3344R1ZP", "AABCD3344R", 85000),
+                ("United Traders", "741 Market Square", "Jaipur", "0141-9876543", "info@unitedtraders.com", "08AADCU5566M1ZT", "AADCU5566M", 65000)
             };
 
             // Get brokers for assignment
@@ -114,9 +114,11 @@ namespace SaleBillSystem.NET.Data
                     City = party.city,
                     Phone = party.phone,
                     Email = party.email,
-                    CreditLimit = party.creditLimit,
-                    CreditDays = party.creditDays,
-                    OutstandingAmount = party.outstanding
+                    GSTNo = party.gst,
+                    PAN = party.pan,
+                    OpeningBalance = party.openingBalance,
+                    OpeningBalanceDate = DateTime.Today.AddDays(-30),
+                    CreditDays = 30 + (i * 5) % 30 // Varied credit days 30-60
                 };
 
                 // Assign broker to some parties (about 60% of them)
@@ -212,7 +214,8 @@ namespace SaleBillSystem.NET.Data
                 }
 
                 bill.CalculateTotals();
-                BillService.SaveBill(bill);
+                int billId;
+                BillService.SaveBill(bill, out billId);
             }
         }
 
@@ -226,8 +229,15 @@ namespace SaleBillSystem.NET.Data
                 DatabaseManager.ExecuteNonQuery("DELETE FROM PartyMaster");
                 DatabaseManager.ExecuteNonQuery("DELETE FROM BrokerMaster");
                 
-                // Reset auto-increment counters
-                DatabaseManager.ExecuteNonQuery("DELETE FROM sqlite_sequence");
+                // Reset counters in Access
+                try {
+                    // These operations may fail if counters don't exist, that's ok
+                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BillMaster ALTER COLUMN BillID COUNTER(1,1)");
+                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BillDetails ALTER COLUMN BillDetailID COUNTER(1,1)");
+                    DatabaseManager.ExecuteNonQuery("ALTER TABLE ItemMaster ALTER COLUMN ItemID COUNTER(1,1)");
+                    DatabaseManager.ExecuteNonQuery("ALTER TABLE PartyMaster ALTER COLUMN PartyID COUNTER(1,1)");
+                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BrokerMaster ALTER COLUMN BrokerID COUNTER(1,1)");
+                } catch { /* Ignore errors with counter reset */ }
                 
                 _isDataGenerated = false;
                 

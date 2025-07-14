@@ -17,6 +17,7 @@ namespace SaleBillSystem.NET.Models
         public double TotalCharges { get; set; }
         public double NetAmount { get; set; }
         public double PaidAmount { get; set; }
+        public string Notes { get; set; } = string.Empty;
         public double BalanceAmount => NetAmount - PaidAmount;
         public List<BillItem> BillItems { get; set; } = new List<BillItem>();
 
@@ -57,12 +58,10 @@ namespace SaleBillSystem.NET.Models
             {
                 if (BalanceAmount <= 0.01)
                     return "Paid";
-                else if (IsOverdue)
-                    return $"Overdue ({DaysOverdue} days)";
-                else if (DaysUntilDue > 0)
-                    return $"Due in {DaysUntilDue} days";
+                else if (PaidAmount > 0)
+                    return "Partial";
                 else
-                    return "Due Today";
+                    return "Unpaid";
             }
         }
 

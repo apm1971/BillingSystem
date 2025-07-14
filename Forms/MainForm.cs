@@ -15,6 +15,21 @@ namespace SaleBillSystem.NET.Forms
         
         private void InitializeUI()
         {
+            // Refresh active company from database
+            Program.ActiveCompany = CompanyService.GetActiveCompany();
+            
+            // Check if active company exists
+            if (Program.ActiveCompany == null)
+            {
+                MessageBox.Show(
+                    "No active company selected. The application will now exit.",
+                    Program.APP_NAME,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                this.Close();
+                return;
+            }
+            
             // Set form properties
             this.Text = Program.APP_NAME + " - Main Menu";
             this.Width = 1200;
@@ -94,6 +109,10 @@ namespace SaleBillSystem.NET.Forms
             utilitiesMenu.ForeColor = Color.White;
             
             ToolStripMenuItem utilitiesSettings = new ToolStripMenuItem("&Settings");
+            ToolStripMenuItem utilitiesCompany = new ToolStripMenuItem("&Company");
+            ToolStripMenuItem utilitiesCreateCompany = new ToolStripMenuItem("&Create New Company");
+            ToolStripMenuItem utilitiesEditCompany = new ToolStripMenuItem("&Edit Company");
+            ToolStripMenuItem utilitiesSwitchCompany = new ToolStripMenuItem("&Switch Company");
 
             ToolStripMenuItem utilitiesBackup = new ToolStripMenuItem("&Backup Data");
             ToolStripMenuItem utilitiesRestore = new ToolStripMenuItem("&Restore Data");
@@ -105,7 +124,13 @@ namespace SaleBillSystem.NET.Forms
             utilitiesGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
             utilitiesClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
             
+            // Add company submenu
+            utilitiesCompany.DropDownItems.Add(utilitiesCreateCompany);
+            utilitiesCompany.DropDownItems.Add(utilitiesEditCompany);
+            utilitiesCompany.DropDownItems.Add(utilitiesSwitchCompany);
+            
             utilitiesMenu.DropDownItems.Add(utilitiesSettings);
+            utilitiesMenu.DropDownItems.Add(utilitiesCompany);
 
             utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             utilitiesMenu.DropDownItems.Add(utilitiesBackup);
@@ -154,6 +179,9 @@ namespace SaleBillSystem.NET.Forms
             mastersItem.Click += (s, e) => ShowItemMaster();
             mastersBroker.Click += (s, e) => ShowBrokerMaster();
             utilitiesSettings.Click += (s, e) => ShowSettings();
+            utilitiesCreateCompany.Click += (s, e) => CreateCompany();
+            utilitiesEditCompany.Click += (s, e) => EditCompany();
+            utilitiesSwitchCompany.Click += (s, e) => SwitchCompany();
 
             utilitiesGenerateMockData.Click += (s, e) => GenerateMockData();
             utilitiesClearAllData.Click += (s, e) => ClearAllData();
@@ -172,6 +200,17 @@ namespace SaleBillSystem.NET.Forms
         
         private void NewBill()
         {
+            // Check if active company exists
+            if (Program.ActiveCompany == null)
+            {
+                MessageBox.Show(
+                    "No active company selected. Please select or create a company first.",
+                    Program.APP_NAME,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+            
             var form = new SaleBillForm();
             form.ShowDialog();
         }
@@ -211,6 +250,71 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
+        private void CreateCompany()
+        {
+            var companyForm = new CompanyForm();
+            if (companyForm.ShowDialog() == DialogResult.OK)
+            {
+                // Refresh active company
+                Program.ActiveCompany = CompanyService.GetActiveCompany();
+                
+                // Update status bar
+                UpdateStatusBar();
+                
+                MessageBox.Show("Company created successfully!", "Company Created", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void EditCompany()
+        {
+            if (Program.ActiveCompany == null)
+            {
+                MessageBox.Show("No active company found. Please create a company first.", 
+                    "No Company", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            var companyForm = new CompanyForm(Program.ActiveCompany);
+            if (companyForm.ShowDialog() == DialogResult.OK)
+            {
+                // Refresh active company
+                Program.ActiveCompany = CompanyService.GetActiveCompany();
+                
+                // Update status bar
+                UpdateStatusBar();
+                
+                MessageBox.Show("Company updated successfully!", "Company Updated", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void SwitchCompany()
+        {
+            var companyListForm = new CompanyListForm();
+            if (companyListForm.ShowDialog() == DialogResult.OK)
+            {
+                // Refresh active company from database
+                Program.ActiveCompany = CompanyService.GetActiveCompany();
+                
+                if (Program.ActiveCompany == null)
+                {
+                    MessageBox.Show(
+                        "No active company selected. The application will now exit.",
+                        Program.APP_NAME,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    this.Close();
+                    return;
+                }
+                
+                // Update status bar
+                UpdateStatusBar();
+                
+                MessageBox.Show("Company switched successfully!", "Company Switched", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
 
 
         private void ShowPaymentEntry()
@@ -564,46 +668,83 @@ namespace SaleBillSystem.NET.Forms
         
         private void CreateStatusBar()
         {
-            StatusStrip statusBar = new StatusStrip();
-            statusBar.BackColor = Color.FromArgb(45, 45, 48);
-            statusBar.ForeColor = Color.White;
+            // Status bar at bottom
+            StatusStrip statusStrip = new StatusStrip();
+            statusStrip.BackColor = Color.FromArgb(45, 45, 48);
+            statusStrip.ForeColor = Color.White;
             
-            ToolStripStatusLabel statusLabel = new ToolStripStatusLabel(Program.APP_NAME);
-            ToolStripStatusLabel userLabel = new ToolStripStatusLabel("User: Administrator");
-            ToolStripStatusLabel dateLabel = new ToolStripStatusLabel(DateTime.Now.ToString("dd/MM/yyyy"));
-            ToolStripStatusLabel timeLabel = new ToolStripStatusLabel(DateTime.Now.ToString("HH:mm:ss"));
+            // Create status bar labels
+            statusUserLabel = new ToolStripStatusLabel();
+            statusUserLabel.ForeColor = Color.White;
+            statusUserLabel.Padding = new Padding(5, 0, 5, 0);
             
-            // Set status bar properties
-            statusLabel.Spring = true;
-            statusLabel.TextAlign = ContentAlignment.MiddleLeft;
-            statusLabel.ForeColor = Color.White;
-            userLabel.ForeColor = Color.White;
-            dateLabel.ForeColor = Color.White;
-            timeLabel.ForeColor = Color.White;
+            statusCompanyLabel = new ToolStripStatusLabel();
+            statusCompanyLabel.ForeColor = Color.LightGreen;
+            statusCompanyLabel.Padding = new Padding(5, 0, 5, 0);
+            statusCompanyLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            statusCompanyLabel.BorderStyle = Border3DStyle.Etched;
             
-            // Add labels to status bar
-            statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(userLabel);
-            statusBar.Items.Add(dateLabel);
-            statusBar.Items.Add(timeLabel);
+            statusFYLabel = new ToolStripStatusLabel();
+            statusFYLabel.ForeColor = Color.LightBlue;
+            statusFYLabel.Padding = new Padding(5, 0, 5, 0);
+            statusFYLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            statusFYLabel.BorderStyle = Border3DStyle.Etched;
             
-            // Store references for updating
-            this.statusDateLabel = dateLabel;
-            this.statusTimeLabel = timeLabel;
+            statusDateLabel = new ToolStripStatusLabel();
+            statusDateLabel.ForeColor = Color.White;
+            statusDateLabel.Padding = new Padding(5, 0, 5, 0);
+            statusDateLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            statusDateLabel.BorderStyle = Border3DStyle.Etched;
             
-            // Add status bar to form
-            this.Controls.Add(statusBar);
+            statusTimeLabel = new ToolStripStatusLabel();
+            statusTimeLabel.ForeColor = Color.White;
+            statusTimeLabel.Padding = new Padding(5, 0, 5, 0);
+            
+            // Add labels to status strip
+            statusStrip.Items.Add(statusUserLabel);
+            statusStrip.Items.Add(statusCompanyLabel);
+            statusStrip.Items.Add(statusFYLabel);
+            statusStrip.Items.Add(new ToolStripStatusLabel() { Spring = true });
+            statusStrip.Items.Add(statusDateLabel);
+            statusStrip.Items.Add(statusTimeLabel);
+            
+            this.Controls.Add(statusStrip);
+            
+            UpdateStatusBar();
         }
         
         private ToolStripStatusLabel statusDateLabel;
         private ToolStripStatusLabel statusTimeLabel;
+        private ToolStripStatusLabel statusUserLabel;
+        private ToolStripStatusLabel statusCompanyLabel;
+        private ToolStripStatusLabel statusFYLabel;
         
         private void UpdateStatusBar()
         {
-            if (statusDateLabel != null && statusTimeLabel != null)
+            // Update date and time
+            statusDateLabel.Text = DateTime.Now.ToString("dddd, dd MMM yyyy");
+            statusTimeLabel.Text = DateTime.Now.ToString("hh:mm:ss tt");
+            
+            // Update user info
+            if (Program.CurrentUser != null)
             {
-                statusDateLabel.Text = DateTime.Now.ToString("dd/MM/yyyy");
-                statusTimeLabel.Text = DateTime.Now.ToString("HH:mm:ss");
+                statusUserLabel.Text = $"User: {Program.CurrentUser.DisplayName}";
+            }
+            else
+            {
+                statusUserLabel.Text = "User: N/A";
+            }
+            
+            // Update company and financial year info
+            if (Program.ActiveCompany != null)
+            {
+                statusCompanyLabel.Text = $"Company: {Program.ActiveCompany.CompanyName}";
+                statusFYLabel.Text = $"FY: {Program.ActiveCompany.FinancialYearStart:dd/MM/yyyy} to {Program.ActiveCompany.FinancialYearEnd:dd/MM/yyyy}";
+            }
+            else
+            {
+                statusCompanyLabel.Text = "Company: N/A";
+                statusFYLabel.Text = "FY: N/A";
             }
         }
         

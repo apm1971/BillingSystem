@@ -327,8 +327,12 @@ namespace SaleBillSystem.NET.Forms
                 Name = "PaymentStatusText",
                 HeaderText = "Status",
                 DataPropertyName = "PaymentStatusText",
-                Width = 120
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
+            
+            // Add CellFormatting event to colorize status column
+            dgvBills.CellFormatting += DgvBills_CellFormatting;
         }
 
         private void LoadBills()
@@ -437,16 +441,21 @@ namespace SaleBillSystem.NET.Forms
             if (selectedBill != null)
             {
                 // Create a read-only view or detailed view of the bill
-                string overdueStatus = selectedBill.IsOverdue ? " (OVERDUE)" : 
-                                     selectedBill.DaysUntilDue <= 3 ? " (DUE SOON)" : "";
+                string paymentStatus = selectedBill.PaymentStatusText;
+                string dueDateInfo = selectedBill.DaysUntilDue > 0 ? $" (Due in {selectedBill.DaysUntilDue} days)" : 
+                                    selectedBill.IsOverdue ? $" (Overdue by {selectedBill.DaysOverdue} days)" : " (Due today)";
+                
                 string billDetails = $"Bill Details:\n\n" +
                     $"Bill No: {selectedBill.BillNo}\n" +
                     $"Bill Date: {selectedBill.BillDate:dd/MM/yyyy}\n" +
-                    $"Due Date: {selectedBill.DueDate:dd/MM/yyyy}{overdueStatus}\n" +
+                    $"Due Date: {selectedBill.DueDate:dd/MM/yyyy}{dueDateInfo}\n" +
                     $"Party: {selectedBill.PartyName}\n" +
                     $"Total Amount: {selectedBill.TotalAmount:N2}\n" +
                     $"Total Charges: {selectedBill.TotalCharges:N2}\n" +
                     $"Net Amount: {selectedBill.NetAmount:N2}\n" +
+                    $"Paid Amount: {selectedBill.PaidAmount:N2}\n" +
+                    $"Balance: {selectedBill.BalanceAmount:N2}\n" +
+                    $"Status: {paymentStatus}\n" +
                     $"Number of Items: {selectedBill.BillItems.Count}\n\n";
 
                 if (selectedBill.BillItems.Count > 0)
@@ -580,7 +589,52 @@ namespace SaleBillSystem.NET.Forms
         {
             ApplyFilters();
         }
-
+        
         #endregion
+        
+        // Cell formatting event handler to colorize payment status
+        private void DgvBills_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            {
+                DataGridViewColumn column = dgvBills.Columns[e.ColumnIndex];
+                
+                // Colorize Payment Status column
+                if (column.Name == "PaymentStatusText" && e.Value != null)
+                {
+                    string status = e.Value.ToString();
+                    
+                    switch (status)
+                    {
+                        case "Paid":
+                            e.CellStyle.ForeColor = Color.Green;
+                            e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
+                            break;
+                        case "Partial":
+                            e.CellStyle.ForeColor = Color.Blue;
+                            break;
+                        case "Unpaid":
+                            e.CellStyle.ForeColor = Color.Red;
+                            break;
+                    }
+                }
+                
+                // Colorize Balance Amount column
+                if (column.Name == "BalanceAmount" && e.Value != null)
+                {
+                    if (double.TryParse(e.Value.ToString(), out double balanceAmount))
+                    {
+                        if (balanceAmount <= 0.01) // Fully paid
+                        {
+                            e.CellStyle.ForeColor = Color.Green;
+                        }
+                        else // Outstanding balance
+                        {
+                            e.CellStyle.ForeColor = Color.Red;
+                        }
+                    }
+                }
+            }
+        }
     }
 } 

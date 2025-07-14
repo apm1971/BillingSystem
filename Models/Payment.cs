@@ -11,6 +11,7 @@ namespace SaleBillSystem.NET.Models
         public string PaymentMethod { get; set; } = string.Empty;
         public string Reference { get; set; } = string.Empty;
         public string Notes { get; set; } = string.Empty;
+        public int CompanyID { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; } = new List<PaymentDetail>();
 
         // Party information properties (populated by service)

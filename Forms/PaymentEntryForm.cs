@@ -165,6 +165,18 @@ namespace SaleBillSystem.NET.Forms
                     {
                         var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
                         
+                        // Safely check for payment details matching this bill
+                        double allocatedAmount = 0.0;
+                        if (currentPayment != null && currentPayment.PaymentDetails != null)
+                        {
+                            var paymentDetail = currentPayment.PaymentDetails
+                                .FirstOrDefault(pd => pd != null && pd.BillID == b.BillID);
+                            if (paymentDetail != null)
+                            {
+                                allocatedAmount = paymentDetail.AllocatedAmount;
+                            }
+                        }
+                        
                         return new
                         {
                             BillID = b.BillID,
@@ -177,8 +189,7 @@ namespace SaleBillSystem.NET.Forms
                             NetPayableAmount = netPayableAmount,
                             PaidAmount = b.PaidAmount,
                             BalanceAmount = netPayableAmount - b.PaidAmount,
-                            PaymentAmount = currentPayment.PaymentDetails
-                                .FirstOrDefault(pd => pd.BillID == b.BillID)?.AllocatedAmount ?? 0.0
+                            PaymentAmount = allocatedAmount
                         };
                     }).ToList();
 
@@ -763,6 +774,15 @@ namespace SaleBillSystem.NET.Forms
             if (!ValidatePayment())
                 return;
 
+            // Validate payment date is within financial year
+            if (!CompanyService.IsDateWithinFinancialYear(dtpPaymentDate.Value.Date))
+            {
+                MessageBox.Show("Payment date must be within the current financial year.", "Date Validation Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                dtpPaymentDate.Focus();
+                return;
+            }
+            
             try
             {
                 // Create payment object

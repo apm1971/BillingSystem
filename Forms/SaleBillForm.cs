@@ -847,17 +847,39 @@ namespace SaleBillSystem.NET.Forms
 
         private void btnSave_Click(object sender, EventArgs e)
         {
+            if (!ValidateInputs())
+            {
+                return;
+            }
+            
             try
             {
-                if (!ValidateForm())
+                // Validate bill date is within financial year
+                if (!CompanyService.IsDateWithinFinancialYear(dtpBillDate.Value.Date))
+                {
+                    MessageBox.Show("Bill date must be within the current financial year.", "Date Validation Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    dtpBillDate.Focus();
                     return;
-
-                // Prepare bill data
-                currentBill.BillNo = txtBillNo.Text;
-                currentBill.BillDate = dtpBillDate.Value;
-                currentBill.DueDate = dtpDueDate.Value; // Read due date from control
-                currentBill.PartyID = Convert.ToInt32(cmbParty.SelectedValue);
-                currentBill.PartyName = cmbParty.Text;
+                }
+                
+                // Get data from form
+                currentBill.BillDate = dtpBillDate.Value.Date;
+                currentBill.DueDate = dtpDueDate.Value.Date;
+                
+                // Get party information
+                if (cmbParty.SelectedValue is int partyId && partyId > 0)
+                {
+                    currentBill.PartyID = partyId;
+                    currentBill.PartyName = cmbParty.Text;
+                }
+                else
+                {
+                    MessageBox.Show("Please select a party.", "Validation Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    cmbParty.Focus();
+                    return;
+                }
 
                 // Clear existing items
                 currentBill.BillItems.Clear();
@@ -886,8 +908,10 @@ namespace SaleBillSystem.NET.Forms
                 currentBill.CalculateTotals();
 
                 // Save to database
-                if (BillService.SaveBill(currentBill))
+                int billID;
+                if (BillService.SaveBill(currentBill, out billID))
                 {
+                    currentBill.BillID = billID; // Update the bill ID
                     MessageBox.Show("Bill saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.DialogResult = DialogResult.OK;
                     this.Close();
@@ -903,7 +927,7 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private bool ValidateForm()
+        private bool ValidateInputs()
         {
             if (string.IsNullOrWhiteSpace(txtBillNo.Text))
             {

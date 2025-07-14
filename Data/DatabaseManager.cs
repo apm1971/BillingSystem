@@ -1,14 +1,15 @@
 using System;
 using System.Data;
-using System.Data.SQLite;
+using System.Data.OleDb; // Changed from SQLite to OleDb
 using System.IO;
+// Remove ADOX reference
 
 namespace SaleBillSystem.NET.Data
 {
     public class DatabaseManager
     {
         // Database constants
-        private const string DB_FILENAME = "SaleSystem.db";
+        private const string DB_FILENAME = "SaleSystem.accdb"; // Changed from .db to .accdb
 
         // Database connection string
         private static string _connectionString;
@@ -36,11 +37,11 @@ namespace SaleBillSystem.NET.Data
                     }
                 }
                 
-                // Set connection string
-                _connectionString = $"Data Source={dbPath};Version=3;";
+                // Set connection string for Access
+                _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
                 
                 // Test connection and upgrade database if needed
-                using (SQLiteConnection connection = new SQLiteConnection(_connectionString))
+                using (OleDbConnection connection = new OleDbConnection(_connectionString))
                 {
                     connection.Open();
                     UpgradeDatabase(connection);
@@ -61,116 +62,162 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                // Create a new SQLite database
-                SQLiteConnection.CreateFile(dbPath);
+                // First, try using a template file if it exists
+                string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "template.accdb");
                 
-                // Connect to the new database
-                using (SQLiteConnection conn = new SQLiteConnection($"Data Source={dbPath};Version=3;"))
+                if (File.Exists(templatePath))
+                {
+                    // Copy the template database to the target location
+                    File.Copy(templatePath, dbPath);
+                }
+                else
+                {
+                    // Template doesn't exist, create manually using the connection string
+                    // Use Microsoft Access directly - this will require ACE to be installed
+                    string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Engine Type=5";
+                    
+                    using (OleDbConnection tempConn = new OleDbConnection(connString))
+                    {
+                        // This will create an empty database
+                        System.Windows.Forms.MessageBox.Show(
+                            "Creating a new database. This might take a moment.",
+                            "Creating Database",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Information);
+                        
+                        try 
+                        {
+                            // Using reflection to access ADOX Catalog
+                            var catalogType = Type.GetTypeFromProgID("ADOX.Catalog");
+                            if (catalogType == null) 
+                            {
+                                throw new InvalidOperationException("ADOX.Catalog not found. Make sure Microsoft Access or the Microsoft Access Database Engine is installed.");
+                            }
+                            
+                            dynamic catalog = Activator.CreateInstance(catalogType);
+                            catalog.Create(connString);
+                            
+                            System.Windows.Forms.MessageBox.Show(
+                                "Database created successfully.",
+                                "Database Created",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex) 
+                        {
+                            throw new Exception($"Error creating database with ADOX: {ex.Message}", ex);
+                        }
+                    }
+                }
+                
+                // Connect to the new database and create tables
+                string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                using (OleDbConnection conn = new OleDbConnection(connectionString))
                 {
                     conn.Open();
                     
                     // Create BrokerMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
-                        BrokerID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        BrokerName TEXT,
-                        Phone TEXT,
-                        Email TEXT
+                        BrokerID COUNTER PRIMARY KEY,
+                        BrokerName TEXT(255),
+                        Phone TEXT(50),
+                        Email TEXT(100)
                     )");
 
                     // Create PartyMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
-                        PartyID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        PartyName TEXT,
-                        Address TEXT,
-                        City TEXT,
-                        Phone TEXT,
-                        Email TEXT,
-                        CreditLimit REAL,
+                        PartyID COUNTER PRIMARY KEY,
+                        PartyName TEXT(255),
+                        Address TEXT(255),
+                        City TEXT(100),
+                        Phone TEXT(50),
+                        Email TEXT(100),
+                        GSTNo TEXT(50),
+                        PAN TEXT(50),
+                        OpeningBalance CURRENCY,
+                        OpeningBalanceDate DATETIME,
                         CreditDays INTEGER,
-                        OutstandingAmount REAL,
                         BrokerID INTEGER,
-                        BrokerName TEXT
+                        BrokerName TEXT(255)
                     )");
-                    
+
                     // Create ItemMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
-                        ItemID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ItemCode TEXT,
-                        ItemName TEXT,
-                        Unit TEXT,
-                        Rate REAL,
-                        Charges REAL,
-                        StockQuantity REAL
+                        ItemID COUNTER PRIMARY KEY,
+                        ItemCode TEXT(50),
+                        ItemName TEXT(255),
+                        Unit TEXT(50),
+                        Rate CURRENCY,
+                        Charges CURRENCY,
+                        StockQuantity DOUBLE
                     )");
-                    
+
                     // Create BillMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
-                        BillID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        BillNo TEXT,
-                        BillDate TEXT,
-                        DueDate TEXT,
+                        BillID COUNTER PRIMARY KEY,
+                        BillNo TEXT(50),
+                        BillDate DATETIME,
+                        DueDate DATETIME,
                         PartyID INTEGER,
-                        PartyName TEXT,
+                        PartyName TEXT(255),
                         BrokerID INTEGER,
-                        BrokerName TEXT,
-                        TotalAmount REAL,
-                        TotalCharges REAL,
-                        NetAmount REAL,
-                        PaidAmount REAL DEFAULT 0,
-                        InterestRate REAL DEFAULT 0,
-                        DiscountRate REAL DEFAULT 0,
-                        InterestAmount REAL DEFAULT 0,
-                        DiscountAmount REAL DEFAULT 0,
-                        NetPayableAmount REAL DEFAULT 0
+                        BrokerName TEXT(255),
+                        TotalAmount CURRENCY,
+                        TotalCharges CURRENCY,
+                        NetAmount CURRENCY,
+                        Notes MEMO
                     )");
-                    
+
                     // Create BillDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
-                        BillDetailID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        BillDetailID COUNTER PRIMARY KEY,
                         BillID INTEGER,
                         ItemID INTEGER,
-                        ItemName TEXT,
-                        Quantity REAL,
-                        Rate REAL,
-                        Amount REAL,
-                        Charges REAL,
-                        TotalAmount REAL
+                        ItemName TEXT(255),
+                        Quantity DOUBLE,
+                        Rate CURRENCY,
+                        Amount CURRENCY,
+                        Charges CURRENCY,
+                        TotalAmount CURRENCY
                     )");
 
                     // Create PaymentMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
-                        PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        PaymentDate TEXT,
-                        PaymentAmount REAL,
-                        PaymentMethod TEXT,
-                        Reference TEXT,
-                        Notes TEXT
+                        PaymentID COUNTER PRIMARY KEY,
+                        PaymentDate DATETIME,
+                        PaymentAmount CURRENCY,
+                        PaymentMethod TEXT(50),
+                        Reference TEXT(100),
+                        Notes MEMO
                     )");
 
                     // Create PaymentDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
-                        PaymentDetailID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentDetailID COUNTER PRIMARY KEY,
                         PaymentID INTEGER,
                         BillID INTEGER,
-                        PreviousPaid REAL,
-                        BalanceBefore REAL,
-                        AllocatedAmount REAL,
-                        BalanceAfter REAL
+                        PreviousPaid CURRENCY,
+                        BalanceBefore CURRENCY,
+                        AllocatedAmount CURRENCY,
+                        BalanceAfter CURRENCY
                     )");
 
                     // Create Settings table
                     ExecuteNonQuery(conn, @"CREATE TABLE Settings (
-                        SettingID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        SettingKey TEXT UNIQUE,
-                        SettingValue TEXT,
-                        Description TEXT
+                        SettingID COUNTER PRIMARY KEY,
+                        SettingKey TEXT(100) UNIQUE,
+                        SettingValue TEXT(255),
+                        Description TEXT(255)
                     )");
 
                     // Insert default settings
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills'),
-                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment'),
-                        ('CompanyName', 'Your Company Name', 'Company name for reports'),
+                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('CompanyName', 'Your Company Name', 'Company name for reports')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
                         ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
                 }
                 
@@ -178,196 +225,369 @@ namespace SaleBillSystem.NET.Data
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"Error creating database: {ex.Message}", "Database Error", 
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                // If file creation failed but the file exists, delete it
+                try {
+                    if (File.Exists(dbPath))
+                        File.Delete(dbPath);
+                } catch { /* Ignore cleanup errors */ }
+                
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error creating database: {ex.Message}\n\n" +
+                    "Please make sure Microsoft Access or the Microsoft Access Database Engine is installed.",
+                    "Database Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Error);
                 return false;
             }
         }
 
         // Upgrade database schema if needed
-        private static void UpgradeDatabase(SQLiteConnection conn)
+        private static void UpgradeDatabase(OleDbConnection conn)
         {
             try
             {
-                // Check if BrokerMaster table exists
-                var tableInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='BrokerMaster'");
-                if (tableInfo.Rows.Count == 0)
-                {
-                    // Create BrokerMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
-                        BrokerID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        BrokerName TEXT,
-                        Phone TEXT,
-                        Email TEXT
-                    )");
-                }
+                // Check for BrokerMaster table
+                var tableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
 
-                // Check and add broker columns to PartyMaster
-                var partyTableInfo = ExecuteQuery(conn, "PRAGMA table_info(PartyMaster)");
-                bool brokerIdExistsInParty = false;
-                bool brokerNameExistsInParty = false;
-                foreach (DataRow row in partyTableInfo.Rows)
-                {
-                    string columnName = row["name"].ToString();
-                    if (columnName == "BrokerID") brokerIdExistsInParty = true;
-                    if (columnName == "BrokerName") brokerNameExistsInParty = true;
-                }
-
-                if (!brokerIdExistsInParty)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN BrokerID INTEGER");
-                }
-                if (!brokerNameExistsInParty)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN BrokerName TEXT");
-                }
-
-                // Check and add columns to BillMaster
-                var billTableInfo = ExecuteQuery(conn, "PRAGMA table_info(BillMaster)");
-                bool dueDateExists = false;
-                bool brokerIdExistsInBill = false;
-                bool brokerNameExistsInBill = false;
-                foreach (DataRow row in billTableInfo.Rows)
-                {
-                    string columnName = row["name"].ToString();
-                    if (columnName == "DueDate") dueDateExists = true;
-                    if (columnName == "BrokerID") brokerIdExistsInBill = true;
-                    if (columnName == "BrokerName") brokerNameExistsInBill = true;
-                }
-
-                // Add DueDate column if it doesn't exist
-                if (!dueDateExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DueDate TEXT");
-                    
-                    // Update existing bills with calculated due dates
-                    ExecuteNonQuery(conn, @"
-                        UPDATE BillMaster 
-                        SET DueDate = date(BillDate, '+30 days') 
-                        WHERE DueDate IS NULL OR DueDate = ''");
-                }
-
-                // Add broker columns to BillMaster
-                if (!brokerIdExistsInBill)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN BrokerID INTEGER");
-                }
-                if (!brokerNameExistsInBill)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN BrokerName TEXT");
-                }
-
-                // Check and add PaidAmount column to BillMaster
-                bool paidAmountExists = false;
-                bool interestRateExists = false;
-                bool discountRateExists = false;
-                bool interestAmountExists = false;
-                bool discountAmountExists = false;
-                bool netPayableAmountExists = false;
+                // Add other database upgrade checks here if needed
                 
-                foreach (DataRow row in billTableInfo.Rows)
+                // Check if UserMaster table exists
+                var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
+                if (userTableInfo.Rows.Count == 0)
                 {
-                    string columnName = row["name"].ToString();
-                    if (columnName == "PaidAmount") paidAmountExists = true;
-                    if (columnName == "InterestRate") interestRateExists = true;
-                    if (columnName == "DiscountRate") discountRateExists = true;
-                    if (columnName == "InterestAmount") interestAmountExists = true;
-                    if (columnName == "DiscountAmount") discountAmountExists = true;
-                    if (columnName == "NetPayableAmount") netPayableAmountExists = true;
+                    // Create UserMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
+                        UserID COUNTER PRIMARY KEY,
+                        Username TEXT(50) UNIQUE,
+                        PasswordHash TEXT(255),
+                        DisplayName TEXT(100),
+                        IsAdmin BIT,
+                        IsActive BIT,
+                        CreatedOn DATETIME,
+                        LastLogin DATETIME
+                    )");
                 }
-
-                if (!paidAmountExists)
+                
+                // Check if CompanyMaster table exists
+                var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
+                if (companyTableInfo.Rows.Count == 0)
                 {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN PaidAmount REAL DEFAULT 0");
-                }
-                if (!interestRateExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN InterestRate REAL DEFAULT 0");
-                }
-                if (!discountRateExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DiscountRate REAL DEFAULT 0");
-                }
-                if (!interestAmountExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN InterestAmount REAL DEFAULT 0");
-                }
-                if (!discountAmountExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN DiscountAmount REAL DEFAULT 0");
-                }
-                if (!netPayableAmountExists)
-                {
-                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN NetPayableAmount REAL DEFAULT 0");
-                }
-
-                // Check and create PaymentMaster table
-                var paymentMasterInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='PaymentMaster'");
-                if (paymentMasterInfo.Rows.Count == 0)
-                {
-                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
-                        PaymentID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        PaymentDate TEXT,
-                        PaymentAmount REAL,
-                        PaymentMethod TEXT,
-                        Reference TEXT,
-                        Notes TEXT
+                    // Create CompanyMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
+                        CompanyID COUNTER PRIMARY KEY,
+                        CompanyName TEXT(255),
+                        PrintName TEXT(255),
+                        Address TEXT(255),
+                        City TEXT(100),
+                        FinancialYearStart DATETIME,
+                        FinancialYearEnd DATETIME,
+                        IsActive BIT,
+                        CreatedOn DATETIME
                     )");
                 }
 
-                // Check and create PaymentDetails table
-                var paymentDetailsInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='PaymentDetails'");
-                if (paymentDetailsInfo.Rows.Count == 0)
+                // Add CompanyID fields to existing tables
+                AddCompanyIDToTables(conn);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error upgrading database: {ex.Message}", "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        // Add CompanyID fields to relevant tables
+        private static void AddCompanyIDToTables(OleDbConnection conn)
+        {
+            try
+            {
+                // Check if PartyMaster table has CompanyID field
+                bool hasCompanyID = false;
+                DataTable columns = conn.GetSchema("Columns", new string[] { null, null, "PartyMaster", "CompanyID" });
+                hasCompanyID = columns.Rows.Count > 0;
+                
+                if (!hasCompanyID)
                 {
+                    // Add CompanyID field to PartyMaster
+                    ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
+                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to PartyMaster table.", "Database Upgrade",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                
+                // Check if ItemMaster table has CompanyID field
+                columns = conn.GetSchema("Columns", new string[] { null, null, "ItemMaster", "CompanyID" });
+                hasCompanyID = columns.Rows.Count > 0;
+                
+                if (!hasCompanyID)
+                {
+                    // Add CompanyID field to ItemMaster
+                    ExecuteNonQuery(conn, "ALTER TABLE ItemMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
+                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to ItemMaster table.", "Database Upgrade",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                
+                // Check if BillMaster table has CompanyID field
+                columns = conn.GetSchema("Columns", new string[] { null, null, "BillMaster", "CompanyID" });
+                hasCompanyID = columns.Rows.Count > 0;
+                
+                if (!hasCompanyID)
+                {
+                    // Add CompanyID field to BillMaster
+                    ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
+                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to BillMaster table.", "Database Upgrade",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                
+                // Check if PaymentMaster table has CompanyID field
+                columns = conn.GetSchema("Columns", new string[] { null, null, "PaymentMaster", "CompanyID" });
+                hasCompanyID = columns.Rows.Count > 0;
+                
+                if (!hasCompanyID)
+                {
+                    // Add CompanyID field to PaymentMaster
+                    ExecuteNonQuery(conn, "ALTER TABLE PaymentMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
+                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to PaymentMaster table.", "Database Upgrade",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                
+                // Check if BrokerMaster table has CompanyID field
+                columns = conn.GetSchema("Columns", new string[] { null, null, "BrokerMaster", "CompanyID" });
+                hasCompanyID = columns.Rows.Count > 0;
+                
+                if (!hasCompanyID)
+                {
+                    // Add CompanyID field to BrokerMaster
+                    ExecuteNonQuery(conn, "ALTER TABLE BrokerMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
+                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to BrokerMaster table.", "Database Upgrade",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error adding CompanyID fields: {ex.Message}", "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        // Create all necessary tables if they don't exist
+        public static void CreateTablesIfNeeded()
+        {
+            using (OleDbConnection conn = GetConnection())
+            {
+                conn.Open();
+                
+                try
+                {
+                    // Check and create UserMaster table
+                    var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
+                    if (userTableInfo.Rows.Count == 0)
+                    {
+                        // Create UserMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
+                            UserID COUNTER PRIMARY KEY,
+                            Username TEXT(50) UNIQUE,
+                            PasswordHash TEXT(255),
+                            DisplayName TEXT(100),
+                            IsAdmin BIT,
+                            IsActive BIT,
+                            CreatedOn DATETIME,
+                            LastLogin DATETIME
+                        )");
+                    }
+                    
+                    // Check and create CompanyMaster table
+                    var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
+                    if (companyTableInfo.Rows.Count == 0)
+                    {
+                        // Create CompanyMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
+                            CompanyID COUNTER PRIMARY KEY,
+                            CompanyName TEXT(255),
+                            PrintName TEXT(255),
+                            Address TEXT(255),
+                            City TEXT(100),
+                            FinancialYearStart DATETIME,
+                            FinancialYearEnd DATETIME,
+                            IsActive BIT,
+                            CreatedOn DATETIME
+                        )");
+                    }
+                    
+                    // Check and create BrokerMaster table
+                    var brokerTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
+                    if (brokerTableInfo.Rows.Count == 0)
+                    {
+                        // Create BrokerMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
+                            BrokerID COUNTER PRIMARY KEY,
+                            BrokerName TEXT(255),
+                            Phone TEXT(50),
+                            Email TEXT(100),
+                            CompanyID INTEGER
+                        )");
+                    }
+                    
+                    // Check and create PartyMaster table
+                    var partyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PartyMaster" });
+                    if (partyTableInfo.Rows.Count == 0)
+                    {
+                        // Create PartyMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
+                            PartyID COUNTER PRIMARY KEY,
+                            PartyName TEXT(255),
+                            Address TEXT(255),
+                            City TEXT(100),
+                            Phone TEXT(50),
+                            Email TEXT(100),
+                            GSTNo TEXT(50),
+                            PAN TEXT(50),
+                            OpeningBalance CURRENCY,
+                            OpeningBalanceDate DATETIME,
+                            CreditDays INTEGER,
+                            BrokerID INTEGER,
+                            BrokerName TEXT(255),
+                            CompanyID INTEGER
+                        )");
+                    }
+                    
+                    // Check and create ItemMaster table
+                    var itemTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "ItemMaster" });
+                    if (itemTableInfo.Rows.Count == 0)
+                    {
+                        // Create ItemMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
+                            ItemID COUNTER PRIMARY KEY,
+                            ItemCode TEXT(50),
+                            ItemName TEXT(255),
+                            Unit TEXT(50),
+                            Rate CURRENCY,
+                            Charges CURRENCY,
+                            StockQuantity DOUBLE,
+                            CompanyID INTEGER
+                        )");
+                    }
+                    
+                    // Check and create BillMaster table
+                    var billTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillMaster" });
+                    if (billTableInfo.Rows.Count == 0)
+                    {
+                        // Create BillMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
+                            BillID COUNTER PRIMARY KEY,
+                            BillNo TEXT(50),
+                            BillDate DATETIME,
+                            DueDate DATETIME,
+                            PartyID INTEGER,
+                            PartyName TEXT(255),
+                            BrokerID INTEGER,
+                            BrokerName TEXT(255),
+                            TotalAmount CURRENCY,
+                            TotalCharges CURRENCY,
+                            NetAmount CURRENCY,
+                            Notes MEMO,
+                            CompanyID INTEGER
+                        )");
+                    }
+                    
+                    // Check and create BillDetails table
+                    var billDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillDetails" });
+                    if (billDetailsTableInfo.Rows.Count == 0)
+                    {
+                        // Create BillDetails table
+                        ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
+                            BillDetailID COUNTER PRIMARY KEY,
+                            BillID INTEGER,
+                            ItemID INTEGER,
+                            ItemName TEXT(255),
+                            Quantity DOUBLE,
+                            Rate CURRENCY,
+                            Amount CURRENCY,
+                            Charges CURRENCY,
+                            TotalAmount CURRENCY
+                        )");
+                    }
+                    
+                    // Check and create PaymentMaster table
+                    var paymentTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentMaster" });
+                    if (paymentTableInfo.Rows.Count == 0)
+                    {
+                        // Create PaymentMaster table
+                        ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
+                            PaymentID COUNTER PRIMARY KEY,
+                            PaymentDate DATETIME,
+                            PaymentAmount CURRENCY,
+                            PaymentMethod TEXT(50),
+                            Reference TEXT(100),
+                            Notes MEMO,
+                            CompanyID INTEGER
+                        )");
+                    }
+                    
+                    // Check and create PaymentDetails table
+                    var paymentDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentDetails" });
+                    if (paymentDetailsTableInfo.Rows.Count == 0)
+                    {
+                        // Create PaymentDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
-                        PaymentDetailID INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PaymentDetailID COUNTER PRIMARY KEY,
                         PaymentID INTEGER,
                         BillID INTEGER,
-                        PreviousPaid REAL,
-                        BalanceBefore REAL,
-                        AllocatedAmount REAL,
-                        BalanceAfter REAL
+                        PreviousPaid CURRENCY,
+                        BalanceBefore CURRENCY,
+                        AllocatedAmount CURRENCY,
+                        BalanceAfter CURRENCY
                     )");
                 }
 
-                // Check and create Settings table
-                var settingsInfo = ExecuteQuery(conn, "SELECT name FROM sqlite_master WHERE type='table' AND name='Settings'");
-                if (settingsInfo.Rows.Count == 0)
-                {
+                    // Check and create Settings table
+                    var settingsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "Settings" });
+                    if (settingsTableInfo.Rows.Count == 0)
+                    {
+                        // Create Settings table
                     ExecuteNonQuery(conn, @"CREATE TABLE Settings (
-                        SettingID INTEGER PRIMARY KEY AUTOINCREMENT,
-                        SettingKey TEXT UNIQUE,
-                        SettingValue TEXT,
-                        Description TEXT
+                        SettingID COUNTER PRIMARY KEY,
+                        SettingKey TEXT(100) UNIQUE,
+                        SettingValue TEXT(255),
+                        Description TEXT(255)
                     )");
 
                     // Insert default settings
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills'),
-                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment'),
-                        ('CompanyName', 'Your Company Name', 'Company name for reports'),
+                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
+                        ('CompanyName', 'Your Company Name', 'Company name for reports')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
                         ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"Error upgrading database: {ex.Message}", "Database Upgrade Error", 
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                    System.Windows.Forms.MessageBox.Show($"Error creating database tables: {ex.Message}", "Database Error",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                }
             }
         }
 
+        // Get database schema information
+        private static DataTable GetSchema(OleDbConnection conn, string collectionName, string[] restrictionValues)
+        {
+            return conn.GetSchema(collectionName, restrictionValues);
+        }
+
         // Execute a query and return a DataTable (for connection-specific queries)
-        private static DataTable ExecuteQuery(SQLiteConnection conn, string sql, params SQLiteParameter[] parameters)
+        private static DataTable ExecuteQuery(OleDbConnection conn, string sql, params OleDbParameter[] parameters)
         {
             DataTable dt = new DataTable();
-            using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+            using (OleDbCommand cmd = new OleDbCommand(sql, conn))
             {
                 if (parameters != null)
                 {
                     cmd.Parameters.AddRange(parameters);
                 }
                 
-                using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(cmd))
+                using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
                 {
                     adapter.Fill(dt);
                 }
@@ -376,42 +596,77 @@ namespace SaleBillSystem.NET.Data
         }
         
         // Execute a non-query SQL command
-        private static int ExecuteNonQuery(SQLiteConnection connection, string sql, params SQLiteParameter[] parameters)
+        private static int ExecuteNonQuery(OleDbConnection connection, string sql, params OleDbParameter[] parameters)
         {
-            using (SQLiteCommand cmd = new SQLiteCommand(sql, connection))
+            using (OleDbCommand cmd = new OleDbCommand(sql, connection))
             {
                 if (parameters != null)
                 {
                     cmd.Parameters.AddRange(parameters);
                 }
+
+                // Check if the connection has an active transaction and use it
+                if (connection.State == ConnectionState.Open && 
+                    typeof(OleDbConnection).GetProperty("InTransaction", 
+                        System.Reflection.BindingFlags.Instance | 
+                        System.Reflection.BindingFlags.NonPublic)?.GetValue(connection) != null)
+                {
+                    // Get the current transaction
+                    OleDbTransaction transaction = null;
+                    try
+                    {
+                        // Try to get the current transaction
+                        transaction = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Catalogs, null) == null ? 
+                            null : connection.BeginTransaction();
+                    }
+                    catch
+                    {
+                        // Ignore errors, we'll proceed without a transaction if needed
+                    }
+
+                    if (transaction != null)
+                    {
+                        cmd.Transaction = transaction;
+                    }
+                }
+
                 return cmd.ExecuteNonQuery();
             }
         }
 
         // Get a database connection
-        public static SQLiteConnection GetConnection()
+        public static OleDbConnection GetConnection()
         {
-            return new SQLiteConnection(_connectionString);
+            return new OleDbConnection(_connectionString);
         }
         
         // Execute a query and return a DataTable
-        public static DataTable ExecuteQuery(string sql, params SQLiteParameter[] parameters)
+        public static DataTable ExecuteQuery(string sql, params OleDbParameter[] parameters)
         {
             DataTable dt = new DataTable();
             
-            using (SQLiteConnection conn = GetConnection())
+            using (OleDbConnection conn = GetConnection())
             {
                 conn.Open();
-                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                using (OleDbCommand cmd = new OleDbCommand(sql, conn))
                 {
                     if (parameters != null)
                     {
                         cmd.Parameters.AddRange(parameters);
                     }
                     
-                    using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(cmd))
+                    try
                     {
-                        adapter.Fill(dt);
+                        using (OleDbDataAdapter adapter = new OleDbDataAdapter(cmd))
+                        {
+                            adapter.Fill(dt);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.Forms.MessageBox.Show($"Database query error: {ex.Message}", "Database Error", 
+                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                        throw;
                     }
                 }
             }
@@ -420,29 +675,65 @@ namespace SaleBillSystem.NET.Data
         }
         
         // Execute a non-query SQL command
-        public static int ExecuteNonQuery(string sql, params SQLiteParameter[] parameters)
+        public static int ExecuteNonQuery(string sql, params OleDbParameter[] parameters)
         {
-            using (SQLiteConnection conn = GetConnection())
+            using (OleDbConnection conn = GetConnection())
             {
                 conn.Open();
-                return ExecuteNonQuery(conn, sql, parameters);
+                using (OleDbTransaction transaction = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        using (OleDbCommand cmd = new OleDbCommand(sql, conn, transaction))
+                        {
+                            if (parameters != null)
+                            {
+                                cmd.Parameters.AddRange(parameters);
+                            }
+                            
+                            int result = cmd.ExecuteNonQuery();
+                            transaction.Commit();
+                            return result;
+                        }
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
         
         // Execute a scalar query
-        public static object ExecuteScalar(string sql, params SQLiteParameter[] parameters)
+        public static object ExecuteScalar(string sql, params OleDbParameter[] parameters)
         {
-            using (SQLiteConnection conn = GetConnection())
+            using (OleDbConnection conn = GetConnection())
             {
                 conn.Open();
-                using (SQLiteCommand cmd = new SQLiteCommand(sql, conn))
+                using (OleDbTransaction transaction = conn.BeginTransaction())
                 {
-                    if (parameters != null)
+                    try
                     {
-                        cmd.Parameters.AddRange(parameters);
+                        using (OleDbCommand cmd = new OleDbCommand(sql, conn, transaction))
+                        {
+                            if (parameters != null)
+                            {
+                                cmd.Parameters.AddRange(parameters);
+                            }
+                            
+                            object result = cmd.ExecuteScalar();
+                            transaction.Commit();
+                            return result;
+                        }
                     }
-                    
-                    return cmd.ExecuteScalar();
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        System.Windows.Forms.MessageBox.Show($"Database error: {ex.Message}", "Database Error", 
+                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                        throw;
+                    }
                 }
             }
         }
@@ -452,7 +743,7 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                string sql = "SELECT MAX(CAST(BillNo AS INTEGER)) FROM BillMaster";
+                string sql = "SELECT MAX(Val(BillNo)) FROM BillMaster";
                 object result = ExecuteScalar(sql);
                 
                 int lastBillNo = 0;
@@ -470,9 +761,9 @@ namespace SaleBillSystem.NET.Data
         }
         
         // Begin a transaction
-        public static SQLiteTransaction BeginTransaction()
+        public static OleDbTransaction BeginTransaction()
         {
-            SQLiteConnection conn = GetConnection();
+            OleDbConnection conn = GetConnection();
             conn.Open();
             return conn.BeginTransaction();
         }

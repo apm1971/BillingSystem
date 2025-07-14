@@ -8,6 +8,7 @@ namespace SaleBillSystem.NET.Models
         public string BrokerName { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public int CompanyID { get; set; }
 
         public string ContactInfo => $"Phone: {Phone}, Email: {Email}";
         

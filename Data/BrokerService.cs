@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
+using System.Data.OleDb; // Changed from SQLite
 using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET.Data
@@ -13,8 +13,13 @@ namespace SaleBillSystem.NET.Data
         {
             List<Broker> brokers = new List<Broker>();
             
-            string sql = "SELECT * FROM BrokerMaster ORDER BY BrokerName";
-            DataTable dt = DatabaseManager.ExecuteQuery(sql);
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+            
+            string sql = "SELECT * FROM BrokerMaster WHERE CompanyID = ? ORDER BY BrokerName";
+            OleDbParameter param = new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID };
+            
+            DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
             
             foreach (DataRow row in dt.Rows)
             {
@@ -23,7 +28,8 @@ namespace SaleBillSystem.NET.Data
                     BrokerID = Convert.ToInt32(row["BrokerID"]),
                     BrokerName = row["BrokerName"].ToString(),
                     Phone = row["Phone"].ToString(),
-                    Email = row["Email"].ToString()
+                    Email = row["Email"].ToString(),
+                    CompanyID = Convert.ToInt32(row["CompanyID"])
                 };
                 
                 brokers.Add(broker);
@@ -35,10 +41,16 @@ namespace SaleBillSystem.NET.Data
         // Get broker by ID
         public static Broker? GetBrokerByID(int brokerID)
         {
-            string sql = "SELECT * FROM BrokerMaster WHERE BrokerID = @BrokerID";
-            SQLiteParameter param = new SQLiteParameter("@BrokerID", brokerID);
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
+            string sql = "SELECT * FROM BrokerMaster WHERE BrokerID = ? AND CompanyID = ?";
+            OleDbParameter[] parameters = {
+                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerID },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
+            
+            DataTable dt = DatabaseManager.ExecuteQuery(sql, parameters);
             
             if (dt.Rows.Count > 0)
             {
@@ -49,7 +61,8 @@ namespace SaleBillSystem.NET.Data
                     BrokerID = Convert.ToInt32(row["BrokerID"]),
                     BrokerName = row["BrokerName"].ToString(),
                     Phone = row["Phone"].ToString(),
-                    Email = row["Email"].ToString()
+                    Email = row["Email"].ToString(),
+                    CompanyID = Convert.ToInt32(row["CompanyID"])
                 };
                 
                 return broker;
@@ -63,12 +76,16 @@ namespace SaleBillSystem.NET.Data
         {
             List<Broker> brokers = new List<Broker>();
             
-            string sql = "SELECT * FROM BrokerMaster WHERE BrokerName LIKE ? OR Phone LIKE ? ORDER BY BrokerName";
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+            
+            string sql = "SELECT * FROM BrokerMaster WHERE (BrokerName LIKE ? OR Phone LIKE ?) AND CompanyID = ? ORDER BY BrokerName";
             
             string param = "%" + searchText + "%";
             DataTable dt = DatabaseManager.ExecuteQuery(sql, 
-                new SQLiteParameter("@BrokerName", param),
-                new SQLiteParameter("@Phone", param));
+                new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = param },
+                new OleDbParameter("Phone", OleDbType.VarChar) { Value = param },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
                 
             foreach (DataRow row in dt.Rows)
             {
@@ -81,16 +98,17 @@ namespace SaleBillSystem.NET.Data
         // Add a new broker
         public static bool AddBroker(Broker broker)
         {
-            string sql = @"INSERT INTO BrokerMaster (
-                BrokerName, Phone, Email
-            ) VALUES (
-                @BrokerName, @Phone, @Email
-            )";
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            SQLiteParameter[] parameters = {
-                new SQLiteParameter("@BrokerName", broker.BrokerName),
-                new SQLiteParameter("@Phone", broker.Phone),
-                new SQLiteParameter("@Email", broker.Email)
+            string sql = @"INSERT INTO BrokerMaster (BrokerName, Phone, Email, CompanyID) 
+                         VALUES (?, ?, ?, ?)";
+            
+            OleDbParameter[] parameters = {
+                new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
+                new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
+                new OleDbParameter("Email", OleDbType.VarChar) { Value = broker.Email },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
             };
             
             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
@@ -101,17 +119,20 @@ namespace SaleBillSystem.NET.Data
         // Update an existing broker
         public static bool UpdateBroker(Broker broker)
         {
-            string sql = @"UPDATE BrokerMaster SET 
-                BrokerName = @BrokerName,
-                Phone = @Phone,
-                Email = @Email
-            WHERE BrokerID = @BrokerID";
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            SQLiteParameter[] parameters = {
-                new SQLiteParameter("@BrokerName", broker.BrokerName),
-                new SQLiteParameter("@Phone", broker.Phone),
-                new SQLiteParameter("@Email", broker.Email),
-                new SQLiteParameter("@BrokerID", broker.BrokerID)
+            string sql = @"UPDATE BrokerMaster SET 
+                         BrokerName = ?, Phone = ?, Email = ?, CompanyID = ? 
+                         WHERE BrokerID = ? AND CompanyID = ?";
+            
+            OleDbParameter[] parameters = {
+                new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
+                new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
+                new OleDbParameter("Email", OleDbType.VarChar) { Value = broker.Email },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
+                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = broker.BrokerID },
+                new OleDbParameter("CompanyID2", OleDbType.Integer) { Value = companyID }
             };
             
             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
@@ -122,10 +143,40 @@ namespace SaleBillSystem.NET.Data
         // Delete a broker
         public static bool DeleteBroker(int brokerID)
         {
-            string sql = "DELETE FROM BrokerMaster WHERE BrokerID = @BrokerID";
-            SQLiteParameter param = new SQLiteParameter("@BrokerID", brokerID);
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            int result = DatabaseManager.ExecuteNonQuery(sql, param);
+            // Check if broker exists in bills
+            string checkBillsSql = "SELECT COUNT(*) FROM BillMaster WHERE BrokerID = ? AND CompanyID = ?";
+            OleDbParameter[] checkBillsParams = {
+                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerID },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
+            
+            int billCount = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkBillsSql, checkBillsParams));
+            
+            // Check if broker exists in parties
+            string checkPartiesSql = "SELECT COUNT(*) FROM PartyMaster WHERE BrokerID = ? AND CompanyID = ?";
+            OleDbParameter[] checkPartiesParams = {
+                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerID },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
+            
+            int partyCount = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkPartiesSql, checkPartiesParams));
+            
+            if (billCount > 0 || partyCount > 0)
+            {
+                // Broker has bills or parties, cannot delete
+                return false;
+            }
+            
+            string sql = "DELETE FROM BrokerMaster WHERE BrokerID = ? AND CompanyID = ?";
+            OleDbParameter[] parameters = {
+                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerID },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
+            
+            int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
             
             return result > 0;
         }
@@ -133,18 +184,22 @@ namespace SaleBillSystem.NET.Data
         // Check if broker exists with the same name
         public static bool BrokerExists(string brokerName, int? excludeBrokerID = null)
         {
-            string sql = "SELECT COUNT(*) FROM BrokerMaster WHERE BrokerName = @BrokerName";
-            SQLiteParameter[] parameters = { new SQLiteParameter("@BrokerName", brokerName) };
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+            
+            string sql = "SELECT COUNT(*) FROM BrokerMaster WHERE BrokerName = ? AND CompanyID = ?";
+            List<OleDbParameter> paramsList = new List<OleDbParameter> {
+                new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = brokerName },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
             
             if (excludeBrokerID.HasValue)
             {
-                sql += " AND BrokerID <> @BrokerID";
-                parameters = new SQLiteParameter[] {
-                    new SQLiteParameter("@BrokerName", brokerName),
-                    new SQLiteParameter("@BrokerID", excludeBrokerID.Value)
-                };
+                sql += " AND BrokerID <> ?";
+                paramsList.Add(new OleDbParameter("BrokerID", OleDbType.Integer) { Value = excludeBrokerID.Value });
             }
             
+            OleDbParameter[] parameters = paramsList.ToArray();
             object result = DatabaseManager.ExecuteScalar(sql, parameters);
             
             return Convert.ToInt32(result) > 0;
@@ -158,7 +213,8 @@ namespace SaleBillSystem.NET.Data
                 BrokerID = Convert.ToInt32(row["BrokerID"]),
                 BrokerName = row["BrokerName"].ToString(),
                 Phone = row["Phone"].ToString(),
-                Email = row["Email"].ToString()
+                Email = row["Email"].ToString(),
+                CompanyID = row["CompanyID"] != DBNull.Value ? Convert.ToInt32(row["CompanyID"]) : 0
             };
         }
     }

@@ -185,6 +185,7 @@ namespace SaleBillSystem.NET.Forms
                             BillID = b.BillID,
                             BillNo = b.BillNo,
                             BillDate = b.BillDate,
+                            DueDate = b.DueDate,
                             PartyName = b.PartyName,
                             NetAmount = b.NetAmount,
                             InterestAmount = interestAmount,
@@ -220,6 +221,7 @@ namespace SaleBillSystem.NET.Forms
                             BillID = b.BillID,
                             BillNo = b.BillNo,
                             BillDate = b.BillDate,
+                            DueDate = b.DueDate,
                             PartyName = b.PartyName,
                             NetAmount = b.NetAmount,
                             InterestAmount = interestAmount,
@@ -451,6 +453,17 @@ namespace SaleBillSystem.NET.Forms
                 ReadOnly = true,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
             });
+            
+            // Due Date
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "DueDate",
+                HeaderText = "Due Date",
+                DataPropertyName = "DueDate",
+                Width = 100,
+                ReadOnly = true,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+            });
 
             // Party Name
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
@@ -612,6 +625,7 @@ namespace SaleBillSystem.NET.Forms
                         BillID = b.BillID,
                         BillNo = b.BillNo,
                         BillDate = b.BillDate,
+                        DueDate = b.DueDate,
                         PartyName = b.PartyName,
                         NetAmount = b.NetAmount,
                         InterestAmount = interestAmount,

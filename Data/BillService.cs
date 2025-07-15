@@ -53,6 +53,28 @@ namespace SaleBillSystem.NET.Data
                 // Get bill details
                 bill.BillItems = GetBillDetails(bill.BillID);
                 
+                // Calculate interest and discount for bills with payments
+                if (bill.PaidAmount > 0)
+                {
+                    // Get payment details to determine when payment was made
+                    string paymentSql = @"SELECT TOP 1 pm.PaymentDate 
+                                        FROM PaymentDetails pd 
+                                        INNER JOIN PaymentMaster pm ON pd.PaymentID = pm.PaymentID
+                                        WHERE pd.BillID = ?
+                                        ORDER BY pm.PaymentDate DESC";
+                    
+                    OleDbParameter billIdParam = new OleDbParameter("BillID", OleDbType.Integer) { Value = bill.BillID };
+                    object result = DatabaseManager.ExecuteScalar(paymentSql, billIdParam);
+                    
+                    if (result != null && result != DBNull.Value)
+                    {
+                        DateTime paymentDate = Convert.ToDateTime(result);
+                        var (interest, discount, _) = PaymentService.CalculateInterestAndDiscount(bill, paymentDate);
+                        bill.InterestAmount = interest;
+                        bill.DiscountAmount = discount;
+                    }
+                }
+                
                 bills.Add(bill);
             }
             
@@ -369,10 +391,11 @@ namespace SaleBillSystem.NET.Data
                             cmd.ExecuteNonQuery();
                         }
                         
-                        // Delete existing bill details
+                        // Delete existing bill details (use bill.BillID)
                         string deleteBillDetailsSql = "DELETE FROM BillDetails WHERE BillID = ?";
                         ExecuteNonQuery(conn, transaction, deleteBillDetailsSql, 
-                            new OleDbParameter("BillID", OleDbType.Integer) { Value = billID });
+                            new OleDbParameter("BillID", OleDbType.Integer) { Value = bill.BillID });
+                        billID = bill.BillID; // Set billID for consistency
                     }
                     
                     // Insert bill details

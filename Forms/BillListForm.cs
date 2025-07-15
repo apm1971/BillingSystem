@@ -53,9 +53,9 @@ namespace SaleBillSystem.NET.Forms
                     e.SuppressKeyPress = true;
                 }
             }
-            else if (e.KeyCode == Keys.Delete)
+            else if (e.Shift && e.KeyCode == Keys.Delete)
             {
-                // Delete: Delete selected bill
+                // Shift+Delete: Delete selected bill
                 if (dgvBills.SelectedRows.Count > 0)
                 {
                     DeleteBill();
@@ -95,7 +95,7 @@ namespace SaleBillSystem.NET.Forms
                 "Bill List Keyboard Shortcuts:\n\n" +
                 "F5: Refresh List\n" +
                 "Enter or F2: Edit Selected Bill\n" +
-                "Delete: Delete Selected Bill\n" +
+                "Shift+Delete: Delete Selected Bill\n" +
                 "Ctrl+N: New Bill\n" +
                 "Ctrl+F: Focus on Search\n" +
                 "Escape: Close\n" +
@@ -294,6 +294,26 @@ namespace SaleBillSystem.NET.Forms
                 Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
             });
+            
+            // Adjusted Net Amount (visible for paid/partial payments)
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "AdjustedNetAmount",
+                HeaderText = "Adj. Net Amount",
+                DataPropertyName = "AdjustedNetAmount",
+                Width = 110,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) }
+            });
+            
+            // Interest/Discount Info
+            dgvBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "InterestDiscountInfo",
+                HeaderText = "Int/Disc",
+                DataPropertyName = "InterestDiscountInfo",
+                Width = 110,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            });
 
             dgvBills.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -380,6 +400,8 @@ namespace SaleBillSystem.NET.Forms
                     TotalAmount = b.TotalAmount,
                     TotalCharges = b.TotalCharges,
                     NetAmount = b.NetAmount,
+                    AdjustedNetAmount = b.AdjustedNetAmount,
+                    InterestDiscountInfo = b.GetInterestDiscountInfo(),
                     PaidAmount = b.PaidAmount,
                     BalanceAmount = b.BalanceAmount,
                     PaymentStatusText = b.PaymentStatusText,
@@ -452,8 +474,27 @@ namespace SaleBillSystem.NET.Forms
                     $"Party: {selectedBill.PartyName}\n" +
                     $"Total Amount: {selectedBill.TotalAmount:N2}\n" +
                     $"Total Charges: {selectedBill.TotalCharges:N2}\n" +
-                    $"Net Amount: {selectedBill.NetAmount:N2}\n" +
-                    $"Paid Amount: {selectedBill.PaidAmount:N2}\n" +
+                    $"Net Amount: {selectedBill.NetAmount:N2}";
+
+                // Show interest and discount for paid or partial payments
+                if (selectedBill.PaidAmount > 0)
+                {
+                    if (selectedBill.InterestAmount > 0)
+                    {
+                        billDetails += $"\nAdjustment: +₹{selectedBill.InterestAmount:N2}";
+                    }
+                    else if (selectedBill.DiscountAmount > 0)
+                    {
+                        billDetails += $"\nAdjustment: -₹{selectedBill.DiscountAmount:N2}";
+                    }
+                    
+                    if (selectedBill.InterestAmount > 0 || selectedBill.DiscountAmount > 0)
+                    {
+                        billDetails += $"\nAdjusted Net Amount: {selectedBill.AdjustedNetAmount:N2}";
+                    }
+                }
+
+                billDetails += $"\nPaid Amount: {selectedBill.PaidAmount:N2}\n" +
                     $"Balance: {selectedBill.BalanceAmount:N2}\n" +
                     $"Status: {paymentStatus}\n" +
                     $"Number of Items: {selectedBill.BillItems.Count}\n\n";
@@ -566,8 +607,11 @@ namespace SaleBillSystem.NET.Forms
                     e.Handled = true;
                     break;
                 case Keys.Delete:
-                    DeleteSelectedBill();
-                    e.Handled = true;
+                    if (e.Shift) // Only delete if Shift is pressed
+                    {
+                        DeleteSelectedBill();
+                        e.Handled = true;
+                    }
                     break;
                 case Keys.F5:
                     LoadBills();
@@ -631,6 +675,62 @@ namespace SaleBillSystem.NET.Forms
                         else // Outstanding balance
                         {
                             e.CellStyle.ForeColor = Color.Red;
+                        }
+                    }
+                }
+                
+                // Format Interest/Discount Info column
+                if (column.Name == "InterestDiscountInfo" && e.Value != null)
+                {
+                    string info = e.Value.ToString();
+                    if (info.StartsWith("+"))
+                    {
+                        e.CellStyle.ForeColor = Color.Red; // Interest is additional charge (red)
+                        e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
+                    }
+                    else if (info.StartsWith("-"))
+                    {
+                        e.CellStyle.ForeColor = Color.Green; // Discount is a reduction (green)
+                        e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
+                    }
+                }
+                
+                // Format Adjusted Net Amount column - only show for paid/partial payments
+                if (column.Name == "AdjustedNetAmount")
+                {
+                    // Get payment status from the same row
+                    var statusCell = dgvBills.Rows[e.RowIndex].Cells["PaymentStatusText"];
+                    if (statusCell != null && statusCell.Value != null)
+                    {
+                        string status = statusCell.Value.ToString();
+                        if (status == "Unpaid")
+                        {
+                            // Hide adjusted amount for unpaid bills by making it same as regular net amount
+                            var netAmountCell = dgvBills.Rows[e.RowIndex].Cells["NetAmount"];
+                            if (netAmountCell != null && netAmountCell.Value != null)
+                            {
+                                e.Value = netAmountCell.Value;
+                            }
+                        }
+                        else
+                        {
+                            // For paid/partial: show in bold with appropriate color
+                            e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
+                            
+                            // Get interest/discount info to determine color
+                            var infoCell = dgvBills.Rows[e.RowIndex].Cells["InterestDiscountInfo"];
+                            if (infoCell != null && infoCell.Value != null)
+                            {
+                                string info = infoCell.Value.ToString();
+                                if (info.StartsWith("+"))
+                                {
+                                    e.CellStyle.ForeColor = Color.Firebrick; // Higher amount due to interest
+                                }
+                                else if (info.StartsWith("-"))
+                                {
+                                    e.CellStyle.ForeColor = Color.DarkGreen; // Lower amount due to discount
+                                }
+                            }
                         }
                     }
                 }

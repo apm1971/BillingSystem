@@ -864,6 +864,7 @@ namespace SaleBillSystem.NET.Forms
                 }
                 
                 // Get data from form
+                currentBill.BillNo = txtBillNo.Text; // Add this line to set the bill number
                 currentBill.BillDate = dtpBillDate.Value.Date;
                 currentBill.DueDate = dtpDueDate.Value.Date;
                 

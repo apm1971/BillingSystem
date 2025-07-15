@@ -17,8 +17,11 @@ namespace SaleBillSystem.NET.Models
         public double TotalCharges { get; set; }
         public double NetAmount { get; set; }
         public double PaidAmount { get; set; }
+        public double InterestAmount { get; set; }
+        public double DiscountAmount { get; set; }
         public string Notes { get; set; } = string.Empty;
-        public double BalanceAmount => NetAmount - PaidAmount;
+        public double BalanceAmount => (NetAmount + InterestAmount - DiscountAmount) - PaidAmount;
+        public double AdjustedNetAmount => NetAmount + InterestAmount - DiscountAmount;
         public List<BillItem> BillItems { get; set; } = new List<BillItem>();
         public int CompanyID { get; set; }
 
@@ -68,5 +71,19 @@ namespace SaleBillSystem.NET.Models
 
         // Item count for display
         public int ItemCount => BillItems.Count;
+        
+        // Interest and discount info for display
+        public string GetInterestDiscountInfo()
+        {
+            if (PaidAmount <= 0)
+                return string.Empty;
+                
+            if (InterestAmount > 0)
+                return $"+₹{InterestAmount:N2}";
+            else if (DiscountAmount > 0)
+                return $"-₹{DiscountAmount:N2}";
+            else
+                return string.Empty;
+        }
     }
 } 

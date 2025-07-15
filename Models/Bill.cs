@@ -20,6 +20,7 @@ namespace SaleBillSystem.NET.Models
         public string Notes { get; set; } = string.Empty;
         public double BalanceAmount => NetAmount - PaidAmount;
         public List<BillItem> BillItems { get; set; } = new List<BillItem>();
+        public int CompanyID { get; set; }
 
         // Calculate bill totals from items
         public void CalculateTotals()

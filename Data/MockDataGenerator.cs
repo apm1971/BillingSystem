@@ -11,7 +11,18 @@ namespace SaleBillSystem.NET.Data
 
         public static void GenerateMockData()
         {
-            // Check if mock data already exists to avoid duplicates
+            // Check if active company exists
+            if (Program.ActiveCompany == null)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    "No active company found. Please create or select a company first.",
+                    "Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Check if mock data already exists for this company to avoid duplicates
             if (_isDataGenerated || CheckIfDataExists())
             {
                 return;
@@ -26,7 +37,7 @@ namespace SaleBillSystem.NET.Data
                 _isDataGenerated = true;
                 
                 System.Windows.Forms.MessageBox.Show(
-                    "Mock data has been generated successfully!\n\n" +
+                    $"Mock data has been generated successfully for {Program.ActiveCompany.CompanyName}!\n\n" +
                     "• 5 sample brokers\n" +
                     "• 10 sample parties with credit days and brokers\n" +
                     "• 15 sample items with charges\n" +
@@ -49,7 +60,10 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                var dt = DatabaseManager.ExecuteQuery("SELECT COUNT(*) FROM PartyMaster");
+                int companyID = Program.ActiveCompany.CompanyID;
+                var sql = "SELECT COUNT(*) FROM PartyMaster WHERE CompanyID = ?";
+                var parameter = new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID };
+                var dt = DatabaseManager.ExecuteQuery(sql, parameter);
                 if (dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0][0]) > 0)
                 {
                     return true;
@@ -79,7 +93,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     BrokerName = broker.name,
                     Phone = broker.phone,
-                    Email = broker.email
+                    Email = broker.email,
+                    CompanyID = Program.ActiveCompany.CompanyID
                 });
             }
         }
@@ -118,7 +133,8 @@ namespace SaleBillSystem.NET.Data
                     PAN = party.pan,
                     OpeningBalance = party.openingBalance,
                     OpeningBalanceDate = DateTime.Today.AddDays(-30),
-                    CreditDays = 30 + (i * 5) % 30 // Varied credit days 30-60
+                    CreditDays = 30 + (i * 5) % 30, // Varied credit days 30-60
+                    CompanyID = Program.ActiveCompany.CompanyID
                 };
 
                 // Assign broker to some parties (about 60% of them)
@@ -163,7 +179,8 @@ namespace SaleBillSystem.NET.Data
                     Unit = item.unit,
                     Rate = item.rate,
                     Charges = item.charges,
-                    StockQuantity = item.stock
+                    StockQuantity = item.stock,
+                    CompanyID = Program.ActiveCompany.CompanyID
                 });
             }
         }
@@ -187,7 +204,8 @@ namespace SaleBillSystem.NET.Data
                     PartyID = party.PartyID,
                     PartyName = party.PartyName,
                     BrokerID = party.BrokerID,
-                    BrokerName = party.BrokerName
+                    BrokerName = party.BrokerName,
+                    CompanyID = Program.ActiveCompany.CompanyID
                 };
 
                 // Calculate due date based on party's credit days
@@ -223,26 +241,24 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                DatabaseManager.ExecuteNonQuery("DELETE FROM BillDetails");
-                DatabaseManager.ExecuteNonQuery("DELETE FROM BillMaster");
-                DatabaseManager.ExecuteNonQuery("DELETE FROM ItemMaster");
-                DatabaseManager.ExecuteNonQuery("DELETE FROM PartyMaster");
-                DatabaseManager.ExecuteNonQuery("DELETE FROM BrokerMaster");
+                int companyID = Program.ActiveCompany.CompanyID;
                 
-                // Reset counters in Access
-                try {
-                    // These operations may fail if counters don't exist, that's ok
-                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BillMaster ALTER COLUMN BillID COUNTER(1,1)");
-                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BillDetails ALTER COLUMN BillDetailID COUNTER(1,1)");
-                    DatabaseManager.ExecuteNonQuery("ALTER TABLE ItemMaster ALTER COLUMN ItemID COUNTER(1,1)");
-                    DatabaseManager.ExecuteNonQuery("ALTER TABLE PartyMaster ALTER COLUMN PartyID COUNTER(1,1)");
-                    DatabaseManager.ExecuteNonQuery("ALTER TABLE BrokerMaster ALTER COLUMN BrokerID COUNTER(1,1)");
-                } catch { /* Ignore errors with counter reset */ }
+                // Delete data only for the active company
+                DatabaseManager.ExecuteNonQuery("DELETE FROM BillDetails WHERE BillID IN (SELECT BillID FROM BillMaster WHERE CompanyID = ?)", 
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
+                DatabaseManager.ExecuteNonQuery("DELETE FROM BillMaster WHERE CompanyID = ?",
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
+                DatabaseManager.ExecuteNonQuery("DELETE FROM ItemMaster WHERE CompanyID = ?",
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
+                DatabaseManager.ExecuteNonQuery("DELETE FROM PartyMaster WHERE CompanyID = ?",
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
+                DatabaseManager.ExecuteNonQuery("DELETE FROM BrokerMaster WHERE CompanyID = ?",
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
                 
                 _isDataGenerated = false;
                 
                 System.Windows.Forms.MessageBox.Show(
-                    "All data has been cleared successfully!",
+                    $"All data for {Program.ActiveCompany.CompanyName} has been cleared successfully!",
                     "Data Cleared",
                     System.Windows.Forms.MessageBoxButtons.OK,
                     System.Windows.Forms.MessageBoxIcon.Information);

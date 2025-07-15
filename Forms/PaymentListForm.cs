@@ -149,22 +149,22 @@ namespace SaleBillSystem.NET.Forms
                 Width = 120
             });
             
-            // Reference column
+            // Party Name column
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Reference",
-                HeaderText = "Reference",
-                DataPropertyName = "Reference",
-                Width = 150
+                Name = "PrimaryPartyName",
+                HeaderText = "Party Name",
+                DataPropertyName = "PrimaryPartyName",
+                Width = 180
             });
             
-            // Party column
+            // Broker Name column
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "PartyInfo",
-                HeaderText = "Party",
-                DataPropertyName = "PartyInfo",
-                Width = 200
+                Name = "PrimaryBrokerName",
+                HeaderText = "Broker Name",
+                DataPropertyName = "PrimaryBrokerName",
+                Width = 180
             });
             
             // Bill Count column
@@ -220,16 +220,31 @@ namespace SaleBillSystem.NET.Forms
         private void RefreshGrid()
         {
             // Create display data
-            var paymentData = filteredPayments.Select(p => new
+            var paymentData = filteredPayments.Select(p => 
             {
-                PaymentID = p.PaymentID,
-                PaymentDate = p.PaymentDate,
-                PaymentAmount = p.PaymentAmount,
-                PaymentMethod = p.PaymentMethod,
-                Reference = p.Reference,
-                PartyInfo = p.PartyInfo,
-                BillCount = p.PaymentDetails.Count,
-                Notes = p.Notes
+                // Extract the primary broker name from payment details
+                string primaryBrokerName = "";
+                if (p.PaymentDetails.Any() && p.PaymentDetails.FirstOrDefault()?.BillID > 0)
+                {
+                    // Try to get broker info from the first bill
+                    var bill = BillService.GetBillByID(p.PaymentDetails.First().BillID);
+                    if (bill != null && !string.IsNullOrEmpty(bill.BrokerName))
+                    {
+                        primaryBrokerName = bill.BrokerName;
+                    }
+                }
+
+                return new
+                {
+                    PaymentID = p.PaymentID,
+                    PaymentDate = p.PaymentDate,
+                    PaymentAmount = p.PaymentAmount,
+                    PaymentMethod = p.PaymentMethod,
+                    PrimaryPartyName = p.PrimaryPartyName,
+                    PrimaryBrokerName = primaryBrokerName,
+                    BillCount = p.PaymentDetails.Count,
+                    Notes = p.Notes
+                };
             }).ToList();
 
             dgvPayments.DataSource = paymentData;
@@ -255,9 +270,9 @@ namespace SaleBillSystem.NET.Forms
             {
                 filteredPayments = payments.Where(p =>
                     p.PaymentMethod.ToLower().Contains(searchText) ||
-                    p.Reference.ToLower().Contains(searchText) ||
-                    p.Notes.ToLower().Contains(searchText) ||
                     p.PrimaryPartyName.ToLower().Contains(searchText) ||
+                    p.Notes.ToLower().Contains(searchText) ||
+                    // Search in payment details
                     p.PaymentDetails.Any(pd => pd.BillNo.ToLower().Contains(searchText) || 
                                               pd.PartyName.ToLower().Contains(searchText))
                 ).ToList();
@@ -374,16 +389,41 @@ namespace SaleBillSystem.NET.Forms
 
         private void ShowPaymentDetails(Payment payment)
         {
+            // Get broker information if available
+            string brokerInfo = "";
+            if (payment.PaymentDetails.Any() && payment.PaymentDetails.FirstOrDefault()?.BillID > 0)
+            {
+                var bill = BillService.GetBillByID(payment.PaymentDetails.First().BillID);
+                if (bill != null && !string.IsNullOrEmpty(bill.BrokerName))
+                {
+                    brokerInfo = bill.BrokerName;
+                }
+            }
+
             string details = $"Payment Details\n";
             details += $"==================\n";
             details += $"Payment ID: {payment.PaymentID}\n";
             details += $"Date: {payment.PaymentDate:dd/MM/yyyy}\n";
             details += $"Amount: ₹{payment.PaymentAmount:N2}\n";
             details += $"Method: {payment.PaymentMethod}\n";
-            details += $"Reference: {payment.Reference}\n";
-            details += $"Notes: {payment.Notes}\n\n";
+            details += $"Party: {payment.PrimaryPartyName}\n";
             
-            details += $"Bill Allocations:\n";
+            if (!string.IsNullOrEmpty(brokerInfo))
+            {
+                details += $"Broker: {brokerInfo}\n";
+            }
+            
+            if (!string.IsNullOrEmpty(payment.Reference))
+            {
+                details += $"Reference: {payment.Reference}\n";
+            }
+            
+            if (!string.IsNullOrEmpty(payment.Notes))
+            {
+                details += $"Notes: {payment.Notes}\n";
+            }
+            
+            details += $"\nBill Allocations: {payment.PaymentDetails.Count}\n";
             details += $"=================\n";
             
             foreach (var detail in payment.PaymentDetails)

@@ -29,12 +29,15 @@ namespace SaleBillSystem.NET.Forms
         public PaymentEntryForm(int paymentId)
         {
             InitializeComponent();
+            // Set edit mode flag first
+            isEditMode = true;
+            
             LoadData();
             SetupForm();
             
             // Load the existing payment
             LoadPayment(paymentId);
-            isEditMode = true;
+            
             this.Text = "Edit Payment";
         }
 
@@ -276,6 +279,7 @@ namespace SaleBillSystem.NET.Forms
             cmbBroker.SelectedIndexChanged += Broker_SelectedIndexChanged;
             txtPaymentAmount.TextChanged += PaymentAmount_TextChanged;
             dgvBills.CellValueChanged += DgvBills_CellValueChanged;
+            dgvBills.CellEndEdit += DgvBills_CellEndEdit;
             dtpPaymentDate.ValueChanged += DtpPaymentDate_ValueChanged; // Added for date change
             
             // Add KeyDown event handler for keyboard shortcuts
@@ -634,30 +638,172 @@ namespace SaleBillSystem.NET.Forms
 
         private void PaymentAmount_TextChanged(object sender, EventArgs e)
         {
-            // Only auto-allocate for new payments, not when editing existing payments
-            if (!isEditMode)
-            {
-                AutoAllocatePayment();
-            }
-            else
-            {
-                // In edit mode, just update the summary without auto-allocating
-                UpdatePaymentSummary();
-            }
+            // Skip processing if this change was triggered programmatically
+            if (isAutoAllocating)
+                return;
+            
+            // Auto-allocate for both new payments and when editing existing payments
+            // The AutoAllocatePayment method will handle preserving allocations in edit mode
+            AutoAllocatePayment();
         }
 
         private void AutoAllocatePayment()
         {
-            if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
+            // Set flag to prevent recursive updates
+            isAutoAllocating = true;
+            
+            try
             {
-                // Clear all payment amounts if invalid
-                foreach (DataGridViewRow row in dgvBills.Rows)
+                if (!double.TryParse(txtPaymentAmount.Text, out double paymentAmount) || paymentAmount <= 0)
                 {
-                    if (row.Cells["PaymentAmount"] != null)
+                    // Clear all payment amounts if invalid
+                    foreach (DataGridViewRow row in dgvBills.Rows)
                     {
-                        row.Cells["PaymentAmount"].Value = 0.0;
+                        if (row.Cells["PaymentAmount"] != null)
+                        {
+                            row.Cells["PaymentAmount"].Value = 0.0;
+                        }
+                    }
+                    UpdatePaymentSummary();
+                    return;
+                }
+
+                double remainingAmount = paymentAmount;
+
+                // Get current bill data with calculated interest/discount
+                var billData = dgvBills.DataSource as IEnumerable<dynamic>;
+                if (billData == null) return;
+
+                var billList = billData.ToList();
+
+                if (isEditMode)
+                {
+                    // In edit mode, try to preserve existing allocations
+                    // Calculate total currently allocated
+                    double currentlyAllocated = 0;
+                    foreach (DataGridViewRow row in dgvBills.Rows)
+                    {
+                        if (row.Cells["PaymentAmount"].Value != null)
+                        {
+                            currentlyAllocated += Convert.ToDouble(row.Cells["PaymentAmount"].Value);
+                        }
+                    }
+
+                    // If the new amount differs from the currently allocated amount
+                    if (Math.Abs(paymentAmount - currentlyAllocated) > 0.01)
+                    {
+                        // If new amount is greater, allocate the difference to oldest bills with balance
+                        if (paymentAmount > currentlyAllocated)
+                        {
+                            double additionalAmount = paymentAmount - currentlyAllocated;
+                            
+                            // Allocate additional amount to bills with remaining balance
+                            for (int i = 0; i < dgvBills.Rows.Count && additionalAmount > 0; i++)
+                            {
+                                var row = dgvBills.Rows[i];
+                                var billInfo = billList[i];
+                                
+                                double currentPayment = Convert.ToDouble(row.Cells["PaymentAmount"].Value);
+                                double balanceAmount = billInfo.BalanceAmount;
+                                double remainingBalance = balanceAmount - currentPayment;
+                                
+                                if (remainingBalance > 0)
+                                {
+                                    double additionalAllocation = Math.Min(additionalAmount, remainingBalance);
+                                    row.Cells["PaymentAmount"].Value = currentPayment + additionalAllocation;
+                                    additionalAmount -= additionalAllocation;
+                                }
+                            }
+                        }
+                        // If new amount is less, reduce allocations proportionally
+                        else
+                        {
+                            double reductionFactor = paymentAmount / currentlyAllocated;
+                            
+                            // Apply reduction to all rows with allocations
+                            foreach (DataGridViewRow row in dgvBills.Rows)
+                            {
+                                if (row.Cells["PaymentAmount"].Value != null)
+                                {
+                                    double currentValue = Convert.ToDouble(row.Cells["PaymentAmount"].Value);
+                                    if (currentValue > 0)
+                                    {
+                                        double newValue = Math.Round(currentValue * reductionFactor, 2);
+                                        row.Cells["PaymentAmount"].Value = newValue;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+                else
+                {
+                    // For new payments, allocate from scratch
+                    // Allocate payment to bills in order (oldest first)
+                    for (int i = 0; i < dgvBills.Rows.Count && remainingAmount > 0; i++)
+                    {
+                        var row = dgvBills.Rows[i];
+                        var billInfo = billList[i];
+                        
+                        double balanceAmount = billInfo.BalanceAmount;
+                        double allocationAmount = Math.Min(remainingAmount, balanceAmount);
+                        
+                        row.Cells["PaymentAmount"].Value = allocationAmount;
+                        remainingAmount -= allocationAmount;
+                    }
+
+                    // Clear remaining rows if payment is less than total outstanding
+                    for (int i = 0; i < dgvBills.Rows.Count; i++)
+                    {
+                        var row = dgvBills.Rows[i];
+                        if (row.Cells["PaymentAmount"].Value == null)
+                        {
+                            row.Cells["PaymentAmount"].Value = 0.0;
+                        }
+                    }
+                }
+
+                UpdatePaymentSummary();
+            }
+            finally
+            {
+                isAutoAllocating = false;
+            }
+        }
+        
+        private void btnAutoAllocate_Click(object sender, EventArgs e)
+        {
+            // First clear all existing allocations
+            isAutoAllocating = true;
+            
+            try
+            {
+                // Clear existing allocations first
+                foreach (DataGridViewRow row in dgvBills.Rows)
+                {
+                    row.Cells["PaymentAmount"].Value = 0.0;
+                }
+                
+                // Get current payment amount - this stays the same
+                double currentAmount = 0;
+                if (double.TryParse(txtPaymentAmount.Text, out double amount))
+                {
+                    currentAmount = amount;
+                }
+                
+                // Then perform auto allocation from scratch
+                AutoAllocateFromScratch(currentAmount);
+            }
+            finally
+            {
+                isAutoAllocating = false;
+            }
+        }
+        
+        private void AutoAllocateFromScratch(double paymentAmount)
+        {
+            if (paymentAmount <= 0)
+            {
                 UpdatePaymentSummary();
                 return;
             }
@@ -683,22 +829,7 @@ namespace SaleBillSystem.NET.Forms
                 remainingAmount -= allocationAmount;
             }
 
-            // Clear remaining rows if payment is less than total outstanding
-            for (int i = 0; i < dgvBills.Rows.Count; i++)
-            {
-                var row = dgvBills.Rows[i];
-                if (row.Cells["PaymentAmount"].Value == null)
-                {
-                    row.Cells["PaymentAmount"].Value = 0.0;
-                }
-            }
-
             UpdatePaymentSummary();
-        }
-
-        private void btnAutoAllocate_Click(object sender, EventArgs e)
-        {
-            AutoAllocatePayment();
         }
         
         private void btnClearAllocation_Click(object sender, EventArgs e)
@@ -707,9 +838,16 @@ namespace SaleBillSystem.NET.Forms
             
             try
             {
+                // Clear all payment allocations
                 foreach (DataGridViewRow row in dgvBills.Rows)
                 {
                     row.Cells["PaymentAmount"].Value = 0.0;
+                }
+                
+                // Update the payment amount to zero as well if not in edit mode
+                if (!isEditMode)
+                {
+                    txtPaymentAmount.Text = "0.00";
                 }
                 
                 UpdatePaymentSummary();
@@ -726,11 +864,89 @@ namespace SaleBillSystem.NET.Forms
             
             if (e.ColumnIndex >= 0 && dgvBills.Columns[e.ColumnIndex].Name == "PaymentAmount")
             {
+                // Validate the value is numeric
+                var cell = dgvBills.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                if (cell.Value != null)
+                {
+                    if (!double.TryParse(cell.Value.ToString(), out double amount))
+                    {
+                        // Reset to 0 if not a valid number
+                        cell.Value = 0.0;
+                    }
+                    else if (amount < 0)
+                    {
+                        // Ensure payment amount is not negative
+                        cell.Value = 0.0;
+                    }
+                    else
+                    {
+                        // Ensure payment amount doesn't exceed bill balance
+                        var balanceCell = dgvBills.Rows[e.RowIndex].Cells["BalanceAmount"];
+                        if (balanceCell != null && double.TryParse(balanceCell.Value.ToString(), out double balance))
+                        {
+                            if (amount > balance)
+                            {
+                                cell.Value = balance;
+                            }
+                        }
+                    }
+                }
+                
+                // Update the payment summary and the top payment amount
+                double totalAllocated = CalculateTotalAllocated();
+                
+                // Only update the top payment amount if not in edit mode
+                if (!isEditMode)
+                {
+                    // Update the payment amount textbox with the total allocated
+                    // Set isAutoAllocating to prevent recursive updates
+                    isAutoAllocating = true;
+                    txtPaymentAmount.Text = totalAllocated.ToString("N2");
+                    isAutoAllocating = false;
+                }
+                
                 UpdatePaymentSummary();
             }
         }
 
-        private void UpdatePaymentSummary()
+        private void DgvBills_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            // Skip if this is not the payment amount column
+            if (e.ColumnIndex < 0 || dgvBills.Columns[e.ColumnIndex].Name != "PaymentAmount")
+                return;
+                
+            // Ensure the value is valid
+            var cell = dgvBills.Rows[e.RowIndex].Cells[e.ColumnIndex];
+            if (cell.Value == null || string.IsNullOrWhiteSpace(cell.Value.ToString()))
+            {
+                cell.Value = 0.0;
+            }
+            
+            // Make sure the payment amount is valid and doesn't exceed the balance
+            if (double.TryParse(cell.Value.ToString(), out double amount))
+            {
+                // Get the balance amount for this bill
+                var balanceCell = dgvBills.Rows[e.RowIndex].Cells["BalanceAmount"];
+                if (balanceCell != null && double.TryParse(balanceCell.Value.ToString(), out double balance))
+                {
+                    if (amount > balance)
+                    {
+                        cell.Value = balance;
+                        MessageBox.Show(
+                            "Payment amount cannot exceed the outstanding balance. Amount has been adjusted.",
+                            "Payment Amount Adjusted",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                }
+            }
+            else
+            {
+                cell.Value = 0.0;
+            }
+        }
+
+        private double CalculateTotalAllocated()
         {
             double totalAllocated = 0;
             
@@ -741,7 +957,13 @@ namespace SaleBillSystem.NET.Forms
                     totalAllocated += Convert.ToDouble(row.Cells["PaymentAmount"].Value);
                 }
             }
+            
+            return totalAllocated;
+        }
 
+        private void UpdatePaymentSummary()
+        {
+            double totalAllocated = CalculateTotalAllocated();
             lblAllocatedAmount.Text = $"Allocated: ₹{totalAllocated:N2}";
             
             if (double.TryParse(txtPaymentAmount.Text, out double paymentAmount))

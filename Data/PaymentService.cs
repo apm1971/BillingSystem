@@ -70,10 +70,54 @@ namespace SaleBillSystem.NET.Data
                 // Get payment details
                 payment.PaymentDetails = GetPaymentDetails(payment.PaymentID);
                 
+                // Extract party information from payment details
+                PopulatePartyInformation(payment);
+                
                 payments.Add(payment);
             }
             
             return payments;
+        }
+        
+        // Populate party and broker information for a payment
+        private static void PopulatePartyInformation(Payment payment)
+        {
+            if (payment.PaymentDetails.Count == 0)
+                return;
+                
+            // Get all bills associated with this payment
+            var billIds = payment.PaymentDetails.Select(pd => pd.BillID).ToList();
+            var partyNames = new HashSet<string>();
+            string primaryPartyName = string.Empty;
+            
+            // For each payment detail, get bill information
+            foreach (var detail in payment.PaymentDetails)
+            {
+                // Load bill and party information
+                var bill = BillService.GetBillByID(detail.BillID);
+                if (bill != null)
+                {
+                    // Set bill no and party name on payment detail
+                    detail.BillNo = bill.BillNo;
+                    detail.PartyName = bill.PartyName;
+                    
+                    // Add to unique party names
+                    if (!string.IsNullOrEmpty(bill.PartyName))
+                    {
+                        partyNames.Add(bill.PartyName);
+                        
+                        // Use first bill's party name as primary
+                        if (string.IsNullOrEmpty(primaryPartyName))
+                        {
+                            primaryPartyName = bill.PartyName;
+                        }
+                    }
+                }
+            }
+            
+            // Set party information on payment
+            payment.PrimaryPartyName = primaryPartyName;
+            payment.UniquePartyCount = partyNames.Count;
         }
         
         // Get payment details
@@ -81,7 +125,9 @@ namespace SaleBillSystem.NET.Data
         {
             List<PaymentDetail> paymentDetails = new List<PaymentDetail>();
             
-            string sql = "SELECT * FROM PaymentDetails WHERE PaymentID = ?";
+            string sql = "SELECT pd.*, b.BillNo, b.PartyName FROM PaymentDetails pd " +
+                         "LEFT JOIN BillMaster b ON pd.BillID = b.BillID " +
+                         "WHERE pd.PaymentID = ?";
             OleDbParameter param = new OleDbParameter("PaymentID", paymentID);
             
             DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
@@ -93,6 +139,8 @@ namespace SaleBillSystem.NET.Data
                     PaymentDetailID = Convert.ToInt32(row["PaymentDetailID"]),
                     PaymentID = paymentID,
                     BillID = Convert.ToInt32(row["BillID"]),
+                    BillNo = row["BillNo"].ToString(),
+                    PartyName = row["PartyName"].ToString(),
                     PreviousPaid = Convert.ToDouble(row["PreviousPaid"]),
                     BalanceBefore = Convert.ToDouble(row["BalanceBefore"]),
                     AllocatedAmount = Convert.ToDouble(row["AllocatedAmount"]),
@@ -136,6 +184,9 @@ namespace SaleBillSystem.NET.Data
                 
                 // Get payment details
                 payment.PaymentDetails = GetPaymentDetails(payment.PaymentID);
+                
+                // Extract party information from payment details
+                PopulatePartyInformation(payment);
                 
                 return payment;
             }

@@ -22,6 +22,12 @@ namespace SaleBillSystem.NET.Forms
         {
             this.Text = isEditMode ? "Edit Broker" : "New Broker";
             
+            // Set text fields to use uppercase
+            txtBrokerName.CharacterCasing = CharacterCasing.Upper;
+            txtPhone.CharacterCasing = CharacterCasing.Upper;
+            // Email can remain in mixed case as emails are case-sensitive
+            // txtEmail.CharacterCasing = CharacterCasing.Upper;
+            
             if (isEditMode)
             {
                 LoadBrokerData();
@@ -47,9 +53,9 @@ namespace SaleBillSystem.NET.Forms
                 var broker = new Broker
                 {
                     BrokerID = currentBroker.BrokerID,
-                    BrokerName = txtBrokerName.Text.Trim(),
-                    Phone = txtPhone.Text.Trim(),
-                    Email = txtEmail.Text.Trim()
+                    BrokerName = txtBrokerName.Text.Trim().ToUpper(),
+                    Phone = txtPhone.Text.Trim().ToUpper(),
+                    Email = txtEmail.Text.Trim() // Email remains as-is (case-sensitive)
                 };
 
                 bool success;

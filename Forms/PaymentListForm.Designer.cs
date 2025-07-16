@@ -20,6 +20,10 @@ namespace SaleBillSystem.NET.Forms
             this.txtSearch = new System.Windows.Forms.TextBox();
             this.lblTotalPayments = new System.Windows.Forms.Label();
             this.lblTotalAmount = new System.Windows.Forms.Label();
+            this.lblFromDate = new System.Windows.Forms.Label();
+            this.dtpFromDate = new System.Windows.Forms.DateTimePicker();
+            this.lblToDate = new System.Windows.Forms.Label();
+            this.dtpToDate = new System.Windows.Forms.DateTimePicker();
             
             this.dgvPayments = new System.Windows.Forms.DataGridView();
             
@@ -38,6 +42,10 @@ namespace SaleBillSystem.NET.Forms
             // panelTop
             this.panelTop.Controls.Add(this.lblSearch);
             this.panelTop.Controls.Add(this.txtSearch);
+            this.panelTop.Controls.Add(this.lblFromDate);
+            this.panelTop.Controls.Add(this.dtpFromDate);
+            this.panelTop.Controls.Add(this.lblToDate);
+            this.panelTop.Controls.Add(this.dtpToDate);
             this.panelTop.Controls.Add(this.lblTotalPayments);
             this.panelTop.Controls.Add(this.lblTotalAmount);
             this.panelTop.Dock = System.Windows.Forms.DockStyle.Top;
@@ -58,26 +66,58 @@ namespace SaleBillSystem.NET.Forms
             this.txtSearch.Location = new System.Drawing.Point(60, 12);
             this.txtSearch.Name = "txtSearch";
             this.txtSearch.PlaceholderText = "Search by method, reference, notes, bill or party...";
-            this.txtSearch.Size = new System.Drawing.Size(300, 23);
+            this.txtSearch.Size = new System.Drawing.Size(200, 23);
             this.txtSearch.TabIndex = 1;
             this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
+
+            // lblFromDate
+            this.lblFromDate.AutoSize = true;
+            this.lblFromDate.Location = new System.Drawing.Point(275, 15);
+            this.lblFromDate.Name = "lblFromDate";
+            this.lblFromDate.Size = new System.Drawing.Size(38, 15);
+            this.lblFromDate.TabIndex = 2;
+            this.lblFromDate.Text = "From:";
+            
+            // dtpFromDate
+            this.dtpFromDate.CustomFormat = "dd-MM-yyyy";
+            this.dtpFromDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpFromDate.Location = new System.Drawing.Point(320, 12);
+            this.dtpFromDate.Name = "dtpFromDate";
+            this.dtpFromDate.Size = new System.Drawing.Size(100, 23);
+            this.dtpFromDate.TabIndex = 3;
+            
+            // lblToDate
+            this.lblToDate.AutoSize = true;
+            this.lblToDate.Location = new System.Drawing.Point(430, 15);
+            this.lblToDate.Name = "lblToDate";
+            this.lblToDate.Size = new System.Drawing.Size(23, 15);
+            this.lblToDate.TabIndex = 4;
+            this.lblToDate.Text = "To:";
+            
+            // dtpToDate
+            this.dtpToDate.CustomFormat = "dd-MM-yyyy";
+            this.dtpToDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpToDate.Location = new System.Drawing.Point(460, 12);
+            this.dtpToDate.Name = "dtpToDate";
+            this.dtpToDate.Size = new System.Drawing.Size(100, 23);
+            this.dtpToDate.TabIndex = 5;
 
             // lblTotalPayments
             this.lblTotalPayments.AutoSize = true;
             this.lblTotalPayments.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblTotalPayments.Location = new System.Drawing.Point(380, 15);
+            this.lblTotalPayments.Location = new System.Drawing.Point(580, 15);
             this.lblTotalPayments.Name = "lblTotalPayments";
             this.lblTotalPayments.Size = new System.Drawing.Size(102, 15);
-            this.lblTotalPayments.TabIndex = 2;
+            this.lblTotalPayments.TabIndex = 6;
             this.lblTotalPayments.Text = "Total Payments: 0";
 
             // lblTotalAmount
             this.lblTotalAmount.AutoSize = true;
             this.lblTotalAmount.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.lblTotalAmount.Location = new System.Drawing.Point(550, 15);
+            this.lblTotalAmount.Location = new System.Drawing.Point(700, 15);
             this.lblTotalAmount.Name = "lblTotalAmount";
             this.lblTotalAmount.Size = new System.Drawing.Size(116, 15);
-            this.lblTotalAmount.TabIndex = 3;
+            this.lblTotalAmount.TabIndex = 7;
             this.lblTotalAmount.Text = "Total Amount: ₹0.00";
 
             // dgvPayments
@@ -182,6 +222,10 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Label lblTotalPayments;
         private System.Windows.Forms.Label lblTotalAmount;
+        private System.Windows.Forms.Label lblFromDate;
+        private System.Windows.Forms.DateTimePicker dtpFromDate;
+        private System.Windows.Forms.Label lblToDate;
+        private System.Windows.Forms.DateTimePicker dtpToDate;
         private System.Windows.Forms.DataGridView dgvPayments;
         private System.Windows.Forms.Panel panelBottom;
         private System.Windows.Forms.Button btnView;

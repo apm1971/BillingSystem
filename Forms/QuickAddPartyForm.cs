@@ -23,6 +23,14 @@ namespace SaleBillSystem.NET.Forms
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             
+            // Set text fields to use uppercase
+            txtPartyName.CharacterCasing = CharacterCasing.Upper;
+            txtAddress.CharacterCasing = CharacterCasing.Upper;
+            txtCity.CharacterCasing = CharacterCasing.Upper;
+            txtPhone.CharacterCasing = CharacterCasing.Upper;
+            // Email can remain in mixed case as emails are case-sensitive
+            // txtEmail.CharacterCasing = CharacterCasing.Upper;
+            
             txtPartyName.Focus();
         }
 
@@ -35,11 +43,11 @@ namespace SaleBillSystem.NET.Forms
             {
                 var party = new Party
                 {
-                    PartyName = txtPartyName.Text.Trim(),
-                    Address = txtAddress.Text.Trim(),
-                    City = txtCity.Text.Trim(),
-                    Phone = txtPhone.Text.Trim(),
-                    Email = txtEmail.Text.Trim(),
+                    PartyName = txtPartyName.Text.Trim().ToUpper(),
+                    Address = txtAddress.Text.Trim().ToUpper(),
+                    City = txtCity.Text.Trim().ToUpper(),
+                    Phone = txtPhone.Text.Trim().ToUpper(),
+                    Email = txtEmail.Text.Trim(), // Email remains as-is (case-sensitive)
                     CreditLimit = 0,
                     CreditDays = 0,
                     OutstandingAmount = 0

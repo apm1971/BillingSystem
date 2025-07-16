@@ -43,6 +43,13 @@ namespace SaleBillSystem.NET.Forms
             dgvBrokers.ReadOnly = true;
             dgvBrokers.AllowUserToAddRows = false;
             dgvBrokers.AllowUserToDeleteRows = false;
+            
+            // Set bold font with larger size for the entire grid
+            dgvBrokers.DefaultCellStyle.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
+            dgvBrokers.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
+            
+            // Adjust row height for better readability with the larger font
+            dgvBrokers.RowTemplate.Height = 25;
 
             // Configure columns
             dgvBrokers.Columns.Clear();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SaleBillSystem.NET.Models
 {
@@ -22,6 +23,11 @@ namespace SaleBillSystem.NET.Models
         // Helper properties
         public string PaymentInfo => $"Payment #{PaymentID} - ₹{PaymentAmount:N2} on {PaymentDate:dd/MM/yyyy}";
         public string MethodInfo => string.IsNullOrEmpty(Reference) ? PaymentMethod : $"{PaymentMethod} ({Reference})";
+        
+        // New calculated properties for payment allocations
+        public double AdjustedAmount => PaymentDetails.Sum(pd => pd.AllocatedAmount);
+        public double UnallocatedAmount => PaymentAmount - AdjustedAmount;
+        public bool IsFullyAllocated => UnallocatedAmount <= 0.01; // Account for floating point precision
     }
 
     public class PaymentDetail

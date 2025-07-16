@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -116,6 +117,11 @@ namespace SaleBillSystem.NET.Forms
             if (dgvBills.SelectedRows.Count > 0)
             {
                 int billId = Convert.ToInt32(dgvBills.SelectedRows[0].Cells["BillID"].Value);
+                
+                // Skip if this is the summary row
+                if (billId == -1)
+                    return;
+                    
                 Bill bill = BillService.GetBillByID(billId);
                 if (bill != null)
                 {
@@ -133,6 +139,11 @@ namespace SaleBillSystem.NET.Forms
             if (dgvBills.SelectedRows.Count > 0)
             {
                 int billId = Convert.ToInt32(dgvBills.SelectedRows[0].Cells["BillID"].Value);
+                
+                // Skip if this is the summary row
+                if (billId == -1)
+                    return;
+                    
                 string billNo = dgvBills.SelectedRows[0].Cells["BillNo"].Value.ToString();
                 
                 var result = MessageBox.Show(
@@ -193,7 +204,8 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.ReadOnly = true;
             dgvBills.AllowUserToAddRows = false;
             dgvBills.AllowUserToDeleteRows = false;
-            dgvBills.RowHeadersVisible = false;
+            dgvBills.RowHeadersVisible = true; // Enable row headers for better visibility
+            dgvBills.RowHeadersWidth = 40;
             dgvBills.BackgroundColor = Color.White;
             dgvBills.BorderStyle = BorderStyle.Fixed3D;
             dgvBills.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
@@ -234,7 +246,7 @@ namespace SaleBillSystem.NET.Forms
                 HeaderText = "Bill Date",
                 DataPropertyName = "BillDate",
                 Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy", NullValue = null }
             });
 
             // Due Date
@@ -244,7 +256,7 @@ namespace SaleBillSystem.NET.Forms
                 HeaderText = "Due Date",
                 DataPropertyName = "DueDate",
                 Width = 100,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy", NullValue = null }
             });
 
             // Party Name
@@ -355,6 +367,9 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.CellFormatting += DgvBills_CellFormatting;
         }
 
+        // Flag to track if summary row has been added
+        private bool isSummaryRowAdded = false;
+
         private void LoadBills()
         {
             try
@@ -388,30 +403,82 @@ namespace SaleBillSystem.NET.Forms
                     ).ToList();
                 }
 
-                // Add item count and payment info for display
-                var billsWithItemCount = filteredBills.Select(b => new
-                {
-                    BillID = b.BillID,
-                    BillNo = b.BillNo,
-                    BillDate = b.BillDate,
-                    DueDate = b.DueDate,
-                    PartyName = b.PartyName,
-                    BrokerName = string.IsNullOrEmpty(b.BrokerName) ? "No Broker" : b.BrokerName,
-                    TotalAmount = b.TotalAmount,
-                    TotalCharges = b.TotalCharges,
-                    NetAmount = b.NetAmount,
-                    AdjustedNetAmount = b.AdjustedNetAmount,
-                    InterestDiscountInfo = b.GetInterestDiscountInfo(),
-                    PaidAmount = b.PaidAmount,
-                    BalanceAmount = b.BalanceAmount,
-                    PaymentStatusText = b.PaymentStatusText,
-                    ItemCount = b.BillItems.Count
-                }).ToList();
+                // Reset summary row flag
+                isSummaryRowAdded = false;
 
-                dgvBills.DataSource = billsWithItemCount;
+                // Calculate totals for summary row
+                double totalAmount = filteredBills.Sum(b => b.TotalAmount);
+                double totalCharges = filteredBills.Sum(b => b.TotalCharges);
+                double netAmount = filteredBills.Sum(b => b.NetAmount);
+                double adjustedNetAmount = filteredBills.Sum(b => b.AdjustedNetAmount);
+                double paidAmount = filteredBills.Sum(b => b.PaidAmount);
+                double balanceAmount = filteredBills.Sum(b => b.BalanceAmount);
+                int totalItems = filteredBills.Sum(b => b.BillItems.Count);
+
+                // Create a list of display data
+                var displayList = new List<BillDisplayData>();
+                
+                // Add regular bill rows
+                foreach (var b in filteredBills)
+                {
+                    displayList.Add(new BillDisplayData
+                    {
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        BillDate = b.BillDate,
+                        DueDate = b.DueDate,
+                        PartyName = b.PartyName,
+                        BrokerName = string.IsNullOrEmpty(b.BrokerName) ? "No Broker" : b.BrokerName,
+                        TotalAmount = b.TotalAmount,
+                        TotalCharges = b.TotalCharges,
+                        NetAmount = b.NetAmount,
+                        AdjustedNetAmount = b.AdjustedNetAmount,
+                        InterestDiscountInfo = b.GetInterestDiscountInfo(),
+                        PaidAmount = b.PaidAmount,
+                        BalanceAmount = b.BalanceAmount,
+                        PaymentStatusText = b.PaymentStatusText,
+                        ItemCount = b.BillItems.Count,
+                        IsSummaryRow = false
+                    });
+                }
+
+                // Add summary row if there are bills
+                if (filteredBills.Count > 0)
+                {
+                    displayList.Add(new BillDisplayData
+                    {
+                        BillID = -1, // Use -1 to identify the summary row
+                        BillNo = "TOTAL",
+                        BillDate = null, // Null for summary row
+                        DueDate = null, // Null for summary row
+                        PartyName = $"{filteredBills.Count} bills",
+                        BrokerName = "",
+                        TotalAmount = totalAmount,
+                        TotalCharges = totalCharges,
+                        NetAmount = netAmount,
+                        AdjustedNetAmount = adjustedNetAmount,
+                        InterestDiscountInfo = "",
+                        PaidAmount = paidAmount,
+                        BalanceAmount = balanceAmount,
+                        PaymentStatusText = "",
+                        ItemCount = totalItems,
+                        IsSummaryRow = true
+                    });
+                    
+                    isSummaryRowAdded = true;
+                }
+
+                // Create a binding list from the display list
+                var bindingList = new BindingList<BillDisplayData>(displayList);
+                
+                // Clear the data source first
+                dgvBills.DataSource = null;
+                
+                // Set the new data source
+                dgvBills.DataSource = bindingList;
                 
                 lblTotalBills.Text = $"Total Bills: {filteredBills.Count}";
-                lblTotalAmount.Text = $"Total Amount: {filteredBills.Sum(b => b.NetAmount):N2}";
+                lblTotalAmount.Text = $"Total Amount: {netAmount:N2}";
 
                 // Enable/disable buttons based on selection
                 UpdateButtonStates();
@@ -423,9 +490,40 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
+        // Class to hold bill display data including summary row
+        private class BillDisplayData
+        {
+            public int BillID { get; set; }
+            public string BillNo { get; set; } = string.Empty;
+            public DateTime? BillDate { get; set; }
+            public DateTime? DueDate { get; set; }
+            public string PartyName { get; set; } = string.Empty;
+            public string BrokerName { get; set; } = string.Empty;
+            public double TotalAmount { get; set; }
+            public double TotalCharges { get; set; }
+            public double NetAmount { get; set; }
+            public double AdjustedNetAmount { get; set; }
+            public string InterestDiscountInfo { get; set; } = string.Empty;
+            public double PaidAmount { get; set; }
+            public double BalanceAmount { get; set; }
+            public string PaymentStatusText { get; set; } = string.Empty;
+            public int ItemCount { get; set; }
+            public bool IsSummaryRow { get; set; } = false;
+        }
+
         private void UpdateButtonStates()
         {
             bool hasSelection = dgvBills.SelectedRows.Count > 0;
+            
+            // Don't enable buttons for the summary row
+            if (hasSelection && dgvBills.SelectedRows[0].DataBoundItem is BillDisplayData data && data.IsSummaryRow)
+            {
+                btnEdit.Enabled = false;
+                btnDelete.Enabled = false;
+                btnView.Enabled = false;
+                return;
+            }
+            
             btnEdit.Enabled = hasSelection;
             btnDelete.Enabled = hasSelection;
             btnView.Enabled = hasSelection;
@@ -435,11 +533,12 @@ namespace SaleBillSystem.NET.Forms
         {
             if (dgvBills.SelectedRows.Count > 0)
             {
-                int selectedIndex = dgvBills.SelectedRows[0].Index;
-                if (selectedIndex >= 0 && selectedIndex < filteredBills.Count)
-                {
-                    return filteredBills[selectedIndex];
-                }
+                // Skip if summary row is selected
+                if (dgvBills.SelectedRows[0].DataBoundItem is BillDisplayData data && data.IsSummaryRow)
+                    return null;
+                    
+                int billId = Convert.ToInt32(dgvBills.SelectedRows[0].Cells["BillID"].Value);
+                return filteredBills.FirstOrDefault(b => b.BillID == billId);
             }
             return null;
         }
@@ -594,33 +693,34 @@ namespace SaleBillSystem.NET.Forms
         {
             if (e.RowIndex >= 0)
             {
-                EditSelectedBill();
+                // Skip if this is the summary row
+                if (dgvBills.Rows[e.RowIndex].DataBoundItem is BillDisplayData data && data.IsSummaryRow)
+                    return;
+                    
+                EditBill();
             }
         }
 
         private void dgvBills_KeyDown(object sender, KeyEventArgs e)
         {
-            switch (e.KeyCode)
+            if (dgvBills.SelectedRows.Count > 0)
             {
-                case Keys.Enter:
-                    EditSelectedBill();
-                    e.Handled = true;
-                    break;
-                case Keys.Delete:
-                    if (e.Shift) // Only delete if Shift is pressed
-                    {
-                        DeleteSelectedBill();
-                        e.Handled = true;
-                    }
-                    break;
-                case Keys.F5:
-                    LoadBills();
-                    e.Handled = true;
-                    break;
-                case Keys.Space:
-                    ViewSelectedBill();
-                    e.Handled = true;
-                    break;
+                // Skip if this is the summary row
+                if (dgvBills.SelectedRows[0].DataBoundItem is BillDisplayData data && data.IsSummaryRow)
+                    return;
+                    
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.F2)
+                {
+                    // Enter or F2: Edit selected bill
+                    EditBill();
+                    e.SuppressKeyPress = true;
+                }
+                else if (e.Shift && e.KeyCode == Keys.Delete)
+                {
+                    // Shift+Delete: Delete selected bill
+                    DeleteBill();
+                    e.SuppressKeyPress = true;
+                }
             }
         }
 
@@ -639,97 +739,116 @@ namespace SaleBillSystem.NET.Forms
         // Cell formatting event handler to colorize payment status
         private void DgvBills_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
         {
-            if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+            if (e.RowIndex < 0 || e.Value == null)
+                return;
+                
+            // Check if this is the summary row
+            if (dgvBills.Rows[e.RowIndex].DataBoundItem is BillDisplayData data && data.IsSummaryRow)
             {
-                DataGridViewColumn column = dgvBills.Columns[e.ColumnIndex];
+                // Style the summary row
+                e.CellStyle.Font = new Font(dgvBills.Font, FontStyle.Bold);
+                e.CellStyle.BackColor = Color.LightGray;
                 
-                // Colorize Payment Status column
-                if (column.Name == "PaymentStatusText" && e.Value != null)
+                // Date columns should already be null for summary row, but just in case
+                if (dgvBills.Columns[e.ColumnIndex].Name == "BillDate" || 
+                    dgvBills.Columns[e.ColumnIndex].Name == "DueDate")
                 {
-                    string status = e.Value.ToString();
-                    
-                    switch (status)
+                    if (e.Value != null)
                     {
-                        case "Paid":
-                            e.CellStyle.ForeColor = Color.Green;
-                            e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
-                            break;
-                        case "Partial":
-                            e.CellStyle.ForeColor = Color.Blue;
-                            break;
-                        case "Unpaid":
-                            e.CellStyle.ForeColor = Color.Red;
-                            break;
+                        e.Value = null;
+                        e.FormattingApplied = true;
                     }
                 }
                 
-                // Colorize Balance Amount column
-                if (column.Name == "BalanceAmount" && e.Value != null)
+                return;
+            }
+
+            // Original cell formatting for regular rows
+            var columnName = dgvBills.Columns[e.ColumnIndex].Name;
+            
+            if (columnName == "PaymentStatusText")
+            {
+                string status = e.Value.ToString();
+                
+                if (status == "Paid")
                 {
-                    if (double.TryParse(e.Value.ToString(), out double balanceAmount))
+                    e.CellStyle.ForeColor = Color.Green;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Partial")
+                {
+                    e.CellStyle.ForeColor = Color.Blue;
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (status == "Unpaid")
+                {
+                    e.CellStyle.ForeColor = Color.Red;
+                }
+            }
+            else if (columnName == "InterestDiscountInfo")
+            {
+                string value = e.Value.ToString();
+                
+                if (value.StartsWith("+"))
+                {
+                    e.CellStyle.ForeColor = Color.Red; // Interest is red
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+                else if (value.StartsWith("-"))
+                {
+                    e.CellStyle.ForeColor = Color.Green; // Discount is green
+                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                }
+            }
+            // Format Balance Amount column
+            else if (columnName == "BalanceAmount")
+            {
+                if (double.TryParse(e.Value.ToString(), out double balanceAmount))
+                {
+                    if (balanceAmount <= 0.01) // Fully paid
                     {
-                        if (balanceAmount <= 0.01) // Fully paid
+                        e.CellStyle.ForeColor = Color.Green;
+                    }
+                    else // Outstanding balance
+                    {
+                        e.CellStyle.ForeColor = Color.Red;
+                    }
+                }
+            }
+            // Format Adjusted Net Amount column - only show for paid/partial payments
+            else if (columnName == "AdjustedNetAmount")
+            {
+                // Get payment status from the same row
+                var statusCell = dgvBills.Rows[e.RowIndex].Cells["PaymentStatusText"];
+                if (statusCell != null && statusCell.Value != null)
+                {
+                    string status = statusCell.Value.ToString();
+                    if (status == "Unpaid")
+                    {
+                        // Hide adjusted amount for unpaid bills by making it same as regular net amount
+                        var netAmountCell = dgvBills.Rows[e.RowIndex].Cells["NetAmount"];
+                        if (netAmountCell != null && netAmountCell.Value != null)
                         {
-                            e.CellStyle.ForeColor = Color.Green;
+                            e.Value = netAmountCell.Value;
                         }
-                        else // Outstanding balance
+                    }
+                    else
+                    {
+                        // For paid/partial: show in bold with appropriate color
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                        
+                        // Get interest/discount info to determine color
+                        var infoCell = dgvBills.Rows[e.RowIndex].Cells["InterestDiscountInfo"];
+                        if (infoCell != null && infoCell.Value != null)
                         {
-                            e.CellStyle.ForeColor = Color.Red;
-                        }
-                    }
-                }
-                
-                // Format Interest/Discount Info column
-                if (column.Name == "InterestDiscountInfo" && e.Value != null)
-                {
-                    string info = e.Value.ToString();
-                    if (info.StartsWith("+"))
-                    {
-                        e.CellStyle.ForeColor = Color.Red; // Interest is additional charge (red)
-                        e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
-                    }
-                    else if (info.StartsWith("-"))
-                    {
-                        e.CellStyle.ForeColor = Color.Green; // Discount is a reduction (green)
-                        e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
-                    }
-                }
-                
-                // Format Adjusted Net Amount column - only show for paid/partial payments
-                if (column.Name == "AdjustedNetAmount")
-                {
-                    // Get payment status from the same row
-                    var statusCell = dgvBills.Rows[e.RowIndex].Cells["PaymentStatusText"];
-                    if (statusCell != null && statusCell.Value != null)
-                    {
-                        string status = statusCell.Value.ToString();
-                        if (status == "Unpaid")
-                        {
-                            // Hide adjusted amount for unpaid bills by making it same as regular net amount
-                            var netAmountCell = dgvBills.Rows[e.RowIndex].Cells["NetAmount"];
-                            if (netAmountCell != null && netAmountCell.Value != null)
+                            string info = infoCell.Value.ToString();
+                            if (info.StartsWith("+"))
                             {
-                                e.Value = netAmountCell.Value;
+                                e.CellStyle.ForeColor = Color.Firebrick; // Higher amount due to interest
                             }
-                        }
-                        else
-                        {
-                            // For paid/partial: show in bold with appropriate color
-                            e.CellStyle.Font = new Font(dgvBills.DefaultCellStyle.Font, FontStyle.Bold);
-                            
-                            // Get interest/discount info to determine color
-                            var infoCell = dgvBills.Rows[e.RowIndex].Cells["InterestDiscountInfo"];
-                            if (infoCell != null && infoCell.Value != null)
+                            else if (info.StartsWith("-"))
                             {
-                                string info = infoCell.Value.ToString();
-                                if (info.StartsWith("+"))
-                                {
-                                    e.CellStyle.ForeColor = Color.Firebrick; // Higher amount due to interest
-                                }
-                                else if (info.StartsWith("-"))
-                                {
-                                    e.CellStyle.ForeColor = Color.DarkGreen; // Lower amount due to discount
-                                }
+                                e.CellStyle.ForeColor = Color.DarkGreen; // Lower amount due to discount
                             }
                         }
                     }

@@ -29,10 +29,7 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                string sql = @"INSERT INTO Settings (SettingKey, SettingValue, Description) 
-                              VALUES (?, ?, ?)";
-                
-                // Check if the setting already exists
+                // Check if setting exists
                 string checkSql = "SELECT COUNT(*) FROM Settings WHERE SettingKey = ?";
                 OleDbParameter checkParam = new OleDbParameter("SettingKey", key);
                 
@@ -41,18 +38,29 @@ namespace SaleBillSystem.NET.Data
                 if (count > 0)
                 {
                     // Update existing setting
-                    sql = @"UPDATE Settings SET SettingValue = ?, Description = ? 
-                           WHERE SettingKey = ?";
+                    string updateSql = "UPDATE Settings SET SettingValue = ?, Description = ? WHERE SettingKey = ?";
+                    OleDbParameter[] updateParams = {
+                        new OleDbParameter("SettingValue", value),
+                        new OleDbParameter("Description", description),
+                        new OleDbParameter("SettingKey", key)
+                    };
+                    
+                    DatabaseManager.ExecuteNonQuery(updateSql, updateParams);
+                }
+                else
+                {
+                    // Insert new setting
+                    string insertSql = "INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES (?, ?, ?)";
+                    OleDbParameter[] insertParams = {
+                        new OleDbParameter("SettingKey", key),
+                        new OleDbParameter("SettingValue", value),
+                        new OleDbParameter("Description", description)
+                    };
+                    
+                    DatabaseManager.ExecuteNonQuery(insertSql, insertParams);
                 }
                 
-                OleDbParameter[] parameters = {
-                    new OleDbParameter("SettingKey", key),
-                    new OleDbParameter("SettingValue", value),
-                    new OleDbParameter("Description", description)
-                };
-                
-                int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
-                return result > 0;
+                return true;
             }
             catch (Exception)
             {
@@ -112,6 +120,18 @@ namespace SaleBillSystem.NET.Data
         public static bool SetCompanyAddress(string address)
         {
             return SetSetting("CompanyAddress", address, "Company address for reports");
+        }
+
+        // Get database path
+        public static string GetDatabasePath()
+        {
+            return GetSetting("DatabasePath", "");
+        }
+
+        // Set database path
+        public static bool SetDatabasePath(string path)
+        {
+            return DatabaseManager.SetDatabasePath(path);
         }
 
         // Get all settings

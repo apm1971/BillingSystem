@@ -17,6 +17,8 @@ namespace SaleBillSystem.NET.Forms
         {
             this.panel1 = new System.Windows.Forms.Panel();
             this.groupBoxFilters = new System.Windows.Forms.GroupBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.cmbStatus = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
             this.cmbParty = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -59,6 +61,8 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBoxFilters
             // 
+            this.groupBoxFilters.Controls.Add(this.label3);
+            this.groupBoxFilters.Controls.Add(this.cmbStatus);
             this.groupBoxFilters.Controls.Add(this.label1);
             this.groupBoxFilters.Controls.Add(this.cmbParty);
             this.groupBoxFilters.Controls.Add(this.label2);
@@ -71,6 +75,26 @@ namespace SaleBillSystem.NET.Forms
             this.groupBoxFilters.TabIndex = 0;
             this.groupBoxFilters.TabStop = false;
             this.groupBoxFilters.Text = "Filters";
+            
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(820, 30);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(42, 15);
+            this.label3.TabIndex = 5;
+            this.label3.Text = "Status:";
+            
+            // 
+            // cmbStatus
+            // 
+            this.cmbStatus.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbStatus.FormattingEnabled = true;
+            this.cmbStatus.Location = new System.Drawing.Point(870, 27);
+            this.cmbStatus.Name = "cmbStatus";
+            this.cmbStatus.Size = new System.Drawing.Size(150, 23);
+            this.cmbStatus.TabIndex = 6;
             
             // 
             // label1
@@ -242,7 +266,7 @@ namespace SaleBillSystem.NET.Forms
             this.btnExportPDF.Name = "btnExportPDF";
             this.btnExportPDF.Size = new System.Drawing.Size(120, 30);
             this.btnExportPDF.TabIndex = 2;
-            this.btnExportPDF.Text = "Export HTML (Ctrl+P)";
+            this.btnExportPDF.Text = "Export PDF (Ctrl+P)";
             this.btnExportPDF.UseVisualStyleBackColor = false;
             this.btnExportPDF.Click += new System.EventHandler(this.btnExportPDF_Click);
             
@@ -269,7 +293,7 @@ namespace SaleBillSystem.NET.Forms
             this.Controls.Add(this.panel3);
             this.Name = "OutstandingReportForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Outstanding Report";
+            this.Text = "Bills Report";
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             
             this.panel1.ResumeLayout(false);
@@ -305,5 +329,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Button btnExportExcel;
         private System.Windows.Forms.Button btnExportPDF;
         private System.Windows.Forms.Button btnClose;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ComboBox cmbStatus;
     }
 } 

@@ -8,6 +8,12 @@ using System.IO;
 using System.Text;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using OfficeOpenXml; // Added for EPPlus
+// Import iTextSharp with alias to avoid conflicts
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using Font = System.Drawing.Font;
+using Rectangle = System.Drawing.Rectangle;
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -22,9 +28,20 @@ namespace SaleBillSystem.NET.Forms
             InitializeComponent();
             SetupDataGridView();
             SetupEventHandlers();
+            SetupStatusComboBox();
             LoadData();
             this.KeyPreview = true;
             this.KeyDown += OutstandingReportForm_KeyDown;
+        }
+
+        private void SetupStatusComboBox()
+        {
+            // Add payment status options
+            cmbStatus.Items.Add("All");
+            cmbStatus.Items.Add("Paid");
+            cmbStatus.Items.Add("Partial");
+            cmbStatus.Items.Add("Unpaid");
+            cmbStatus.SelectedIndex = 0; // Default to "All"
         }
 
         private void SetupEventHandlers()
@@ -32,6 +49,7 @@ namespace SaleBillSystem.NET.Forms
             // Setup search event handler
             txtSearch.TextChanged += txtSearch_TextChanged;
             cmbParty.SelectedIndexChanged += cmbParty_SelectedIndexChanged;
+            cmbStatus.SelectedIndexChanged += cmbStatus_SelectedIndexChanged;
             
             // Setup grid event handlers
             dgvOutstanding.SelectionChanged += dgvOutstanding_SelectionChanged;
@@ -82,18 +100,22 @@ namespace SaleBillSystem.NET.Forms
         private void ShowOutstandingReportHelp()
         {
             MessageBox.Show(
-                "Outstanding Report Keyboard Shortcuts:\n\n" +
+                "Bills Report Keyboard Shortcuts:\n\n" +
                 "F5: Refresh Data\n" +
-                "Ctrl+E: Export to Excel\n" +
-                "Ctrl+P: Export to PDF\n" +
+                "Ctrl+E: Export to Excel (.xlsx)\n" +
+                "Ctrl+P: Export to PDF (.pdf)\n" +
                 "Ctrl+F: Focus on Search\n" +
                 "Escape: Close Report\n" +
                 "F1: Show this help\n\n" +
+                "Filters:\n" +
+                "- Party: Filter by specific party\n" +
+                "- Status: Filter by payment status (All/Paid/Partial/Unpaid)\n" +
+                "- Search: Search by bill number, party name, or broker\n\n" +
                 "Navigation:\n" +
                 "Tab: Move between controls\n" +
                 "Enter: View bill details\n" +
                 "Arrow Keys: Navigate in grid",
-                "Outstanding Report Help",
+                "Bills Report Help",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -132,7 +154,7 @@ namespace SaleBillSystem.NET.Forms
         private void SetupDataGridView()
         {
             // Set form properties
-            this.Text = "Outstanding Report";
+            this.Text = "Bills Report";
             this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
 
@@ -224,6 +246,26 @@ namespace SaleBillSystem.NET.Forms
                 Width = 110,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
+            
+            // Interest/Discount Info
+            dgvOutstanding.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "InterestDiscountInfo",
+                HeaderText = "Adjustment",
+                DataPropertyName = "InterestDiscountInfo",
+                Width = 90,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+            
+            // Adjusted Net Amount
+            dgvOutstanding.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "AdjustedNetAmount",
+                HeaderText = "Adjusted Amount",
+                DataPropertyName = "AdjustedNetAmount",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
 
             // Paid Amount
             dgvOutstanding.Columns.Add(new DataGridViewTextBoxColumn
@@ -284,8 +326,85 @@ namespace SaleBillSystem.NET.Forms
                     }
                     else
                     {
+                        var columnName = dgvOutstanding.Columns[e.ColumnIndex].Name;
+                        
+                        // Format the payment status column
+                        if (columnName == "PaymentStatusText")
+                        {
+                            string status = e.Value.ToString();
+                            
+                            if (status == "Paid")
+                            {
+                                e.CellStyle.ForeColor = Color.Green;
+                                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                            }
+                            else if (status == "Partial")
+                            {
+                                e.CellStyle.ForeColor = Color.Blue;
+                                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                            }
+                            else if (status == "Unpaid")
+                            {
+                                e.CellStyle.ForeColor = Color.Red;
+                            }
+                        }
+                        // Format the interest/discount info
+                        else if (columnName == "InterestDiscountInfo")
+                        {
+                            string value = e.Value?.ToString() ?? string.Empty;
+                            
+                            if (value.StartsWith("+"))
+                            {
+                                e.CellStyle.ForeColor = Color.Red; // Interest is red
+                                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                            }
+                            else if (value.StartsWith("-"))
+                            {
+                                e.CellStyle.ForeColor = Color.Green; // Discount is green
+                                e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                            }
+                        }
+                        // Format the adjusted net amount
+                        else if (columnName == "AdjustedNetAmount")
+                        {
+                            // Get payment status from the same row
+                            var statusCell = dgvOutstanding.Rows[e.RowIndex].Cells["PaymentStatusText"];
+                            if (statusCell != null && statusCell.Value != null)
+                            {
+                                string status = statusCell.Value.ToString();
+                                if (status == "Unpaid")
+                                {
+                                    // Hide adjusted amount for unpaid bills by making it same as regular net amount
+                                    var netAmountCell = dgvOutstanding.Rows[e.RowIndex].Cells["NetAmount"];
+                                    if (netAmountCell != null && netAmountCell.Value != null)
+                                    {
+                                        e.Value = netAmountCell.Value;
+                                    }
+                                }
+                                else
+                                {
+                                    // For paid/partial: show in bold with appropriate color
+                                    e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                                    
+                                    // Get interest/discount info to determine color
+                                    var infoCell = dgvOutstanding.Rows[e.RowIndex].Cells["InterestDiscountInfo"];
+                                    if (infoCell != null && infoCell.Value != null)
+                                    {
+                                        string info = infoCell.Value.ToString();
+                                        if (info.StartsWith("+"))
+                                        {
+                                            e.CellStyle.ForeColor = Color.Firebrick; // Higher amount due to interest
+                                        }
+                                        else if (info.StartsWith("-"))
+                                        {
+                                            e.CellStyle.ForeColor = Color.DarkGreen; // Lower amount due to discount
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         // Color code based on overdue status
-                        if (data.DaysOverdue > 30)
+                        else if (data.DaysOverdue > 30)
                         {
                             e.CellStyle.BackColor = Color.FromArgb(255, 200, 200); // Light red for very overdue
                         }
@@ -325,6 +444,13 @@ namespace SaleBillSystem.NET.Forms
                     ).ToList();
                 }
 
+                // Apply status filter
+                string statusFilter = cmbStatus.SelectedItem?.ToString();
+                if (!string.IsNullOrEmpty(statusFilter) && statusFilter != "All")
+                {
+                    filteredBills = filteredBills.Where(b => b.PaymentStatusText == statusFilter).ToList();
+                }
+
                 // Create display data
                 var displayList = new List<OutstandingDisplayData>();
 
@@ -340,6 +466,8 @@ namespace SaleBillSystem.NET.Forms
                         PartyName = b.PartyName,
                         BrokerName = string.IsNullOrEmpty(b.BrokerName) ? "No Broker" : b.BrokerName,
                         NetAmount = b.NetAmount,
+                        InterestDiscountInfo = b.GetInterestDiscountInfo(),
+                        AdjustedNetAmount = b.AdjustedNetAmount,
                         PaidAmount = b.PaidAmount,
                         BalanceAmount = b.BalanceAmount,
                         DaysOverdue = b.IsOverdue ? b.DaysOverdue : (b.DaysUntilDue >= 0 ? -b.DaysUntilDue : b.DaysOverdue),
@@ -352,6 +480,7 @@ namespace SaleBillSystem.NET.Forms
                 if (filteredBills.Count > 0)
                 {
                     double totalNetAmount = filteredBills.Sum(b => b.NetAmount);
+                    double totalAdjustedNetAmount = filteredBills.Sum(b => b.AdjustedNetAmount);
                     double totalPaidAmount = filteredBills.Sum(b => b.PaidAmount);
                     double totalBalanceAmount = filteredBills.Sum(b => b.BalanceAmount);
 
@@ -364,6 +493,8 @@ namespace SaleBillSystem.NET.Forms
                         PartyName = $"{filteredBills.Count} bills",
                         BrokerName = "",
                         NetAmount = totalNetAmount,
+                        InterestDiscountInfo = "",
+                        AdjustedNetAmount = totalAdjustedNetAmount,
                         PaidAmount = totalPaidAmount,
                         BalanceAmount = totalBalanceAmount,
                         DaysOverdue = 0,
@@ -414,50 +545,181 @@ namespace SaleBillSystem.NET.Forms
 
             try
             {
+                // Get selected party name for the report title
+                string partyFilter = "All Parties";
+                if (cmbParty.SelectedValue is int partyId && partyId > 0)
+                {
+                    partyFilter = cmbParty.Text;
+                }
+
+                // Get selected status filter
+                string statusFilter = cmbStatus.SelectedItem?.ToString() ?? "All";
+
                 SaveFileDialog saveDialog = new SaveFileDialog
                 {
-                    Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-                    DefaultExt = "csv",
-                    FileName = $"Outstanding_Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                    Filter = "Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*",
+                    DefaultExt = "xlsx",
+                    FileName = $"Outstanding_Report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
                 };
 
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    var csv = new StringBuilder();
+                    // Add EPPlus license context for non-commercial use
+                    OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
                     
-                    // Add header
-                    csv.AppendLine($"Outstanding Report - {Program.ActiveCompany?.CompanyName}");
-                    csv.AppendLine($"Generated on: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-                    csv.AppendLine($"Total Bills: {filteredBills.Count}, Total Outstanding: ₹{filteredBills.Sum(b => b.BalanceAmount):N2}");
-                    csv.AppendLine();
-                    
-                    // Add column headers
-                    csv.AppendLine("Bill No,Bill Date,Due Date,Party Name,Broker,Bill Amount,Paid Amount,Outstanding,Days Overdue,Status");
-                    
-                    // Add data rows
+                    using (var package = new OfficeOpenXml.ExcelPackage())
+                    {
+                        var worksheet = package.Workbook.Worksheets.Add("Outstanding Report");
+                        
+                        // Add report title
+                        worksheet.Cells[1, 1].Value = $"Outstanding Report - {Program.ActiveCompany?.CompanyName}";
+                        worksheet.Cells[1, 1, 1, 12].Merge = true;
+                        worksheet.Cells[1, 1].Style.Font.Size = 16;
+                        worksheet.Cells[1, 1].Style.Font.Bold = true;
+                        worksheet.Cells[1, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        
+                        // Add party filter info
+                        worksheet.Cells[2, 1].Value = $"Party: {partyFilter} | Status: {statusFilter}";
+                        worksheet.Cells[2, 1, 2, 12].Merge = true;
+                        worksheet.Cells[2, 1].Style.Font.Size = 12;
+                        worksheet.Cells[2, 1].Style.Font.Bold = true;
+                        worksheet.Cells[2, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        
+                        // Add generated date
+                        worksheet.Cells[3, 1].Value = $"Generated on: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+                        worksheet.Cells[3, 1, 3, 12].Merge = true;
+                        worksheet.Cells[3, 1].Style.Font.Size = 10;
+                        worksheet.Cells[3, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        
+                        // Add total summary
+                        worksheet.Cells[4, 1].Value = $"Total Bills: {filteredBills.Count}, Total Outstanding: ₹{filteredBills.Sum(b => b.BalanceAmount):N2}";
+                        worksheet.Cells[4, 1, 4, 12].Merge = true;
+                        worksheet.Cells[4, 1].Style.Font.Size = 10;
+                        worksheet.Cells[4, 1].Style.Font.Bold = true;
+                        worksheet.Cells[4, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        
+                        // Add header row at row 6
+                        var headers = new string[] { 
+                            "Bill No", "Bill Date", "Due Date", "Party Name", "Broker", 
+                            "Bill Amount", "Adjustment", "Adjusted Amount", "Paid Amount", 
+                            "Outstanding", "Days Overdue", "Status"
+                        };
+                        
+                        for (int i = 0; i < headers.Length; i++)
+                        {
+                            worksheet.Cells[6, i + 1].Value = headers[i];
+                            worksheet.Cells[6, i + 1].Style.Font.Bold = true;
+                            worksheet.Cells[6, i + 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            worksheet.Cells[6, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(64, 64, 64));
+                            worksheet.Cells[6, i + 1].Style.Font.Color.SetColor(System.Drawing.Color.White);
+                        }
+                        
+                        // Add data rows starting at row 7
+                        int row = 7;
                     foreach (var bill in filteredBills.OrderBy(x => x.PartyName).ThenBy(x => x.BillDate))
                     {
                         int daysOverdue = bill.IsOverdue ? bill.DaysOverdue : (bill.DaysUntilDue >= 0 ? -bill.DaysUntilDue : bill.DaysOverdue);
                         string brokerName = string.IsNullOrEmpty(bill.BrokerName) ? "No Broker" : bill.BrokerName;
                         
-                        csv.AppendLine($"\"{bill.BillNo}\",\"{bill.BillDate:dd/MM/yyyy}\",\"{bill.DueDate:dd/MM/yyyy}\",\"{bill.PartyName}\",\"{brokerName}\",{bill.NetAmount:F2},{bill.PaidAmount:F2},{bill.BalanceAmount:F2},{daysOverdue},\"{bill.PaymentStatusText}\"");
+                            // Apply row color based on overdue status
+                            var fillColor = System.Drawing.Color.White;
+                            if (daysOverdue > 30)
+                                fillColor = System.Drawing.Color.FromArgb(255, 200, 200); // Light red for very overdue
+                            else if (daysOverdue > 0)
+                                fillColor = System.Drawing.Color.FromArgb(255, 240, 200); // Light orange for overdue
+                            else if (daysOverdue < 0 && daysOverdue >= -7)
+                                fillColor = System.Drawing.Color.FromArgb(255, 255, 200); // Light yellow for due soon
+                            
+                            worksheet.Cells[row, 1].Value = bill.BillNo;
+                            worksheet.Cells[row, 2].Value = bill.BillDate;
+                            worksheet.Cells[row, 2].Style.Numberformat.Format = "dd/MM/yyyy";
+                            worksheet.Cells[row, 3].Value = bill.DueDate;
+                            worksheet.Cells[row, 3].Style.Numberformat.Format = "dd/MM/yyyy";
+                            worksheet.Cells[row, 4].Value = bill.PartyName;
+                            worksheet.Cells[row, 5].Value = brokerName;
+                            worksheet.Cells[row, 6].Value = bill.NetAmount;
+                            worksheet.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
+                            worksheet.Cells[row, 7].Value = bill.GetInterestDiscountInfo();
+                            
+                            // Format interest/discount cell
+                            if (bill.GetInterestDiscountInfo().StartsWith("+"))
+                            {
+                                worksheet.Cells[row, 7].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                                worksheet.Cells[row, 7].Style.Font.Bold = true;
+                            }
+                            else if (bill.GetInterestDiscountInfo().StartsWith("-"))
+                            {
+                                worksheet.Cells[row, 7].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                                worksheet.Cells[row, 7].Style.Font.Bold = true;
+                            }
+                            
+                            worksheet.Cells[row, 8].Value = bill.AdjustedNetAmount;
+                            worksheet.Cells[row, 8].Style.Numberformat.Format = "#,##0.00";
+                            worksheet.Cells[row, 9].Value = bill.PaidAmount;
+                            worksheet.Cells[row, 9].Style.Numberformat.Format = "#,##0.00";
+                            worksheet.Cells[row, 10].Value = bill.BalanceAmount;
+                            worksheet.Cells[row, 10].Style.Numberformat.Format = "#,##0.00";
+                            worksheet.Cells[row, 10].Style.Font.Bold = true;
+                            worksheet.Cells[row, 11].Value = daysOverdue;
+                            worksheet.Cells[row, 12].Value = bill.PaymentStatusText;
+                            
+                            // Format status cell
+                            if (bill.PaymentStatusText == "Paid")
+                            {
+                                worksheet.Cells[row, 12].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                                worksheet.Cells[row, 12].Style.Font.Bold = true;
+                            }
+                            else if (bill.PaymentStatusText == "Partial")
+                            {
+                                worksheet.Cells[row, 12].Style.Font.Color.SetColor(System.Drawing.Color.Blue);
+                                worksheet.Cells[row, 12].Style.Font.Bold = true;
+                            }
+                            else if (bill.PaymentStatusText == "Unpaid")
+                            {
+                                worksheet.Cells[row, 12].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                            }
+                            
+                            // Apply row background color
+                            if (fillColor != System.Drawing.Color.White)
+                            {
+                                var rowRange = worksheet.Cells[row, 1, row, 12];
+                                rowRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                rowRange.Style.Fill.BackgroundColor.SetColor(fillColor);
+                            }
+                            
+                            row++;
+                        }
+                        
+                        // Add total row
+                        worksheet.Cells[row, 1].Value = "TOTAL";
+                        worksheet.Cells[row, 1].Style.Font.Bold = true;
+                        worksheet.Cells[row, 4].Value = $"{filteredBills.Count} bills";
+                        worksheet.Cells[row, 6].Value = filteredBills.Sum(b => b.NetAmount);
+                        worksheet.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
+                        worksheet.Cells[row, 8].Value = filteredBills.Sum(b => b.AdjustedNetAmount);
+                        worksheet.Cells[row, 8].Style.Numberformat.Format = "#,##0.00";
+                        worksheet.Cells[row, 9].Value = filteredBills.Sum(b => b.PaidAmount);
+                        worksheet.Cells[row, 9].Style.Numberformat.Format = "#,##0.00";
+                        worksheet.Cells[row, 10].Value = filteredBills.Sum(b => b.BalanceAmount);
+                        worksheet.Cells[row, 10].Style.Numberformat.Format = "#,##0.00";
+                        
+                        var totalRowRange = worksheet.Cells[row, 1, row, 12];
+                        totalRowRange.Style.Font.Bold = true;
+                        totalRowRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        totalRowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(220, 220, 220));
+                        
+                        // Auto-fit columns
+                        for (int i = 1; i <= 12; i++)
+                        {
+                            worksheet.Column(i).AutoFit();
+                        }
+                        
+                        // Save the Excel package
+                        package.SaveAs(new FileInfo(saveDialog.FileName));
                     }
-                    
-                    File.WriteAllText(saveDialog.FileName, csv.ToString(), Encoding.UTF8);
                     
                     MessageBox.Show($"Report exported successfully to:\n{saveDialog.FileName}", "Export Complete", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
-                    // Ask if user wants to open the file
-                    if (MessageBox.Show("Do you want to open the exported file?", "Open File", 
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = saveDialog.FileName,
-                            UseShellExecute = true
-                        });
-                    }
                 }
             }
             catch (Exception ex)
@@ -477,112 +739,208 @@ namespace SaleBillSystem.NET.Forms
 
             try
             {
+                // Get selected party name for the report title
+                string partyFilter = "All Parties";
+                if (cmbParty.SelectedValue is int partyId && partyId > 0)
+                {
+                    partyFilter = cmbParty.Text;
+                }
+
+                // Get selected status filter
+                string statusFilter = cmbStatus.SelectedItem?.ToString() ?? "All";
+
                 SaveFileDialog saveDialog = new SaveFileDialog
                 {
-                    Filter = "HTML files (*.html)|*.html|All files (*.*)|*.*",
-                    DefaultExt = "html",
-                    FileName = $"Outstanding_Report_{DateTime.Now:yyyyMMdd_HHmmss}.html"
+                    Filter = "PDF files (*.pdf)|*.pdf|All files (*.*)|*.*",
+                    DefaultExt = "pdf",
+                    FileName = $"Outstanding_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
                 };
 
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    var html = new StringBuilder();
-                    
-                    // HTML structure with styling
-                    html.AppendLine("<!DOCTYPE html>");
-                    html.AppendLine("<html><head><meta charset='UTF-8'>");
-                    html.AppendLine("<title>Outstanding Report</title>");
-                    html.AppendLine("<style>");
-                    html.AppendLine("body { font-family: Arial, sans-serif; margin: 20px; }");
-                    html.AppendLine("h1 { color: #333; text-align: center; }");
-                    html.AppendLine("h2 { color: #666; text-align: center; margin-bottom: 20px; }");
-                    html.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 20px; }");
-                    html.AppendLine("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
-                    html.AppendLine("th { background-color: #f2f2f2; font-weight: bold; }");
-                    html.AppendLine("tr:nth-child(even) { background-color: #f9f9f9; }");
-                    html.AppendLine(".number { text-align: right; }");
-                    html.AppendLine(".overdue-high { background-color: #ffcccc; }");
-                    html.AppendLine(".overdue-medium { background-color: #fff0cc; }");
-                    html.AppendLine(".due-soon { background-color: #ffffcc; }");
-                    html.AppendLine(".summary { background-color: #e6e6e6; font-weight: bold; }");
-                    html.AppendLine("</style>");
-                    html.AppendLine("</head><body>");
-                    
-                    // Header
-                    html.AppendLine($"<h1>{Program.ActiveCompany?.CompanyName}</h1>");
-                    html.AppendLine("<h1>Outstanding Report</h1>");
-                    html.AppendLine($"<h2>Generated on: {DateTime.Now:dd/MM/yyyy HH:mm:ss}</h2>");
-                    
-                    // Summary
-                    html.AppendLine($"<p><strong>Total Bills:</strong> {filteredBills.Count} | ");
-                    html.AppendLine($"<strong>Total Outstanding:</strong> ₹{filteredBills.Sum(b => b.BalanceAmount):N2}</p>");
-                    
-                    // Table
-                    html.AppendLine("<table>");
-                    html.AppendLine("<tr>");
-                    html.AppendLine("<th>Bill No</th><th>Bill Date</th><th>Due Date</th><th>Party Name</th>");
-                    html.AppendLine("<th>Broker</th><th>Bill Amount</th><th>Paid Amount</th><th>Outstanding</th>");
-                    html.AppendLine("<th>Days Overdue</th><th>Status</th>");
-                    html.AppendLine("</tr>");
-                    
-                    foreach (var bill in filteredBills.OrderBy(x => x.PartyName).ThenBy(x => x.BillDate))
+                    // Create a new PDF document
+                    using (var fileStream = new FileStream(saveDialog.FileName, FileMode.Create))
                     {
-                        int daysOverdue = bill.IsOverdue ? bill.DaysOverdue : (bill.DaysUntilDue >= 0 ? -bill.DaysUntilDue : bill.DaysOverdue);
-                        string brokerName = string.IsNullOrEmpty(bill.BrokerName) ? "No Broker" : bill.BrokerName;
+                        // Document setup
+                        var document = new iTextSharp.text.Document(iTextSharp.text.PageSize.A4.Rotate(), 30, 30, 30, 30);
+                        var writer = iTextSharp.text.pdf.PdfWriter.GetInstance(document, fileStream);
+                        document.Open();
+
+                        // Add fonts
+                        var baseFont = iTextSharp.text.pdf.BaseFont.CreateFont(
+                            iTextSharp.text.pdf.BaseFont.HELVETICA,
+                            iTextSharp.text.pdf.BaseFont.CP1252,
+                            iTextSharp.text.pdf.BaseFont.NOT_EMBEDDED);
+
+                        var normalFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.NORMAL);
+                        var boldFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.BOLD);
+                        var titleFont = new iTextSharp.text.Font(baseFont, 16, iTextSharp.text.Font.BOLD);
+                        var subtitleFont = new iTextSharp.text.Font(baseFont, 12, iTextSharp.text.Font.BOLD);
+                        var smallFont = new iTextSharp.text.Font(baseFont, 8, iTextSharp.text.Font.NORMAL);
+
+                        // Colors
+                        var redFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.NORMAL, new iTextSharp.text.BaseColor(255, 0, 0));
+                        var redBoldFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.BOLD, new iTextSharp.text.BaseColor(255, 0, 0));
+                        var greenFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.NORMAL, new iTextSharp.text.BaseColor(0, 128, 0));
+                        var greenBoldFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.BOLD, new iTextSharp.text.BaseColor(0, 128, 0));
+                        var blueFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.NORMAL, new iTextSharp.text.BaseColor(0, 0, 255));
+                        var blueBoldFont = new iTextSharp.text.Font(baseFont, 10, iTextSharp.text.Font.BOLD, new iTextSharp.text.BaseColor(0, 0, 255));
+
+                        // Report title
+                        var titlePara = new iTextSharp.text.Paragraph($"Outstanding Report - {Program.ActiveCompany?.CompanyName}", titleFont);
+                        titlePara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                        document.Add(titlePara);
+
+                        // Party filter
+                        var filterPara = new iTextSharp.text.Paragraph($"Party: {partyFilter} | Status: {statusFilter}", subtitleFont);
+                        filterPara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                        document.Add(filterPara);
+
+                        // Date and totals
+                        var datePara = new iTextSharp.text.Paragraph($"Generated on: {DateTime.Now:dd/MM/yyyy HH:mm:ss}", normalFont);
+                        datePara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                        document.Add(datePara);
                         
-                        string rowClass = "";
-                        if (daysOverdue > 30) rowClass = "overdue-high";
-                        else if (daysOverdue > 0) rowClass = "overdue-medium";
-                        else if (daysOverdue < 0 && daysOverdue >= -7) rowClass = "due-soon";
+                        var totalsPara = new iTextSharp.text.Paragraph(
+                            $"Total Bills: {filteredBills.Count}, Total Outstanding: ₹{filteredBills.Sum(b => b.BalanceAmount):N2}", 
+                            boldFont);
+                        totalsPara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                        document.Add(totalsPara);
                         
-                        html.AppendLine($"<tr class='{rowClass}'>");
-                        html.AppendLine($"<td>{bill.BillNo}</td>");
-                        html.AppendLine($"<td>{bill.BillDate:dd/MM/yyyy}</td>");
-                        html.AppendLine($"<td>{bill.DueDate:dd/MM/yyyy}</td>");
-                        html.AppendLine($"<td>{bill.PartyName}</td>");
-                        html.AppendLine($"<td>{brokerName}</td>");
-                        html.AppendLine($"<td class='number'>₹{bill.NetAmount:N2}</td>");
-                        html.AppendLine($"<td class='number'>₹{bill.PaidAmount:N2}</td>");
-                        html.AppendLine($"<td class='number'>₹{bill.BalanceAmount:N2}</td>");
-                        html.AppendLine($"<td class='number'>{daysOverdue}</td>");
-                        html.AppendLine($"<td>{bill.PaymentStatusText}</td>");
-                        html.AppendLine("</tr>");
+                        document.Add(new iTextSharp.text.Paragraph(" ")); // Add a blank line
+
+                        // Create table
+                        var table = new iTextSharp.text.pdf.PdfPTable(12)
+                        {
+                            WidthPercentage = 100,
+                            SpacingBefore = 10f,
+                            SpacingAfter = 10f
+                        };
+
+                        // Set column widths
+                        float[] columnWidths = new float[] { 5f, 6f, 6f, 12f, 9f, 8f, 8f, 8f, 8f, 8f, 6f, 6f };
+                        table.SetWidths(columnWidths);
+
+                        // Header cells
+                        string[] headers = new string[] {
+                            "Bill No", "Bill Date", "Due Date", "Party Name", "Broker", 
+                            "Bill Amount", "Adjustment", "Adjusted Amt", "Paid Amount", 
+                            "Outstanding", "Days Due", "Status"
+                        };
+
+                        var headerColor = new iTextSharp.text.BaseColor(64, 64, 64);
+                        foreach (string header in headers)
+                        {
+                            var cell = new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(header, new iTextSharp.text.Font(baseFont, 9, iTextSharp.text.Font.BOLD, new iTextSharp.text.BaseColor(255, 255, 255))))
+                            {
+                                BackgroundColor = headerColor,
+                                HorizontalAlignment = iTextSharp.text.Element.ALIGN_CENTER,
+                                VerticalAlignment = iTextSharp.text.Element.ALIGN_MIDDLE,
+                                Padding = 4
+                            };
+                            table.AddCell(cell);
+                        }
+
+                        // Data rows
+                        foreach (var bill in filteredBills.OrderBy(x => x.PartyName).ThenBy(x => x.BillDate))
+                        {
+                            int daysOverdue = bill.IsOverdue ? bill.DaysOverdue : (bill.DaysUntilDue >= 0 ? -bill.DaysUntilDue : bill.DaysOverdue);
+                            string brokerName = string.IsNullOrEmpty(bill.BrokerName) ? "No Broker" : bill.BrokerName;
+                            
+                            // Background color based on overdue status
+                            iTextSharp.text.BaseColor bgColor = null;
+                            if (daysOverdue > 30)
+                                bgColor = new iTextSharp.text.BaseColor(255, 200, 200);
+                            else if (daysOverdue > 0)
+                                bgColor = new iTextSharp.text.BaseColor(255, 240, 200);
+                            else if (daysOverdue < 0 && daysOverdue >= -7)
+                                bgColor = new iTextSharp.text.BaseColor(255, 255, 200);
+                            
+                            // Add data cells
+                            AddCell(table, bill.BillNo, normalFont, iTextSharp.text.Element.ALIGN_LEFT, bgColor);
+                            AddCell(table, bill.BillDate.ToString("dd/MM/yyyy"), normalFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                            AddCell(table, bill.DueDate.ToString("dd/MM/yyyy"), normalFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                            AddCell(table, bill.PartyName, normalFont, iTextSharp.text.Element.ALIGN_LEFT, bgColor);
+                            AddCell(table, brokerName, normalFont, iTextSharp.text.Element.ALIGN_LEFT, bgColor);
+                            AddCell(table, bill.NetAmount.ToString("N2"), normalFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            
+                            // Interest/Discount cell
+                            string interestDiscount = bill.GetInterestDiscountInfo();
+                            if (interestDiscount.StartsWith("+"))
+                                AddCell(table, interestDiscount, redBoldFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            else if (interestDiscount.StartsWith("-"))
+                                AddCell(table, interestDiscount, greenBoldFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            else
+                                AddCell(table, interestDiscount, normalFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            
+                            AddCell(table, bill.AdjustedNetAmount.ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            AddCell(table, bill.PaidAmount.ToString("N2"), normalFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            AddCell(table, bill.BalanceAmount.ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, bgColor);
+                            AddCell(table, daysOverdue.ToString(), normalFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                            
+                            // Status cell
+                            if (bill.PaymentStatusText == "Paid")
+                                AddCell(table, bill.PaymentStatusText, greenBoldFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                            else if (bill.PaymentStatusText == "Partial")
+                                AddCell(table, bill.PaymentStatusText, blueBoldFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                            else
+                                AddCell(table, bill.PaymentStatusText, redFont, iTextSharp.text.Element.ALIGN_CENTER, bgColor);
+                        }
+                        
+                        // Add summary row
+                        var summaryBgColor = new iTextSharp.text.BaseColor(220, 220, 220);
+                        
+                        AddCell(table, "TOTAL", boldFont, iTextSharp.text.Element.ALIGN_LEFT, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_CENTER, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_CENTER, summaryBgColor);
+                        AddCell(table, $"{filteredBills.Count} bills", boldFont, iTextSharp.text.Element.ALIGN_LEFT, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_LEFT, summaryBgColor);
+                        AddCell(table, filteredBills.Sum(b => b.NetAmount).ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_RIGHT, summaryBgColor);
+                        AddCell(table, filteredBills.Sum(b => b.AdjustedNetAmount).ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, summaryBgColor);
+                        AddCell(table, filteredBills.Sum(b => b.PaidAmount).ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, summaryBgColor);
+                        AddCell(table, filteredBills.Sum(b => b.BalanceAmount).ToString("N2"), boldFont, iTextSharp.text.Element.ALIGN_RIGHT, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_CENTER, summaryBgColor);
+                        AddCell(table, "", boldFont, iTextSharp.text.Element.ALIGN_CENTER, summaryBgColor);
+                        
+                        // Add the table to the document
+                        document.Add(table);
+                        
+                        // Add footer
+                        document.Add(new iTextSharp.text.Paragraph(" "));
+                        var footerPara = new iTextSharp.text.Paragraph($"Report generated from {Program.ActiveCompany?.CompanyName} Billing System", smallFont);
+                        footerPara.Alignment = iTextSharp.text.Element.ALIGN_CENTER;
+                        document.Add(footerPara);
+                        
+                        // Close the document
+                        document.Close();
                     }
-                    
-                    // Summary row
-                    html.AppendLine("<tr class='summary'>");
-                    html.AppendLine($"<td colspan='5'>TOTAL ({filteredBills.Count} bills)</td>");
-                    html.AppendLine($"<td class='number'>₹{filteredBills.Sum(b => b.NetAmount):N2}</td>");
-                    html.AppendLine($"<td class='number'>₹{filteredBills.Sum(b => b.PaidAmount):N2}</td>");
-                    html.AppendLine($"<td class='number'>₹{filteredBills.Sum(b => b.BalanceAmount):N2}</td>");
-                    html.AppendLine("<td colspan='2'></td>");
-                    html.AppendLine("</tr>");
-                    
-                    html.AppendLine("</table>");
-                    html.AppendLine("</body></html>");
-                    
-                    File.WriteAllText(saveDialog.FileName, html.ToString(), Encoding.UTF8);
                     
                     MessageBox.Show($"Report exported successfully to:\n{saveDialog.FileName}", "Export Complete", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        
-                    // Ask if user wants to open the file
-                    if (MessageBox.Show("Do you want to open the exported file?", "Open File", 
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = saveDialog.FileName,
-                            UseShellExecute = true
-                        });
-                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error exporting to PDF: {ex.Message}", "Export Error", 
+                MessageBox.Show($"Error exporting to PDF: {ex.Message}", "Export Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+        
+        private void AddCell(iTextSharp.text.pdf.PdfPTable table, string text, iTextSharp.text.Font font, 
+            int alignment, iTextSharp.text.BaseColor bgColor = null)
+        {
+            var cell = new iTextSharp.text.pdf.PdfPCell(new iTextSharp.text.Phrase(text, font))
+            {
+                HorizontalAlignment = alignment,
+                VerticalAlignment = iTextSharp.text.Element.ALIGN_MIDDLE,
+                Padding = 4
+            };
+            
+            if (bgColor != null)
+                cell.BackgroundColor = bgColor;
+                
+            table.AddCell(cell);
         }
 
         private void ViewSelectedBill()
@@ -633,6 +991,11 @@ namespace SaleBillSystem.NET.Forms
         }
 
         private void cmbParty_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ApplyFilters();
+        }
+
+        private void cmbStatus_SelectedIndexChanged(object sender, EventArgs e)
         {
             ApplyFilters();
         }
@@ -695,5 +1058,7 @@ namespace SaleBillSystem.NET.Forms
         public int DaysOverdue { get; set; }
         public string PaymentStatusText { get; set; } = string.Empty;
         public bool IsSummaryRow { get; set; } = false;
+        public string InterestDiscountInfo { get; set; } = string.Empty;
+        public double AdjustedNetAmount { get; set; }
     }
 } 

@@ -140,19 +140,51 @@ namespace SaleBillSystem.NET.Forms
             utilitiesMenu.DropDownItems.Add(utilitiesGenerateMockData);
             utilitiesMenu.DropDownItems.Add(utilitiesClearAllData);
             
+            // === TOOLS MENU ===
+            ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
+            toolsMenu.ForeColor = Color.White;
+            
+            ToolStripMenuItem toolsSettings = new ToolStripMenuItem("&Settings");
+            toolsSettings.Click += (s, e) => 
+            {
+                using (var settingsForm = new SettingsForm())
+                {
+                    settingsForm.ShowDialog();
+                }
+            };
+            
+            ToolStripMenuItem toolsLoadDatabase = new ToolStripMenuItem("&Load Database");
+            toolsLoadDatabase.Click += (s, e) => LoadDatabase();
+            
+            ToolStripMenuItem toolsNewDatabase = new ToolStripMenuItem("&Create New Database");
+            toolsNewDatabase.Click += (s, e) => CreateNewDatabase();
+
+            ToolStripMenuItem toolsLicenseGenerator = new ToolStripMenuItem("License &Generator");
+            toolsLicenseGenerator.Click += (s, e) =>
+            {
+                using (var generator = new Tools.LicenseKeyGenerator())
+                {
+                    generator.ShowDialog();
+                }
+            };
+            
+            toolsMenu.DropDownItems.Add(toolsSettings);
+            toolsMenu.DropDownItems.Add(toolsLoadDatabase);
+            toolsMenu.DropDownItems.Add(toolsNewDatabase);
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add(toolsLicenseGenerator);
+            
             // === HELP MENU ===
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("&Help");
             helpMenu.ForeColor = Color.White;
             
-            ToolStripMenuItem helpKeyboardShortcuts = new ToolStripMenuItem("&Keyboard Shortcuts");
             ToolStripMenuItem helpAbout = new ToolStripMenuItem("&About");
+            helpAbout.Click += (s, e) => MessageBox.Show(
+                $"{Program.APP_NAME}\nVersion 1.0\n\n© 2023 Your Company",
+                "About",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             
-            // Add keyboard shortcuts for help
-            helpKeyboardShortcuts.ShortcutKeys = Keys.F1;
-            helpAbout.ShortcutKeys = Keys.Control | Keys.F1;
-            
-            helpMenu.DropDownItems.Add(helpKeyboardShortcuts);
-            helpMenu.DropDownItems.Add(new ToolStripSeparator());
             helpMenu.DropDownItems.Add(helpAbout);
             
             // Add menus to menu strip
@@ -160,6 +192,7 @@ namespace SaleBillSystem.NET.Forms
             mainMenu.Items.Add(mastersMenu);
             mainMenu.Items.Add(reportsMenu);
             mainMenu.Items.Add(utilitiesMenu);
+            mainMenu.Items.Add(toolsMenu);
             mainMenu.Items.Add(helpMenu);
             
             // Add menu strip to form
@@ -188,14 +221,18 @@ namespace SaleBillSystem.NET.Forms
             utilitiesGenerateMockData.Click += (s, e) => GenerateMockData();
             utilitiesClearAllData.Click += (s, e) => ClearAllData();
             helpAbout.Click += (s, e) => ShowAbout();
-            helpKeyboardShortcuts.Click += (s, e) => ShowKeyboardShortcuts();
-            
-            // Add KeyDown event handler for global shortcuts
+            // Setup keyboard shortcuts
             this.KeyDown += MainForm_KeyDown;
             
-            // Timer for updating date/time
+            // Add status strip
+            // SetupStatusStrip();
+            
+            // Update status bar
+            UpdateStatusBar();
+            
+            // Start timer for status bar updates
             System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-            timer.Interval = 1000;
+            timer.Interval = 1000; // 1 second
             timer.Tick += (s, e) => UpdateStatusBar();
             timer.Start();
         }
@@ -395,6 +432,41 @@ namespace SaleBillSystem.NET.Forms
                 MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 MockDataGenerator.ClearAllData();
+            }
+        }
+        
+        private void LoadDatabase()
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "Access Database (*.accdb)|*.accdb";
+                dialog.Title = "Select Database to Load";
+                dialog.CheckFileExists = true;
+                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    // Use the DatabaseManager to set the database path
+                    DatabaseManager.SetDatabasePath(dialog.FileName);
+                }
+            }
+        }
+
+        private void CreateNewDatabase()
+        {
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "Access Database (*.accdb)|*.accdb";
+                dialog.Title = "Create New Database";
+                dialog.OverwritePrompt = true;
+                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                dialog.FileName = "SaleSystem.accdb";
+                
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    // Use the DatabaseManager to create and set the database path
+                    DatabaseManager.SetDatabasePath(dialog.FileName);
+                }
             }
         }
         

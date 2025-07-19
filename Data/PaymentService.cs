@@ -301,18 +301,40 @@ namespace SaleBillSystem.NET.Data
                 WHERE b.CompanyID = ?
                 GROUP BY b.BillID, b.BillNo, b.BillDate, b.DueDate, b.PartyID, b.PartyName, 
                     b.BrokerID, b.BrokerName, b.TotalAmount, b.TotalCharges, b.NetAmount, b.Notes
-                HAVING (b.NetAmount - IIF(SUM(pd.AllocatedAmount) IS NULL, 0, SUM(pd.AllocatedAmount))) > 0.01
                 ORDER BY b.BillDate";
             
             OleDbParameter param = new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID };
             
             try
-            {    
+            {
                 DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
                 
                 foreach (DataRow row in dt.Rows)
                 {
                     Bill bill = MapRowToBill(row);
+                    
+                    // Calculate interest and discount for bills with payments
+                    if (bill.PaidAmount > 0)
+                    {
+                        // Get payment details to determine when payment was made
+                        string paymentSql = @"SELECT TOP 1 pm.PaymentDate 
+                                            FROM PaymentDetails pd 
+                                            INNER JOIN PaymentMaster pm ON pd.PaymentID = pm.PaymentID
+                                            WHERE pd.BillID = ?
+                                            ORDER BY pm.PaymentDate DESC";
+                        
+                        OleDbParameter billIdParam = new OleDbParameter("BillID", OleDbType.Integer) { Value = bill.BillID };
+                        object result = DatabaseManager.ExecuteScalar(paymentSql, billIdParam);
+                        
+                        if (result != null && result != DBNull.Value)
+                        {
+                            DateTime paymentDate = Convert.ToDateTime(result);
+                            var (interest, discount, _) = CalculateInterestAndDiscount(bill, paymentDate);
+                            bill.InterestAmount = interest;
+                            bill.DiscountAmount = discount;
+                        }
+                    }
+                    
                     bills.Add(bill);
                 }
             }

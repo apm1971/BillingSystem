@@ -10,6 +10,9 @@ namespace SaleBillSystem.NET.Data
     {
         // Database constants
         private const string DB_FILENAME = "SaleSystem.accdb"; // Changed from .db to .accdb
+        
+        // Static property for custom database path
+        public static string CustomDatabasePath { get; private set; }
 
         // Database connection string
         private static string _connectionString;
@@ -19,7 +22,53 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
+                // Default database path in application directory
                 string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                
+                // Check if a custom path is stored in settings
+                if (File.Exists(dbPath))
+                {
+                    // Temporarily connect to the default database to check for custom path setting
+                    string tempConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                    using (OleDbConnection tempConn = new OleDbConnection(tempConnectionString))
+                    {
+                        try
+                        {
+                            tempConn.Open();
+                            
+                            // Check if Settings table exists
+                            DataTable tables = tempConn.GetSchema("Tables", new string[] { null, null, "Settings" });
+                            if (tables.Rows.Count > 0)
+                            {
+                                // Check for custom database path setting
+                                using (OleDbCommand cmd = new OleDbCommand("SELECT SettingValue FROM Settings WHERE SettingKey = 'DatabasePath'", tempConn))
+                                {
+                                    object result = cmd.ExecuteScalar();
+                                    if (result != null && result != DBNull.Value)
+                                    {
+                                        string customPath = result.ToString();
+                                        if (!string.IsNullOrEmpty(customPath) && File.Exists(customPath))
+                                        {
+                                            dbPath = customPath;
+                                            CustomDatabasePath = customPath;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // If we can't read the setting, continue with default path
+                        }
+                    }
+                }
+                
+                // If custom path is set but file doesn't exist, revert to default
+                if (CustomDatabasePath != null && !File.Exists(CustomDatabasePath))
+                {
+                    CustomDatabasePath = null;
+                    dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                }
                 
                 // Check if database directory exists, if not create it
                 string dbDir = Path.GetDirectoryName(dbPath);
@@ -57,6 +106,169 @@ namespace SaleBillSystem.NET.Data
             }
         }
 
+        // Set a custom database path
+        public static bool SetDatabasePath(string newPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(newPath))
+                {
+                    return false;
+                }
+
+                // Validate the new database path
+                if (!File.Exists(newPath))
+                {
+                    // If file doesn't exist, check if we can create it
+                    string dir = Path.GetDirectoryName(newPath);
+                    if (!Directory.Exists(dir))
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(dir);
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    }
+                    
+                    // Try to create a new database at the specified path
+                    if (!CreateDatabase(newPath))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    // Test if the file is a valid Access database
+                    try
+                    {
+                        if (!ValidateAndLoadExistingDatabase(newPath))
+                        {
+                            System.Windows.Forms.MessageBox.Show("The selected file is not a valid database or is missing required tables.", 
+                                "Invalid Database", System.Windows.Forms.MessageBoxButtons.OK, 
+                                System.Windows.Forms.MessageBoxIcon.Error);
+                            return false;
+                        }
+                    }
+                    catch
+                    {
+                        System.Windows.Forms.MessageBox.Show("The selected file is not a valid Access database.", 
+                            "Invalid Database", System.Windows.Forms.MessageBoxButtons.OK, 
+                            System.Windows.Forms.MessageBoxIcon.Error);
+                        return false;
+                    }
+                }
+
+                // Store the new path in settings
+                using (OleDbConnection conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if the setting already exists
+                    using (OleDbCommand cmd = new OleDbCommand("SELECT COUNT(*) FROM Settings WHERE SettingKey = 'DatabasePath'", conn))
+                    {
+                        int count = Convert.ToInt32(cmd.ExecuteScalar());
+                        
+                        if (count > 0)
+                        {
+                            // Update existing setting
+                            using (OleDbCommand updateCmd = new OleDbCommand(
+                                "UPDATE Settings SET SettingValue = ?, Description = ? WHERE SettingKey = 'DatabasePath'", conn))
+                            {
+                                updateCmd.Parameters.AddWithValue("SettingValue", newPath);
+                                updateCmd.Parameters.AddWithValue("Description", "Custom database path");
+                                updateCmd.ExecuteNonQuery();
+                            }
+                        }
+                        else
+                        {
+                            // Insert new setting
+                            using (OleDbCommand insertCmd = new OleDbCommand(
+                                "INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES (?, ?, ?)", conn))
+                            {
+                                insertCmd.Parameters.AddWithValue("SettingKey", "DatabasePath");
+                                insertCmd.Parameters.AddWithValue("SettingValue", newPath);
+                                insertCmd.Parameters.AddWithValue("Description", "Custom database path");
+                                insertCmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                }
+                
+                CustomDatabasePath = newPath;
+                
+                // Show message to restart application
+                System.Windows.Forms.MessageBox.Show(
+                    "Database path has been changed. The application will now restart to apply the changes.", 
+                    "Database Path Changed", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Information);
+                
+                // Restart the application
+                System.Windows.Forms.Application.Restart();
+                Environment.Exit(0);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error setting database path: {ex.Message}", 
+                    "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        // Validate and load an existing database
+        private static bool ValidateAndLoadExistingDatabase(string dbPath)
+        {
+            try
+            {
+                string testConn = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                using (OleDbConnection conn = new OleDbConnection(testConn))
+                {
+                    conn.Open();
+                    
+                    // Check if essential tables exist
+                    var requiredTables = new[] { "Settings", "ItemMaster", "PartyMaster", "BillMaster", "BrokerMaster" };
+                    bool allTablesExist = true;
+                    
+                    foreach (var tableName in requiredTables)
+                    {
+                        var tableInfo = GetSchema(conn, "Tables", new string[] { null, null, tableName });
+                        if (tableInfo.Rows.Count == 0)
+                        {
+                            allTablesExist = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!allTablesExist)
+                    {
+                        // Ask user if they want to initialize the database with required tables
+                        if (System.Windows.Forms.MessageBox.Show(
+                            "The selected database is missing some required tables. Would you like to initialize it?",
+                            "Initialize Database",
+                            System.Windows.Forms.MessageBoxButtons.YesNo,
+                            System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes)
+                        {
+                            // Create required tables
+                            CreateTablesIfNeeded(conn);
+                            return true;
+                        }
+                        return false;
+                    }
+                    
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
         // Create database with required tables
         private static bool CreateDatabase(string dbPath)
         {
@@ -370,164 +582,167 @@ namespace SaleBillSystem.NET.Data
         }
 
         // Create all necessary tables if they don't exist
-        public static void CreateTablesIfNeeded()
+        public static void CreateTablesIfNeeded(OleDbConnection existingConn = null)
         {
-            using (OleDbConnection conn = GetConnection())
+            OleDbConnection conn = existingConn ?? GetConnection();
+            bool shouldCloseConn = existingConn == null;
+            
+            try
             {
-                conn.Open();
-                
-                try
+                if (shouldCloseConn)
                 {
-                    // Check and create UserMaster table
-                    var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
-                    if (userTableInfo.Rows.Count == 0)
-                    {
-                        // Create UserMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
-                            UserID COUNTER PRIMARY KEY,
-                            Username TEXT(50) UNIQUE,
-                            PasswordHash TEXT(255),
-                            DisplayName TEXT(100),
-                            IsAdmin BIT,
-                            IsActive BIT,
-                            CreatedOn DATETIME,
-                            LastLogin DATETIME
-                        )");
-                    }
-                    
-                    // Check and create CompanyMaster table
-                    var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
-                    if (companyTableInfo.Rows.Count == 0)
-                    {
-                        // Create CompanyMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
-                            CompanyID COUNTER PRIMARY KEY,
-                            CompanyName TEXT(255),
-                            PrintName TEXT(255),
-                            Address TEXT(255),
-                            City TEXT(100),
-                            FinancialYearStart DATETIME,
-                            FinancialYearEnd DATETIME,
-                            IsActive BIT,
-                            CreatedOn DATETIME
-                        )");
-                    }
-                    
-                    // Check and create BrokerMaster table
-                    var brokerTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
-                    if (brokerTableInfo.Rows.Count == 0)
-                    {
-                        // Create BrokerMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
-                            BrokerID COUNTER PRIMARY KEY,
-                            BrokerName TEXT(255),
-                            Phone TEXT(50),
-                            Email TEXT(100),
-                            CompanyID INTEGER
-                        )");
-                    }
-                    
-                    // Check and create PartyMaster table
-                    var partyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PartyMaster" });
-                    if (partyTableInfo.Rows.Count == 0)
-                    {
-                        // Create PartyMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
-                            PartyID COUNTER PRIMARY KEY,
-                            PartyName TEXT(255),
-                            Address TEXT(255),
-                            City TEXT(100),
-                            Phone TEXT(50),
-                            Email TEXT(100),
-                            GSTNo TEXT(50),
-                            PAN TEXT(50),
-                            OpeningBalance CURRENCY,
-                            OpeningBalanceDate DATETIME,
-                            CreditDays INTEGER,
-                            BrokerID INTEGER,
-                            BrokerName TEXT(255),
-                            CompanyID INTEGER
-                        )");
-                    }
-                    
-                    // Check and create ItemMaster table
-                    var itemTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "ItemMaster" });
-                    if (itemTableInfo.Rows.Count == 0)
-                    {
-                        // Create ItemMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
-                            ItemID COUNTER PRIMARY KEY,
-                            ItemCode TEXT(50),
-                            ItemName TEXT(255),
-                            Unit TEXT(50),
-                            Rate CURRENCY,
-                            Charges CURRENCY,
-                            StockQuantity DOUBLE,
-                            CompanyID INTEGER
-                        )");
-                    }
-                    
-                    // Check and create BillMaster table
-                    var billTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillMaster" });
-                    if (billTableInfo.Rows.Count == 0)
-                    {
-                        // Create BillMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
-                            BillID COUNTER PRIMARY KEY,
-                            BillNo TEXT(50),
-                            BillDate DATETIME,
-                            DueDate DATETIME,
-                            PartyID INTEGER,
-                            PartyName TEXT(255),
-                            BrokerID INTEGER,
-                            BrokerName TEXT(255),
-                            TotalAmount CURRENCY,
-                            TotalCharges CURRENCY,
-                            NetAmount CURRENCY,
-                            Notes MEMO,
-                            CompanyID INTEGER
-                        )");
-                    }
-                    
-                    // Check and create BillDetails table
-                    var billDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillDetails" });
-                    if (billDetailsTableInfo.Rows.Count == 0)
-                    {
-                        // Create BillDetails table
-                        ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
-                            BillDetailID COUNTER PRIMARY KEY,
-                            BillID INTEGER,
-                            ItemID INTEGER,
-                            ItemName TEXT(255),
-                            Quantity DOUBLE,
-                            Rate CURRENCY,
-                            Amount CURRENCY,
-                            Charges CURRENCY,
-                            TotalAmount CURRENCY
-                        )");
-                    }
-                    
-                    // Check and create PaymentMaster table
-                    var paymentTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentMaster" });
-                    if (paymentTableInfo.Rows.Count == 0)
-                    {
-                        // Create PaymentMaster table
-                        ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
-                            PaymentID COUNTER PRIMARY KEY,
-                            PaymentDate DATETIME,
-                            PaymentAmount CURRENCY,
-                            PaymentMethod TEXT(50),
-                            Reference TEXT(100),
-                            Notes MEMO,
-                            CompanyID INTEGER
-                        )");
-                    }
-                    
-                    // Check and create PaymentDetails table
-                    var paymentDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentDetails" });
-                    if (paymentDetailsTableInfo.Rows.Count == 0)
-                    {
-                        // Create PaymentDetails table
+                    conn.Open();
+                }
+                
+                // Check and create UserMaster table
+                var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
+                if (userTableInfo.Rows.Count == 0)
+                {
+                    // Create UserMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
+                        UserID COUNTER PRIMARY KEY,
+                        Username TEXT(50) UNIQUE,
+                        PasswordHash TEXT(255),
+                        DisplayName TEXT(100),
+                        IsAdmin BIT,
+                        IsActive BIT,
+                        CreatedOn DATETIME,
+                        LastLogin DATETIME
+                    )");
+                }
+                
+                // Check and create CompanyMaster table
+                var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
+                if (companyTableInfo.Rows.Count == 0)
+                {
+                    // Create CompanyMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
+                        CompanyID COUNTER PRIMARY KEY,
+                        CompanyName TEXT(255),
+                        PrintName TEXT(255),
+                        Address TEXT(255),
+                        City TEXT(100),
+                        FinancialYearStart DATETIME,
+                        FinancialYearEnd DATETIME,
+                        IsActive BIT,
+                        CreatedOn DATETIME
+                    )");
+                }
+                
+                // Check and create BrokerMaster table
+                var brokerTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
+                if (brokerTableInfo.Rows.Count == 0)
+                {
+                    // Create BrokerMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
+                        BrokerID COUNTER PRIMARY KEY,
+                        BrokerName TEXT(255),
+                        Phone TEXT(50),
+                        Email TEXT(100),
+                        CompanyID INTEGER
+                    )");
+                }
+                
+                // Check and create PartyMaster table
+                var partyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PartyMaster" });
+                if (partyTableInfo.Rows.Count == 0)
+                {
+                    // Create PartyMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
+                        PartyID COUNTER PRIMARY KEY,
+                        PartyName TEXT(255),
+                        Address TEXT(255),
+                        City TEXT(100),
+                        Phone TEXT(50),
+                        Email TEXT(100),
+                        GSTNo TEXT(50),
+                        PAN TEXT(50),
+                        OpeningBalance CURRENCY,
+                        OpeningBalanceDate DATETIME,
+                        CreditDays INTEGER,
+                        BrokerID INTEGER,
+                        BrokerName TEXT(255),
+                        CompanyID INTEGER
+                    )");
+                }
+                
+                // Check and create ItemMaster table
+                var itemTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "ItemMaster" });
+                if (itemTableInfo.Rows.Count == 0)
+                {
+                    // Create ItemMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
+                        ItemID COUNTER PRIMARY KEY,
+                        ItemName TEXT(255),
+                        Unit TEXT(50),
+                        Rate CURRENCY,
+                        Charges CURRENCY,
+                        StockQuantity DOUBLE,
+                        CompanyID INTEGER
+                    )");
+                }
+                
+                // Check and create BillMaster table
+                var billTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillMaster" });
+                if (billTableInfo.Rows.Count == 0)
+                {
+                    // Create BillMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
+                        BillID COUNTER PRIMARY KEY,
+                        BillNo TEXT(50),
+                        BillDate DATETIME,
+                        DueDate DATETIME,
+                        PartyID INTEGER,
+                        PartyName TEXT(255),
+                        BrokerID INTEGER,
+                        BrokerName TEXT(255),
+                        TotalAmount CURRENCY,
+                        TotalCharges CURRENCY,
+                        NetAmount CURRENCY,
+                        Notes MEMO,
+                        CompanyID INTEGER
+                    )");
+                }
+                
+                // Check and create BillDetails table
+                var billDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillDetails" });
+                if (billDetailsTableInfo.Rows.Count == 0)
+                {
+                    // Create BillDetails table
+                    ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
+                        BillDetailID COUNTER PRIMARY KEY,
+                        BillID INTEGER,
+                        ItemID INTEGER,
+                        ItemName TEXT(255),
+                        Quantity DOUBLE,
+                        Rate CURRENCY,
+                        Amount CURRENCY,
+                        Charges CURRENCY,
+                        TotalAmount CURRENCY
+                    )");
+                }
+                
+                // Check and create PaymentMaster table
+                var paymentTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentMaster" });
+                if (paymentTableInfo.Rows.Count == 0)
+                {
+                    // Create PaymentMaster table
+                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
+                        PaymentID COUNTER PRIMARY KEY,
+                        PaymentDate DATETIME,
+                        PaymentAmount CURRENCY,
+                        PaymentMethod TEXT(50),
+                        Reference TEXT(100),
+                        Notes MEMO,
+                        CompanyID INTEGER
+                    )");
+                }
+                
+                // Check and create PaymentDetails table
+                var paymentDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentDetails" });
+                if (paymentDetailsTableInfo.Rows.Count == 0)
+                {
+                    // Create PaymentDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
                         PaymentDetailID COUNTER PRIMARY KEY,
                         PaymentID INTEGER,
@@ -539,11 +754,11 @@ namespace SaleBillSystem.NET.Data
                     )");
                 }
 
-                    // Check and create Settings table
-                    var settingsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "Settings" });
-                    if (settingsTableInfo.Rows.Count == 0)
-                    {
-                        // Create Settings table
+                // Check and create Settings table
+                var settingsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "Settings" });
+                if (settingsTableInfo.Rows.Count == 0)
+                {
+                    // Create Settings table
                     ExecuteNonQuery(conn, @"CREATE TABLE Settings (
                         SettingID COUNTER PRIMARY KEY,
                         SettingKey TEXT(100) UNIQUE,
@@ -564,8 +779,14 @@ namespace SaleBillSystem.NET.Data
             }
             catch (Exception ex)
             {
-                    System.Windows.Forms.MessageBox.Show($"Error creating database tables: {ex.Message}", "Database Error",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                System.Windows.Forms.MessageBox.Show($"Error creating database tables: {ex.Message}", "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (shouldCloseConn && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
                 }
             }
         }

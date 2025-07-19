@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 using SaleBillSystem.NET.Data;
 
 namespace SaleBillSystem.NET.Forms
@@ -11,6 +12,8 @@ namespace SaleBillSystem.NET.Forms
         private TextBox txtDiscountRate;
         private TextBox txtCompanyName;
         private TextBox txtCompanyAddress;
+        private TextBox txtDatabasePath;
+        private Button btnBrowseDatabase;
         private Button btnSave;
         private Button btnCancel;
         private Button btnReset;
@@ -25,7 +28,7 @@ namespace SaleBillSystem.NET.Forms
         private void SetupForm()
         {
             this.Text = "Application Settings";
-            this.Size = new Size(500, 400);
+            this.Size = new Size(600, 500);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -101,7 +104,7 @@ namespace SaleBillSystem.NET.Forms
             txtCompanyName = new TextBox
             {
                 Location = new Point(250, 108),
-                Size = new Size(200, 23)
+                Size = new Size(300, 23)
             };
 
             // Company Address
@@ -116,16 +119,48 @@ namespace SaleBillSystem.NET.Forms
             txtCompanyAddress = new TextBox
             {
                 Location = new Point(250, 148),
-                Size = new Size(200, 60),
+                Size = new Size(300, 60),
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical
+            };
+            
+            // Database Path
+            Label lblDatabasePath = new Label
+            {
+                Text = "Database Path:",
+                Location = new Point(20, 230),
+                Size = new Size(200, 20),
+                Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
+            };
+            
+            txtDatabasePath = new TextBox
+            {
+                Location = new Point(250, 228),
+                Size = new Size(250, 23),
+                ReadOnly = true
+            };
+            
+            btnBrowseDatabase = new Button
+            {
+                Text = "Browse...",
+                Location = new Point(510, 227),
+                Size = new Size(70, 25)
+            };
+            
+            Label lblDatabaseHelp = new Label
+            {
+                Text = "Select database location (e.g. on a USB drive)",
+                Location = new Point(250, 255),
+                Size = new Size(300, 20),
+                Font = new Font("Microsoft Sans Serif", 8F, FontStyle.Italic),
+                ForeColor = Color.Gray
             };
 
             // Buttons
             btnSave = new Button
             {
                 Text = "Save",
-                Location = new Point(200, 300),
+                Location = new Point(300, 400),
                 Size = new Size(80, 30),
                 BackColor = Color.LightGreen,
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
@@ -134,7 +169,7 @@ namespace SaleBillSystem.NET.Forms
             btnReset = new Button
             {
                 Text = "Reset to Default",
-                Location = new Point(290, 300),
+                Location = new Point(390, 400),
                 Size = new Size(100, 30),
                 BackColor = Color.LightBlue,
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
@@ -143,7 +178,7 @@ namespace SaleBillSystem.NET.Forms
             btnCancel = new Button
             {
                 Text = "Cancel",
-                Location = new Point(400, 300),
+                Location = new Point(500, 400),
                 Size = new Size(80, 30),
                 BackColor = Color.LightCoral,
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
@@ -160,6 +195,10 @@ namespace SaleBillSystem.NET.Forms
             mainPanel.Controls.Add(txtCompanyName);
             mainPanel.Controls.Add(lblCompanyAddress);
             mainPanel.Controls.Add(txtCompanyAddress);
+            mainPanel.Controls.Add(lblDatabasePath);
+            mainPanel.Controls.Add(txtDatabasePath);
+            mainPanel.Controls.Add(btnBrowseDatabase);
+            mainPanel.Controls.Add(lblDatabaseHelp);
             mainPanel.Controls.Add(btnSave);
             mainPanel.Controls.Add(btnReset);
             mainPanel.Controls.Add(btnCancel);
@@ -170,6 +209,7 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Click += BtnSave_Click;
             btnReset.Click += BtnReset_Click;
             btnCancel.Click += BtnCancel_Click;
+            btnBrowseDatabase.Click += BtnBrowseDatabase_Click;
             this.KeyDown += SettingsForm_KeyDown;
 
             // Set tab order
@@ -177,9 +217,11 @@ namespace SaleBillSystem.NET.Forms
             txtDiscountRate.TabIndex = 1;
             txtCompanyName.TabIndex = 2;
             txtCompanyAddress.TabIndex = 3;
-            btnSave.TabIndex = 4;
-            btnReset.TabIndex = 5;
-            btnCancel.TabIndex = 6;
+            txtDatabasePath.TabIndex = 4;
+            btnBrowseDatabase.TabIndex = 5;
+            btnSave.TabIndex = 6;
+            btnReset.TabIndex = 7;
+            btnCancel.TabIndex = 8;
         }
 
         private void LoadSettings()
@@ -190,10 +232,54 @@ namespace SaleBillSystem.NET.Forms
                 txtDiscountRate.Text = SettingsService.GetDiscountRate().ToString("F2");
                 txtCompanyName.Text = SettingsService.GetCompanyName();
                 txtCompanyAddress.Text = SettingsService.GetCompanyAddress();
+                
+                // Load database path
+                string dbPath = DatabaseManager.CustomDatabasePath;
+                if (string.IsNullOrEmpty(dbPath))
+                {
+                    // Show default path if no custom path is set
+                    dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "SaleSystem.accdb");
+                }
+                txtDatabasePath.Text = dbPath;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading settings: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnBrowseDatabase_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (OpenFileDialog dialog = new OpenFileDialog())
+                {
+                    dialog.Filter = "Access Database (*.accdb)|*.accdb";
+                    dialog.Title = "Select Database Location";
+                    dialog.CheckFileExists = false;
+                    dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    
+                    // If we have a current path, use its directory as initial directory
+                    if (!string.IsNullOrEmpty(txtDatabasePath.Text) && File.Exists(txtDatabasePath.Text))
+                    {
+                        dialog.InitialDirectory = Path.GetDirectoryName(txtDatabasePath.Text);
+                        dialog.FileName = Path.GetFileName(txtDatabasePath.Text);
+                    }
+                    else
+                    {
+                        dialog.FileName = "SaleSystem.accdb";
+                    }
+                    
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        txtDatabasePath.Text = dialog.FileName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting database path: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -209,6 +295,7 @@ namespace SaleBillSystem.NET.Forms
                 double discountRate = Convert.ToDouble(txtDiscountRate.Text);
                 string companyName = txtCompanyName.Text.Trim();
                 string companyAddress = txtCompanyAddress.Text.Trim();
+                string databasePath = txtDatabasePath.Text.Trim();
 
                 // Save settings
                 bool success = true;
@@ -217,7 +304,22 @@ namespace SaleBillSystem.NET.Forms
                 success &= SettingsService.SetCompanyName(companyName);
                 success &= SettingsService.SetCompanyAddress(companyAddress);
 
-                if (success)
+                // Check if database path has changed
+                string currentDbPath = DatabaseManager.CustomDatabasePath;
+                if (currentDbPath != databasePath && !string.IsNullOrEmpty(databasePath))
+                {
+                    // Confirm database path change
+                    if (MessageBox.Show(
+                        "Changing the database path will restart the application. Are you sure you want to continue?",
+                        "Confirm Database Change",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question) == DialogResult.Yes)
+                    {
+                        // Set the database path (this will restart the app)
+                        SettingsService.SetDatabasePath(databasePath);
+                    }
+                }
+                else if (success)
                 {
                     MessageBox.Show("Settings saved successfully!", "Success", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -246,6 +348,7 @@ namespace SaleBillSystem.NET.Forms
                 txtDiscountRate.Text = "1.00";
                 txtCompanyName.Text = "Your Company Name";
                 txtCompanyAddress.Text = "Your Company Address";
+                txtDatabasePath.Text = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "SaleSystem.accdb");
             }
         }
 
@@ -257,36 +360,33 @@ namespace SaleBillSystem.NET.Forms
 
         private void SettingsForm_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control && e.KeyCode == Keys.S)
+            if (e.KeyCode == Keys.Escape)
+            {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            }
+            else if (e.KeyCode == Keys.Enter && e.Control)
             {
                 BtnSave_Click(sender, e);
-                e.SuppressKeyPress = true;
-            }
-            else if (e.KeyCode == Keys.Escape)
-            {
-                BtnCancel_Click(sender, e);
-                e.SuppressKeyPress = true;
             }
         }
 
         private bool ValidateInputs()
         {
             // Validate interest rate
-            if (!double.TryParse(txtInterestRate.Text, out double interestRate) || 
-                interestRate < 0 || interestRate > 100)
+            if (!double.TryParse(txtInterestRate.Text, out double interestRate) || interestRate < 0)
             {
-                MessageBox.Show("Please enter a valid interest rate between 0 and 100.", 
-                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter a valid interest rate", "Validation Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtInterestRate.Focus();
                 return false;
             }
 
             // Validate discount rate
-            if (!double.TryParse(txtDiscountRate.Text, out double discountRate) || 
-                discountRate < 0 || discountRate > 100)
+            if (!double.TryParse(txtDiscountRate.Text, out double discountRate) || discountRate < 0)
             {
-                MessageBox.Show("Please enter a valid discount rate between 0 and 100.", 
-                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter a valid discount rate", "Validation Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtDiscountRate.Focus();
                 return false;
             }
@@ -294,8 +394,8 @@ namespace SaleBillSystem.NET.Forms
             // Validate company name
             if (string.IsNullOrWhiteSpace(txtCompanyName.Text))
             {
-                MessageBox.Show("Please enter a company name.", 
-                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter a company name", "Validation Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtCompanyName.Focus();
                 return false;
             }

@@ -28,7 +28,7 @@ namespace SaleBillSystem.NET.Forms
             txtCharges.Text = "0.00";
             txtStockQuantity.Text = "0.00";
             
-            txtItemCode.Focus();
+            txtItemName.Focus();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -40,7 +40,6 @@ namespace SaleBillSystem.NET.Forms
             {
                 var item = new Item
                 {
-                    ItemCode = txtItemCode.Text.Trim(),
                     ItemName = txtItemName.Text.Trim(),
                     Unit = txtUnit.Text.Trim(),
                     Rate = Convert.ToDouble(txtRate.Text),
@@ -50,19 +49,13 @@ namespace SaleBillSystem.NET.Forms
 
                 if (ItemService.AddItem(item))
                 {
-                    // Get the newly added item with its ID
-                    var items = ItemService.GetAllItems();
-                    NewItem = items.Find(i => i.ItemCode == item.ItemCode);
-                    
-                    MessageBox.Show("Item added successfully!", "Success", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    
+                    NewItem = item;
                     this.DialogResult = DialogResult.OK;
                     this.Close();
                 }
                 else
                 {
-                    MessageBox.Show("Failed to add item. Please try again.", "Error", 
+                    MessageBox.Show("Failed to add item", "Error", 
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -75,14 +68,6 @@ namespace SaleBillSystem.NET.Forms
 
         private bool ValidateForm()
         {
-            if (string.IsNullOrWhiteSpace(txtItemCode.Text))
-            {
-                MessageBox.Show("Please enter Item Code", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtItemCode.Focus();
-                return false;
-            }
-
             if (string.IsNullOrWhiteSpace(txtItemName.Text))
             {
                 MessageBox.Show("Please enter Item Name", "Validation Error", 
@@ -96,15 +81,6 @@ namespace SaleBillSystem.NET.Forms
                 MessageBox.Show("Please enter Unit", "Validation Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtUnit.Focus();
-                return false;
-            }
-
-            // Check for duplicate item code
-            if (ItemService.ItemCodeExists(txtItemCode.Text.Trim(), null))
-            {
-                MessageBox.Show("An item with this code already exists", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtItemCode.Focus();
                 return false;
             }
 

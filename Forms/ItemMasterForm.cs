@@ -35,7 +35,6 @@ namespace SaleBillSystem.NET.Forms
             this.StartPosition = FormStartPosition.CenterScreen;
 
             // Configure text boxes
-            txtItemCode.MaxLength = 20;
             txtItemName.MaxLength = 100;
             txtUnit.MaxLength = 20;
             txtRate.TextAlign = HorizontalAlignment.Right;
@@ -62,14 +61,6 @@ namespace SaleBillSystem.NET.Forms
 
             // Configure columns
             dgvItems.Columns.Clear();
-
-            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "ItemCode",
-                HeaderText = "Item Code",
-                DataPropertyName = "ItemCode",
-                Width = 100
-            });
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -141,14 +132,13 @@ namespace SaleBillSystem.NET.Forms
             currentItem = new Item();
             isNewItem = true;
 
-            txtItemCode.Text = string.Empty;
             txtItemName.Text = string.Empty;
             txtUnit.Text = string.Empty;
             txtRate.Text = "0.00";
             txtCharges.Text = "0.00";
             txtStockQuantity.Text = "0.00";
 
-            txtItemCode.Focus();
+            txtItemName.Focus();
             btnDelete.Enabled = false;
         }
 
@@ -157,7 +147,6 @@ namespace SaleBillSystem.NET.Forms
             currentItem = item;
             isNewItem = false;
 
-            txtItemCode.Text = item.ItemCode;
             txtItemName.Text = item.ItemName;
             txtUnit.Text = item.Unit;
             txtRate.Text = item.Rate.ToString("N2");
@@ -172,7 +161,6 @@ namespace SaleBillSystem.NET.Forms
             Item item = new Item
             {
                 ItemID = currentItem.ItemID,
-                ItemCode = txtItemCode.Text.Trim(),
                 ItemName = txtItemName.Text.Trim(),
                 Unit = txtUnit.Text.Trim(),
                 Rate = Convert.ToDouble(txtRate.Text),
@@ -185,14 +173,6 @@ namespace SaleBillSystem.NET.Forms
 
         private bool ValidateForm()
         {
-            if (string.IsNullOrWhiteSpace(txtItemCode.Text))
-            {
-                MessageBox.Show("Please enter Item Code", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtItemCode.Focus();
-                return false;
-            }
-
             if (string.IsNullOrWhiteSpace(txtItemName.Text))
             {
                 MessageBox.Show("Please enter Item Name", "Validation Error", 
@@ -206,40 +186,6 @@ namespace SaleBillSystem.NET.Forms
                 MessageBox.Show("Please enter Unit", "Validation Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 txtUnit.Focus();
-                return false;
-            }
-
-            // Check for duplicate item code
-            if (ItemService.ItemCodeExists(txtItemCode.Text.Trim(), isNewItem ? null : currentItem.ItemID))
-            {
-                MessageBox.Show("An item with this code already exists", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtItemCode.Focus();
-                return false;
-            }
-
-            // Validate numeric fields
-            if (!double.TryParse(txtRate.Text, out double rate) || rate < 0)
-            {
-                MessageBox.Show("Please enter a valid Rate", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtRate.Focus();
-                return false;
-            }
-
-            if (!double.TryParse(txtCharges.Text, out double charges) || charges < 0)
-            {
-                MessageBox.Show("Please enter a valid Charges amount", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtCharges.Focus();
-                return false;
-            }
-
-            if (!double.TryParse(txtStockQuantity.Text, out double stock) || stock < 0)
-            {
-                MessageBox.Show("Please enter a valid Stock Quantity", "Validation Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtStockQuantity.Focus();
                 return false;
             }
 
@@ -347,7 +293,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 Item selectedItem = items[e.RowIndex];
                 PopulateForm(selectedItem);
-                txtItemCode.Focus();
+                txtItemName.Focus();
             }
         }
 
@@ -363,9 +309,7 @@ namespace SaleBillSystem.NET.Forms
             else
             {
                 List<Item> filteredItems = items.FindAll(i => 
-                    i.ItemName.ToLower().Contains(searchText) ||
-                    i.ItemCode.ToLower().Contains(searchText) ||
-                    i.Unit.ToLower().Contains(searchText)
+                    i.ItemName.ToLower().Contains(searchText)
                 );
 
                 dgvItems.DataSource = null;

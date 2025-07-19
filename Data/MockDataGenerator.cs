@@ -151,30 +151,29 @@ namespace SaleBillSystem.NET.Data
 
         private static void GenerateItems()
         {
-            var items = new List<(string code, string name, string unit, double rate, double charges, double stock)>
+            var items = new List<(string name, string unit, double rate, double charges, double stock)>
             {
-                ("ITEM001", "Laptop Computer", "PCS", 45000, 2250, 25),
-                ("ITEM002", "Wireless Mouse", "PCS", 800, 40, 100),
-                ("ITEM003", "Keyboard Mechanical", "PCS", 2500, 125, 50),
-                ("ITEM004", "Monitor 24 inch", "PCS", 15000, 750, 30),
-                ("ITEM005", "USB Cable Type-C", "PCS", 350, 18, 200),
-                ("ITEM006", "External Hard Drive", "PCS", 5500, 275, 40),
-                ("ITEM007", "Wireless Headphones", "PCS", 3200, 160, 60),
-                ("ITEM008", "Smartphone", "PCS", 25000, 1250, 35),
-                ("ITEM009", "Tablet 10 inch", "PCS", 18000, 900, 20),
-                ("ITEM010", "Printer Inkjet", "PCS", 8500, 425, 15),
-                ("ITEM011", "Router WiFi", "PCS", 2800, 140, 45),
-                ("ITEM012", "Speaker Bluetooth", "PCS", 1500, 75, 80),
-                ("ITEM013", "Power Bank", "PCS", 1200, 60, 75),
-                ("ITEM014", "Camera DSLR", "PCS", 55000, 2750, 10),
-                ("ITEM015", "Gaming Chair", "PCS", 12000, 600, 25)
+                ("Laptop Computer", "PCS", 45000, 2250, 25),
+                ("Wireless Mouse", "PCS", 800, 40, 100),
+                ("Keyboard Mechanical", "PCS", 2500, 125, 50),
+                ("Monitor 24 inch", "PCS", 15000, 750, 30),
+                ("USB Cable Type-C", "PCS", 350, 18, 200),
+                ("External Hard Drive", "PCS", 5500, 275, 40),
+                ("Wireless Headphones", "PCS", 3200, 160, 60),
+                ("Smartphone", "PCS", 25000, 1250, 35),
+                ("Tablet 10 inch", "PCS", 18000, 900, 20),
+                ("Printer Inkjet", "PCS", 8500, 425, 15),
+                ("Router WiFi", "PCS", 2800, 140, 45),
+                ("Speaker Bluetooth", "PCS", 1500, 75, 80),
+                ("Power Bank", "PCS", 1200, 60, 75),
+                ("Camera DSLR", "PCS", 55000, 2750, 10),
+                ("Gaming Chair", "PCS", 12000, 600, 25)
             };
 
             foreach (var item in items)
             {
                 ItemService.AddItem(new Item
                 {
-                    ItemCode = item.code,
                     ItemName = item.name,
                     Unit = item.unit,
                     Rate = item.rate,

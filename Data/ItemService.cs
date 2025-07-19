@@ -26,7 +26,6 @@ namespace SaleBillSystem.NET.Data
                 Item item = new Item
                 {
                     ItemID = Convert.ToInt32(row["ItemID"]),
-                    ItemCode = row["ItemCode"].ToString(),
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
                     Rate = Convert.ToDouble(row["Rate"]),
@@ -62,7 +61,6 @@ namespace SaleBillSystem.NET.Data
                 Item item = new Item
                 {
                     ItemID = Convert.ToInt32(row["ItemID"]),
-                    ItemCode = row["ItemCode"].ToString(),
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
                     Rate = Convert.ToDouble(row["Rate"]),
@@ -85,12 +83,11 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = "SELECT * FROM ItemMaster WHERE (ItemName LIKE ? OR ItemCode LIKE ?) AND CompanyID = ? ORDER BY ItemName";
+            string sql = "SELECT * FROM ItemMaster WHERE ItemName LIKE ? AND CompanyID = ? ORDER BY ItemName";
             
             string param = "%" + searchText + "%";
             DataTable dt = DatabaseManager.ExecuteQuery(sql, 
                 new OleDbParameter("ItemName", OleDbType.VarChar) { Value = param },
-                new OleDbParameter("ItemCode", OleDbType.VarChar) { Value = param },
                 new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
                 
             foreach (DataRow row in dt.Rows)
@@ -107,11 +104,10 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"INSERT INTO ItemMaster (ItemCode, ItemName, Unit, Rate, Charges, StockQuantity, CompanyID) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?)";
+            string sql = @"INSERT INTO ItemMaster (ItemName, Unit, Rate, Charges, StockQuantity, CompanyID) 
+                         VALUES (?, ?, ?, ?, ?, ?)";
             
             OleDbParameter[] parameters = {
-                new OleDbParameter("ItemCode", OleDbType.VarChar) { Value = item.ItemCode },
                 new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
                 new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
                 new OleDbParameter("Rate", OleDbType.Double) { Value = item.Rate },
@@ -132,11 +128,10 @@ namespace SaleBillSystem.NET.Data
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
             string sql = @"UPDATE ItemMaster SET 
-                         ItemCode = ?, ItemName = ?, Unit = ?, Rate = ?, Charges = ?, StockQuantity = ?, CompanyID = ? 
+                         ItemName = ?, Unit = ?, Rate = ?, Charges = ?, StockQuantity = ?, CompanyID = ? 
                          WHERE ItemID = ? AND CompanyID = ?";
             
             OleDbParameter[] parameters = {
-                new OleDbParameter("ItemCode", OleDbType.VarChar) { Value = item.ItemCode },
                 new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
                 new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
                 new OleDbParameter("Rate", OleDbType.Double) { Value = item.Rate },
@@ -186,37 +181,12 @@ namespace SaleBillSystem.NET.Data
             return result > 0;
         }
         
-        // Check if item exists with the same code
-        public static bool ItemCodeExists(string itemCode, int? excludeItemID = null)
-        {
-            // Get the active company ID
-            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
-            
-            string sql = "SELECT COUNT(*) FROM ItemMaster WHERE ItemCode = ? AND CompanyID = ?";
-            List<OleDbParameter> paramsList = new List<OleDbParameter> {
-                new OleDbParameter("ItemCode", OleDbType.VarChar) { Value = itemCode },
-                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
-            };
-            
-            if (excludeItemID.HasValue)
-            {
-                sql += " AND ItemID <> ?";
-                paramsList.Add(new OleDbParameter("ItemID", OleDbType.Integer) { Value = excludeItemID.Value });
-            }
-            
-            OleDbParameter[] parameters = paramsList.ToArray();
-            object result = DatabaseManager.ExecuteScalar(sql, parameters);
-            
-            return Convert.ToInt32(result) > 0;
-        }
-        
         // Map DataRow to Item object
         private static Item MapRowToItem(DataRow row)
         {
             return new Item
             {
                 ItemID = Convert.ToInt32(row["ItemID"]),
-                ItemCode = row["ItemCode"].ToString(),
                 ItemName = row["ItemName"].ToString(),
                 Unit = row["Unit"].ToString(),
                 Rate = Convert.ToDouble(row["Rate"]),

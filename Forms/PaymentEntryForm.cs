@@ -103,6 +103,10 @@ namespace SaleBillSystem.NET.Forms
                 // Load all associated bills
                 LoadAssociatedBills();
                 
+                // When loading is complete, update payment summary to show allocated/unallocated
+                // Force a second update after a short delay to ensure values are calculated correctly
+                UpdatePaymentSummary();
+                
                 // Keep payment amount editable in edit mode
                 txtPaymentAmount.ReadOnly = false;
                 btnAutoAllocate.Enabled = true;
@@ -127,10 +131,11 @@ namespace SaleBillSystem.NET.Forms
                 
                 if (isEditMode && currentPayment != null && currentPayment.PaymentDetails != null)
                 {
-                    // In edit mode, load bills that are either:
-                    // 1. Already allocated in this payment
-                    // 2. Currently outstanding for the selected party/broker
-                    
+                    // Store existing payment details for easier lookup
+                    var paymentDetailsMap = currentPayment.PaymentDetails
+                        .Where(pd => pd != null)
+                        .ToDictionary(pd => pd.BillID, pd => pd.AllocatedAmount);
+                        
                     // First, get all bills that are already allocated in this payment
                     foreach (var detail in currentPayment.PaymentDetails)
                     {
@@ -174,18 +179,16 @@ namespace SaleBillSystem.NET.Forms
                     {
                         var (interestAmount, discountAmount, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
                         
-                        // Safely check for payment details matching this bill
+                        // Find the allocation for this bill in the current payment
                         double allocatedAmount = 0.0;
-                        if (currentPayment != null && currentPayment.PaymentDetails != null)
+                        if (paymentDetailsMap.ContainsKey(b.BillID))
                         {
-                            var paymentDetail = currentPayment.PaymentDetails
-                                .FirstOrDefault(pd => pd != null && pd.BillID == b.BillID);
-                            if (paymentDetail != null)
-                            {
-                                allocatedAmount = paymentDetail.AllocatedAmount;
-                            }
+                            allocatedAmount = paymentDetailsMap[b.BillID];
                         }
                         
+                        // Previous paid is the total paid before this payment
+                        double previousPaid = b.PaidAmount;
+                        double balanceBefore = netPayableAmount - previousPaid;
                         return new
                         {
                             BillID = b.BillID,
@@ -197,13 +200,16 @@ namespace SaleBillSystem.NET.Forms
                             InterestAmount = interestAmount,
                             DiscountAmount = discountAmount,
                             NetPayableAmount = netPayableAmount,
-                            PaidAmount = b.PaidAmount,
-                            BalanceAmount = netPayableAmount - b.PaidAmount,
+                            PaidAmount = previousPaid, // Show previous paid before this payment
+                            BalanceAmount = balanceBefore, // Show balance before this payment
                             PaymentAmount = allocatedAmount
                         };
                     }).ToList();
 
                     dgvBills.DataSource = billData;
+                    
+                    // Validate the PaymentAmount column in the grid to ensure the values are correct
+                    ValidateGridPaymentValues(paymentDetailsMap);
                 }
                 else
                 {
@@ -224,6 +230,14 @@ namespace SaleBillSystem.NET.Forms
                     {
                         outstandingBills = new List<Bill>();
                     }
+
+                    // Filter out any fully paid bills
+                    outstandingBills = outstandingBills
+                        .Where(b => {
+                            var (_, _, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
+                            return (netPayableAmount - b.PaidAmount) > 0.01; // Only show bills with positive balance
+                        })
+                        .ToList();
 
                     // Create display data with payment amount column
                     var billData = outstandingBills.Select(b => 
@@ -268,10 +282,45 @@ namespace SaleBillSystem.NET.Forms
                 }
             }
         }
+        
+        private void ValidateGridPaymentValues(Dictionary<int, double> paymentDetailsMap)
+        {
+            // Make sure we don't trigger recursive updates
+            isAutoAllocating = true;
+            
+            try
+            {
+                for (int i = 0; i < dgvBills.Rows.Count; i++)
+                {
+                    var row = dgvBills.Rows[i];
+                    
+                    // Get the bill ID from the grid
+                    int billId = Convert.ToInt32(row.Cells["BillID"].Value);
+                    
+                    // Check if this bill has an allocation in the current payment
+                    if (paymentDetailsMap.ContainsKey(billId))
+                    {
+                        double allocatedAmount = paymentDetailsMap[billId];
+                        
+                        // Make sure the grid value matches the allocation
+                        if (row.Cells["PaymentAmount"].Value == null || 
+                            Math.Abs(Convert.ToDouble(row.Cells["PaymentAmount"].Value) - allocatedAmount) > 0.01)
+                        {
+                            // Update the grid value to match the actual allocation
+                            row.Cells["PaymentAmount"].Value = allocatedAmount;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                isAutoAllocating = false;
+            }
+        }
 
         private void SetupForm()
         {
-            this.Text = "Payment Entry";
+            this.Text = isEditMode ? "Edit Payment" : "Payment Entry";
             this.KeyPreview = true; // Enable form to receive key events first
             
             // Setup party combo box
@@ -308,6 +357,12 @@ namespace SaleBillSystem.NET.Forms
             
             // Set tab order for better keyboard navigation
             SetTabOrder();
+            
+            // Update the group box title to indicate only unpaid bills are shown
+            if (!isEditMode)
+            {
+                groupBoxBills.Text = "Outstanding Bills (Unpaid Only)";
+            }
         }
         
         private void SetTabOrder()
@@ -623,6 +678,14 @@ namespace SaleBillSystem.NET.Forms
                     outstandingBills = bills ?? new List<Bill>();
                 }
 
+                // Filter out fully paid bills
+                outstandingBills = outstandingBills
+                    .Where(b => {
+                        var (_, _, netPayableAmount) = PaymentService.CalculateInterestAndDiscount(b, dtpPaymentDate.Value);
+                        return (netPayableAmount - b.PaidAmount) > 0.01; // Only show bills with positive balance
+                    })
+                    .ToList();
+
                 // Use the new RefreshBillsList method to calculate interest/discount
                 RefreshBillsList();
             }
@@ -689,9 +752,26 @@ namespace SaleBillSystem.NET.Forms
             if (isAutoAllocating)
                 return;
             
-            // Auto-allocate for both new payments and when editing existing payments
-            // The AutoAllocatePayment method will handle preserving allocations in edit mode
-            AutoAllocatePayment();
+            // Only auto-allocate if this is a new entry or if there's a significant change in payment amount
+            if (!isEditMode)
+            {
+                // Always auto-allocate for new payments
+                AutoAllocatePayment();
+            }
+            else
+            {
+                // For edit mode, only re-allocate if the amount has changed significantly
+                if (double.TryParse(txtPaymentAmount.Text, out double newAmount) && 
+                    Math.Abs(newAmount - currentPayment.PaymentAmount) > 0.01)
+                {
+                    AutoAllocatePayment();
+                }
+                else
+                {
+                    // Just update the summary without changing allocations
+                    UpdatePaymentSummary();
+                }
+            }
         }
 
         private void AutoAllocatePayment()
@@ -1017,12 +1097,26 @@ namespace SaleBillSystem.NET.Forms
             {
                 double unallocatedAmount = paymentAmount - totalAllocated;
                 lblUnallocatedAmount.Text = $"Unallocated: ₹{unallocatedAmount:N2}";
-                lblUnallocatedAmount.ForeColor = unallocatedAmount == 0 ? Color.Green : Color.Red;
+                
+                // Make color more prominent and use bold for unallocated amounts
+                if (Math.Abs(unallocatedAmount) < 0.01)
+                {
+                    // Perfectly allocated
+                    lblUnallocatedAmount.ForeColor = Color.Green;
+                    lblUnallocatedAmount.Font = new Font(lblUnallocatedAmount.Font, FontStyle.Bold);
+                }
+                else
+                {
+                    // Unallocated amount exists
+                    lblUnallocatedAmount.ForeColor = Color.Red;
+                    lblUnallocatedAmount.Font = new Font(lblUnallocatedAmount.Font, FontStyle.Bold);
+                }
             }
             else
             {
                 lblUnallocatedAmount.Text = "Unallocated: ₹0.00";
                 lblUnallocatedAmount.ForeColor = Color.Black;
+                lblUnallocatedAmount.Font = new Font(lblUnallocatedAmount.Font, FontStyle.Regular);
             }
         }
 

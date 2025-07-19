@@ -82,7 +82,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // cmbParty
             // 
-            this.cmbParty.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbParty.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown;
             this.cmbParty.FormattingEnabled = true;
             this.cmbParty.Location = new System.Drawing.Point(100, 82);
             this.cmbParty.Name = "cmbParty";

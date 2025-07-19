@@ -122,9 +122,10 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
+                // Initialize outstandingBills to ensure it's never null
                 outstandingBills = new List<Bill>();
                 
-                if (isEditMode)
+                if (isEditMode && currentPayment != null && currentPayment.PaymentDetails != null)
                 {
                     // In edit mode, load bills that are either:
                     // 1. Already allocated in this payment
@@ -133,13 +134,16 @@ namespace SaleBillSystem.NET.Forms
                     // First, get all bills that are already allocated in this payment
                     foreach (var detail in currentPayment.PaymentDetails)
                     {
-                        Bill bill = BillService.GetBillByID(detail.BillID);
-                        if (bill != null)
+                        if (detail != null)
                         {
-                                                    // Temporarily adjust paid amount to exclude this payment's allocation
-                        // so we can see the correct balance for editing
-                        bill.PaidAmount -= detail.AllocatedAmount;
-                        outstandingBills.Add(bill);
+                            Bill bill = BillService.GetBillByID(detail.BillID);
+                            if (bill != null)
+                            {
+                                // Temporarily adjust paid amount to exclude this payment's allocation
+                                // so we can see the correct balance for editing
+                                bill.PaidAmount -= detail.AllocatedAmount;
+                                outstandingBills.Add(bill);
+                            }
                         }
                     }
                     
@@ -147,17 +151,19 @@ namespace SaleBillSystem.NET.Forms
                     List<Bill> additionalBills = new List<Bill>();
                     if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
                     {
-                        additionalBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                        var bills = PaymentService.GetOutstandingBillsByParty(partyId);
+                        additionalBills = bills ?? new List<Bill>();
                     }
                     else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
                     {
-                        additionalBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                        var bills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                        additionalBills = bills ?? new List<Bill>();
                     }
                     
                     // Add bills that aren't already in the list
                     foreach (var bill in additionalBills)
                     {
-                        if (!outstandingBills.Any(b => b.BillID == bill.BillID))
+                        if (bill != null && !outstandingBills.Any(b => b.BillID == bill.BillID))
                         {
                             outstandingBills.Add(bill);
                         }
@@ -201,14 +207,22 @@ namespace SaleBillSystem.NET.Forms
                 }
                 else
                 {
-                    // In new payment mode, load outstanding bills normally
+                    // In new payment mode or when payment details are null, load outstanding bills normally
                     if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
                     {
-                        outstandingBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                        var bills = PaymentService.GetOutstandingBillsByParty(partyId);
+                        outstandingBills = bills ?? new List<Bill>();
                     }
                     else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
                     {
-                        outstandingBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                        var bills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                        outstandingBills = bills ?? new List<Bill>();
+                    }
+
+                    // Ensure outstandingBills is not null before using it
+                    if (outstandingBills == null)
+                    {
+                        outstandingBills = new List<Bill>();
                     }
 
                     // Create display data with payment amount column
@@ -247,6 +261,11 @@ namespace SaleBillSystem.NET.Forms
             {
                 MessageBox.Show($"Error loading bills: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Ensure outstandingBills is initialized even if an error occurs
+                if (outstandingBills == null)
+                {
+                    outstandingBills = new List<Bill>();
+                }
             }
         }
 
@@ -590,15 +609,18 @@ namespace SaleBillSystem.NET.Forms
                     return;
                 }
                 
+                // Initialize outstandingBills to ensure it's never null
                 outstandingBills = new List<Bill>();
 
                 if (rbFilterByParty.Checked && cmbParty.SelectedValue is int partyId && partyId > 0)
                 {
-                    outstandingBills = PaymentService.GetOutstandingBillsByParty(partyId);
+                    var bills = PaymentService.GetOutstandingBillsByParty(partyId);
+                    outstandingBills = bills ?? new List<Bill>();
                 }
                 else if (rbFilterByBroker.Checked && cmbBroker.SelectedValue is int brokerId && brokerId > 0)
                 {
-                    outstandingBills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                    var bills = PaymentService.GetOutstandingBillsByBroker(brokerId);
+                    outstandingBills = bills ?? new List<Bill>();
                 }
 
                 // Use the new RefreshBillsList method to calculate interest/discount
@@ -608,6 +630,11 @@ namespace SaleBillSystem.NET.Forms
             {
                 MessageBox.Show($"Error loading bills: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Ensure outstandingBills is initialized even if an error occurs
+                if (outstandingBills == null)
+                {
+                    outstandingBills = new List<Bill>();
+                }
             }
         }
 
@@ -615,6 +642,12 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
+                // Ensure outstandingBills is not null
+                if (outstandingBills == null)
+                {
+                    outstandingBills = new List<Bill>();
+                }
+
                 // Create display data with calculated interest/discount based on payment date
                 var billData = outstandingBills.Select(b => 
                 {

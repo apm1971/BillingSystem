@@ -97,6 +97,7 @@ namespace SaleBillSystem.NET.Forms
             reportsMenu.ForeColor = Color.White;
             
             ToolStripMenuItem reportsOutstanding = new ToolStripMenuItem("&Outstanding Reports");
+            reportsOutstanding.ShortcutKeys = Keys.Control | Keys.R;
             ToolStripMenuItem reportsPayment = new ToolStripMenuItem("&Payment Reports");
             ToolStripMenuItem reportsSales = new ToolStripMenuItem("&Sales Reports");
             
@@ -178,6 +179,7 @@ namespace SaleBillSystem.NET.Forms
             mastersParty.Click += (s, e) => ShowPartyMaster();
             mastersItem.Click += (s, e) => ShowItemMaster();
             mastersBroker.Click += (s, e) => ShowBrokerMaster();
+            reportsOutstanding.Click += (s, e) => ShowOutstandingReport();
             utilitiesSettings.Click += (s, e) => ShowSettings();
             utilitiesCreateCompany.Click += (s, e) => CreateCompany();
             utilitiesEditCompany.Click += (s, e) => EditCompany();
@@ -237,6 +239,31 @@ namespace SaleBillSystem.NET.Forms
         {
             var form = new BrokerListForm();
             form.ShowDialog();
+        }
+
+        private void ShowOutstandingReport()
+        {
+            try
+            {
+                // Check if active company exists
+                if (Program.ActiveCompany == null)
+                {
+                    MessageBox.Show(
+                        "No active company selected. Please select or create a company first.",
+                        Program.APP_NAME,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var form = new OutstandingReportForm();
+                form.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening outstanding report: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void ShowSettings()
@@ -405,6 +432,8 @@ namespace SaleBillSystem.NET.Forms
                 "Alt+F1: Party Master\n" +
                 "Alt+F2: Item Master\n" +
                 "Alt+F3: Broker Master\n\n" +
+                "=== REPORTS ===\n" +
+                "Ctrl+R: Outstanding Report\n\n" +
                 "=== UTILITIES ===\n" +
                 "Ctrl+Alt+S: Settings\n" +
                 "Ctrl+G: Generate Mock Data\n" +
@@ -485,6 +514,12 @@ namespace SaleBillSystem.NET.Forms
             {
                 // Alt+F3: Broker Master
                 ShowBrokerMaster();
+                e.SuppressKeyPress = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.R)
+            {
+                // Ctrl+R: Outstanding Report
+                ShowOutstandingReport();
                 e.SuppressKeyPress = true;
             }
             else if (e.Alt && e.KeyCode == Keys.F4)

@@ -38,11 +38,11 @@ namespace SaleBillSystem.NET.Forms
             this.btnNew = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.panelForm = new System.Windows.Forms.Panel();
-            this.txtOutstandingAmount = new System.Windows.Forms.TextBox();
+            // this.txtOutstandingAmount = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
             this.txtCreditDays = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
-            this.txtCreditLimit = new System.Windows.Forms.TextBox();
+            // this.txtCreditLimit = new System.Windows.Forms.TextBox();
             this.label8 = new System.Windows.Forms.Label();
             this.txtEmail = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
@@ -160,11 +160,11 @@ namespace SaleBillSystem.NET.Forms
             // 
             // panelForm
             // 
-            this.panelForm.Controls.Add(this.txtOutstandingAmount);
+            // this.panelForm.Controls.Add(this.txtOutstandingAmount);
             this.panelForm.Controls.Add(this.label9);
             this.panelForm.Controls.Add(this.txtCreditDays);
             this.panelForm.Controls.Add(this.label11);
-            this.panelForm.Controls.Add(this.txtCreditLimit);
+            // this.panelForm.Controls.Add(this.txtCreditLimit);
             this.panelForm.Controls.Add(this.label8);
             this.panelForm.Controls.Add(this.txtEmail);
             this.panelForm.Controls.Add(this.label6);
@@ -186,10 +186,10 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtOutstandingAmount
             // 
-            this.txtOutstandingAmount.Location = new System.Drawing.Point(16, 417);
-            this.txtOutstandingAmount.Name = "txtOutstandingAmount";
-            this.txtOutstandingAmount.Size = new System.Drawing.Size(260, 23);
-            this.txtOutstandingAmount.TabIndex = 17;
+            // this.txtOutstandingAmount.Location = new System.Drawing.Point(16, 417);
+            // this.txtOutstandingAmount.Name = "txtOutstandingAmount";
+            // this.txtOutstandingAmount.Size = new System.Drawing.Size(260, 23);
+            // this.txtOutstandingAmount.TabIndex = 17;
             // 
             // label9
             // 
@@ -198,7 +198,7 @@ namespace SaleBillSystem.NET.Forms
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(122, 15);
             this.label9.TabIndex = 16;
-            this.label9.Text = "Outstanding Amount:";
+            // this.label9.Text = "Outstanding Amount:";
             // 
             // txtCreditDays
             // 
@@ -218,10 +218,10 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtCreditLimit
             // 
-            this.txtCreditLimit.Location = new System.Drawing.Point(16, 321);
-            this.txtCreditLimit.Name = "txtCreditLimit";
-            this.txtCreditLimit.Size = new System.Drawing.Size(260, 23);
-            this.txtCreditLimit.TabIndex = 11;
+            // this.txtCreditLimit.Location = new System.Drawing.Point(16, 321);
+            // this.txtCreditLimit.Name = "txtCreditLimit";
+            // this.txtCreditLimit.Size = new System.Drawing.Size(260, 23);
+            // this.txtCreditLimit.TabIndex = 11;
             // 
             // label8
             // 
@@ -230,7 +230,7 @@ namespace SaleBillSystem.NET.Forms
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(71, 15);
             this.label8.TabIndex = 10;
-            this.label8.Text = "Credit Limit:";
+            // this.label8.Text = "Credit Limit:";
             // 
             // txtEmail
             // 
@@ -391,11 +391,11 @@ namespace SaleBillSystem.NET.Forms
         private Label label5;
         private TextBox txtEmail;
         private Label label6;
-        private TextBox txtCreditLimit;
+        // private TextBox txtCreditLimit;
         private Label label8;
         private TextBox txtCreditDays;
         private Label label11;
-        private TextBox txtOutstandingAmount;
+        // private TextBox txtOutstandingAmount;
         private Label label9;
         private DataGridView dgvParties;
         private TextBox txtSearch;

@@ -129,10 +129,10 @@ namespace SaleBillSystem.NET.Data
                     City = party.city,
                     Phone = party.phone,
                     Email = party.email,
-                    GSTNo = party.gst,
-                    PAN = party.pan,
-                    OpeningBalance = party.openingBalance,
-                    OpeningBalanceDate = DateTime.Today.AddDays(-30),
+                    // GSTNo = party.gst,
+                    // PAN = party.pan,
+                    // OpeningBalance = party.openingBalance,
+                    // OpeningBalanceDate = DateTime.Today.AddDays(-30),
                     CreditDays = 30 + (i * 5) % 30, // Varied credit days 30-60
                     CompanyID = Program.ActiveCompany.CompanyID
                 };

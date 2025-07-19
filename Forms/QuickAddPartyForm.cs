@@ -48,9 +48,9 @@ namespace SaleBillSystem.NET.Forms
                     City = txtCity.Text.Trim().ToUpper(),
                     Phone = txtPhone.Text.Trim().ToUpper(),
                     Email = txtEmail.Text.Trim(), // Email remains as-is (case-sensitive)
-                    CreditLimit = 0,
+                    // CreditLimit = 0,
                     CreditDays = 0,
-                    OutstandingAmount = 0
+                    // OutstandingAmount = 0
                 };
 
                 if (PartyService.AddParty(party))

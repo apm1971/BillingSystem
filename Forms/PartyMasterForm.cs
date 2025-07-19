@@ -32,9 +32,9 @@ namespace SaleBillSystem.NET.Forms
         private void ConfigureControls()
         {
             // Set numeric format for TextBoxes
-            txtCreditLimit.Text = "0.00";
+            // txtCreditLimit.Text = "0.00";
             txtCreditDays.Text = "0";
-            txtOutstandingAmount.Text = "0.00";
+            // txtOutstandingAmount.Text = "0.00";
             
             // Set up Tab order
             txtPartyName.TabIndex = 0;
@@ -43,9 +43,9 @@ namespace SaleBillSystem.NET.Forms
             txtPhone.TabIndex = 3;
             txtEmail.TabIndex = 4;
 
-            txtCreditLimit.TabIndex = 6;
+            // txtCreditLimit.TabIndex = 6;
             txtCreditDays.TabIndex = 7;
-            txtOutstandingAmount.TabIndex = 8;
+            // txtOutstandingAmount.TabIndex = 8;
             btnSave.TabIndex = 9;
             btnNew.TabIndex = 10;
             btnDelete.TabIndex = 11;
@@ -114,13 +114,7 @@ namespace SaleBillSystem.NET.Forms
                 
 
                 
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "OutstandingAmount",
-                    HeaderText = "Outstanding",
-                    Width = 100,
-                    DefaultCellStyle = { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
-                });
+                
             }
             
             // Adjust row height for better readability with the larger font
@@ -184,9 +178,9 @@ namespace SaleBillSystem.NET.Forms
             txtPhone.Text = string.Empty;
             txtEmail.Text = string.Empty;
 
-            txtCreditLimit.Text = "0.00";
+            // txtCreditLimit.Text = "0.00";
             txtCreditDays.Text = "0";
-            txtOutstandingAmount.Text = "0.00";
+            // txtOutstandingAmount.Text = "0.00";
             
             // Reset broker selection
             if (cmbBroker != null)
@@ -209,9 +203,9 @@ namespace SaleBillSystem.NET.Forms
             txtPhone.Text = party.Phone;
             txtEmail.Text = party.Email;
 
-            txtCreditLimit.Text = party.CreditLimit.ToString("N2");
+            // txtCreditLimit.Text = party.CreditLimit.ToString("N2");
             txtCreditDays.Text = party.CreditDays.ToString();
-            txtOutstandingAmount.Text = party.OutstandingAmount.ToString("N2");
+            // txtOutstandingAmount.Text = party.OutstandingAmount.ToString("N2");
             
             // Set broker selection
             if (cmbBroker != null)
@@ -239,9 +233,9 @@ namespace SaleBillSystem.NET.Forms
                 City = txtCity.Text.Trim().ToUpper(),
                 Phone = txtPhone.Text.Trim().ToUpper(),
                 Email = txtEmail.Text.Trim(), // Email remains as-is (case-sensitive)
-                CreditLimit = Convert.ToDouble(txtCreditLimit.Text),
+                // CreditLimit = Convert.ToDouble(txtCreditLimit.Text),
                 CreditDays = Convert.ToInt32(txtCreditDays.Text),
-                OutstandingAmount = Convert.ToDouble(txtOutstandingAmount.Text)
+                // OutstandingAmount = Convert.ToDouble(txtOutstandingAmount.Text)
             };
 
             // Set broker information

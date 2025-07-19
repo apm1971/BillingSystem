@@ -113,8 +113,8 @@ namespace SaleBillSystem.NET.Data
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
             string sql = @"INSERT INTO PartyMaster 
-                (PartyName, Address, City, Phone, Email, GSTNo, PAN, OpeningBalance, OpeningBalanceDate, CreditDays, BrokerID, BrokerName, CompanyID) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (PartyName, Address, City, Phone, Email, CreditDays, BrokerID, BrokerName, CompanyID) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             OleDbParameter[] parameters = {
                 new OleDbParameter("PartyName", party.PartyName),
@@ -122,10 +122,10 @@ namespace SaleBillSystem.NET.Data
                 new OleDbParameter("City", party.City),
                 new OleDbParameter("Phone", party.Phone),
                 new OleDbParameter("Email", party.Email),
-                new OleDbParameter("GSTNo", party.GSTNo),
-                new OleDbParameter("PAN", party.PAN),
-                new OleDbParameter("OpeningBalance", party.OpeningBalance),
-                new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
+                // new OleDbParameter("GSTNo", party.GSTNo),
+                // new OleDbParameter("PAN", party.PAN),
+                // new OleDbParameter("OpeningBalance", party.OpeningBalance),
+                // new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
                 new OleDbParameter("CreditDays", party.CreditDays),
                 party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
                 new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
@@ -145,7 +145,6 @@ namespace SaleBillSystem.NET.Data
             
             string sql = @"UPDATE PartyMaster SET 
                 PartyName = ?, Address = ?, City = ?, Phone = ?, Email = ?, 
-                GSTNo = ?, PAN = ?, OpeningBalance = ?, OpeningBalanceDate = ?, 
                 CreditDays = ?, BrokerID = ?, BrokerName = ?, CompanyID = ? 
                 WHERE PartyID = ?";
             
@@ -155,10 +154,10 @@ namespace SaleBillSystem.NET.Data
                 new OleDbParameter("City", party.City),
                 new OleDbParameter("Phone", party.Phone),
                 new OleDbParameter("Email", party.Email),
-                new OleDbParameter("GSTNo", party.GSTNo),
-                new OleDbParameter("PAN", party.PAN),
-                new OleDbParameter("OpeningBalance", party.OpeningBalance),
-                new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
+                // new OleDbParameter("GSTNo", party.GSTNo),
+                // new OleDbParameter("PAN", party.PAN),
+                // new OleDbParameter("OpeningBalance", party.OpeningBalance),
+                // new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
                 new OleDbParameter("CreditDays", party.CreditDays),
                 party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
                 new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
@@ -215,10 +214,10 @@ namespace SaleBillSystem.NET.Data
                 City = row["City"].ToString(),
                 Phone = row["Phone"].ToString(),
                 Email = row["Email"].ToString(),
-                GSTNo = row["GSTNo"] != DBNull.Value ? row["GSTNo"].ToString() : string.Empty,
-                PAN = row["PAN"] != DBNull.Value ? row["PAN"].ToString() : string.Empty,
-                OpeningBalance = row["OpeningBalance"] != DBNull.Value ? Convert.ToDouble(row["OpeningBalance"]) : 0,
-                OpeningBalanceDate = row["OpeningBalanceDate"] != DBNull.Value ? Convert.ToDateTime(row["OpeningBalanceDate"]) : DateTime.Today,
+                // GSTNo = row["GSTNo"] != DBNull.Value ? row["GSTNo"].ToString() : string.Empty,
+                // PAN = row["PAN"] != DBNull.Value ? row["PAN"].ToString() : string.Empty,
+                // OpeningBalance = row["OpeningBalance"] != DBNull.Value ? Convert.ToDouble(row["OpeningBalance"]) : 0,
+                // OpeningBalanceDate = row["OpeningBalanceDate"] != DBNull.Value ? Convert.ToDateTime(row["OpeningBalanceDate"]) : DateTime.Today,
                 CreditDays = row["CreditDays"] != DBNull.Value ? Convert.ToInt32(row["CreditDays"]) : 0,
                 BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
                 BrokerName = row["BrokerName"] != DBNull.Value ? row["BrokerName"].ToString() : string.Empty,

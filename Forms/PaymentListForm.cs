@@ -33,6 +33,10 @@ namespace SaleBillSystem.NET.Forms
 
             // Setup date filters - add DateTimePicker controls for FromDate and ToDate
             // You'll need to add these controls to the form's designer first
+            dtpFromDate.Format = DateTimePickerFormat.Custom;
+            dtpFromDate.CustomFormat = "dd-MM-yyyy";
+            dtpToDate.Format = DateTimePickerFormat.Custom;
+            dtpToDate.CustomFormat = "dd-MM-yyyy";
             dtpFromDate.Value = DateTime.Today.AddMonths(-1);
             dtpToDate.Value = DateTime.Today;
 

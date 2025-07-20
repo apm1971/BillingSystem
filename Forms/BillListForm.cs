@@ -28,6 +28,13 @@ namespace SaleBillSystem.NET.Forms
         {
             // Setup search event handler
             txtSearch.TextChanged += txtSearch_TextChanged;
+            
+            // Configure date pickers
+            dtpFromDate.Format = DateTimePickerFormat.Custom;
+            dtpFromDate.CustomFormat = "dd-MM-yyyy";
+            dtpToDate.Format = DateTimePickerFormat.Custom;
+            dtpToDate.CustomFormat = "dd-MM-yyyy";
+            
             dtpFromDate.ValueChanged += DateFilter_Changed;
             dtpToDate.ValueChanged += DateFilter_Changed;
             

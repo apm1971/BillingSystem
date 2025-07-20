@@ -112,11 +112,20 @@ namespace SaleBillSystem.NET.Forms
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
             };
             
+            dtpBillDate = new DateTimePicker
+            {
+                Location = new Point(100, 53),
+                Size = new Size(120, 23),
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "dd-MM-yyyy"
+            };
+            
             dtpDueDate = new DateTimePicker
             {
                 Location = new Point(425, 53),
                 Size = new Size(120, 23),
-                Format = DateTimePickerFormat.Short
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "dd-MM-yyyy"
             };
             
             // Add Broker controls to groupBox1
@@ -417,115 +426,49 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbBroker_TextChanged(object sender, EventArgs e)
         {
-            if (isBrokerSearching) return; // Prevent recursive calls
-
-            string searchText = cmbBroker.Text.ToLower().Trim();
-            
-            // Only filter if search text has changed
-            if (searchText == lastBrokerSearchText) return;
-            lastBrokerSearchText = searchText;
-
-            try
+            // If a broker is selected, update the current bill
+            if (cmbBroker.SelectedValue is int brokerId)
             {
-                isBrokerSearching = true;
-                
-                if (string.IsNullOrWhiteSpace(searchText))
-                {
-                    // Show all brokers if search is empty
-                    filteredBrokers = new List<Broker>(brokers);
-                }
-                else
-                {
-                    // Filter brokers based on search text
-                    filteredBrokers = FilterBrokersBySearch(searchText);
-                }
-
-                // Update the dropdown
-                RefreshBrokerDropdown();
-            }
-            finally
-            {
-                isBrokerSearching = false;
+                currentBill.BrokerID = brokerId > 0 ? brokerId : (int?)null;
+                currentBill.BrokerName = brokerId > 0 ? cmbBroker.Text : string.Empty;
             }
         }
 
         private void CmbBroker_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
+            switch (e.KeyCode)
             {
-                // If there's exactly one filtered broker, select it
-                if (filteredBrokers.Count == 1)
-                {
-                    // Create a list with the "No Broker" option for proper selection
-                    var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
-                    brokerList.AddRange(filteredBrokers);
-                    
-                    cmbBroker.SelectedValue = filteredBrokers[0].BrokerID;
+                case Keys.Enter:
                     e.SuppressKeyPress = true;
                     e.Handled = true;
                     
-                    // Move focus to next control
+                    // If a broker is selected or text matches exactly, move to next control
+                    if (cmbBroker.SelectedValue is int brokerId)
+                    {
+                        dgvItems.Focus();
+                        return;
+                    }
+                    
+                    // If text matches a broker name exactly, select that broker
+                    var matchingBroker = brokers.FirstOrDefault(b => 
+                        b.BrokerName.Equals(cmbBroker.Text, StringComparison.OrdinalIgnoreCase));
+                    if (matchingBroker != null)
+                    {
+                        cmbBroker.SelectedValue = matchingBroker.BrokerID;
+                        dgvItems.Focus();
+                        return;
+                    }
+                    
+                    // Move to next control anyway
                     dgvItems.Focus();
-                }
-            }
-            else if (e.KeyCode == Keys.Down && !cmbBroker.DroppedDown)
-            {
-                // Show dropdown when down arrow is pressed
-                if (filteredBrokers.Count > 0)
-                {
-                    cmbBroker.DroppedDown = true;
+                    break;
+
+                case Keys.Escape:
+                    cmbBroker.SelectedValue = 0; // Select "No Broker"
+                    cmbBroker.Text = "";
                     e.SuppressKeyPress = true;
                     e.Handled = true;
-                }
-            }
-        }
-
-        private List<Broker> FilterBrokersBySearch(string searchText)
-        {
-            return brokers.Where(broker => 
-            {
-                string brokerName = broker.BrokerName.ToLower();
-                
-                // Direct contains match
-                if (brokerName.Contains(searchText))
-                    return true;
-                
-                // Split search text and broker name into words for multi-word matching
-                string[] searchWords = searchText.Split(new char[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-                string[] brokerWords = brokerName.Split(new char[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-                
-                // Check if all search words match at least one broker word (substring match)
-                return searchWords.All(searchWord => 
-                    brokerWords.Any(brokerWord => brokerWord.Contains(searchWord))
-                );
-            }).ToList();
-        }
-
-        private void RefreshBrokerDropdown()
-        {
-            // Store current selection
-            int currentCursorPosition = cmbBroker.SelectionStart;
-            string currentText = cmbBroker.Text;
-            
-            // Create broker list with "No Broker" option
-            var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
-            brokerList.AddRange(filteredBrokers);
-            
-            // Update data source
-            cmbBroker.DataSource = null;
-            cmbBroker.DataSource = brokerList;
-            cmbBroker.DisplayMember = "BrokerName";
-            cmbBroker.ValueMember = "BrokerID";
-            
-            // Restore text and cursor position
-            cmbBroker.Text = currentText;
-            cmbBroker.SelectionStart = currentCursorPosition;
-            cmbBroker.SelectionLength = 0;
-            
-            // Show dropdown if there are filtered results and text is not empty
-            if (filteredBrokers.Count > 0 && !string.IsNullOrWhiteSpace(currentText))
-            {
-                cmbBroker.DroppedDown = true;
+                    break;
             }
         }
 
@@ -581,140 +524,162 @@ namespace SaleBillSystem.NET.Forms
             return BillService.GenerateNewBillNumber();
         }
 
-        private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
+       private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
+{
+    if (isSearching) return; // Prevent interference during search operations
+    
+    if (cmbParty.SelectedValue is int partyId && partyId > 0)
+    {
+        var party = parties.FirstOrDefault(p => p.PartyID == partyId);
+        if (party != null)
         {
-            if (cmbParty.SelectedValue is int partyId)
+            SelectParty(party);
+        }
+    }
+    else
+    {
+        // Clear party details if no party selected
+        lblPartyDetails.Text = "Party details will appear here";
+    }
+}
+
+        private void CmbParty_TextChanged(object sender, EventArgs e)
+{
+    // If text is empty, clear party details
+    if (string.IsNullOrWhiteSpace(cmbParty.Text))
+    {
+        lblPartyDetails.Text = "Party details will appear here";
+        return;
+    }
+
+    // If a party is selected, update details
+    if (cmbParty.SelectedValue is int partyId && partyId > 0)
+    {
+        var party = parties.FirstOrDefault(p => p.PartyID == partyId);
+        if (party != null)
+        {
+            SelectParty(party);
+        }
+    }
+}
+
+private void SelectParty(Party party)
+{
+    if (party == null) return;
+    
+    // Temporarily disable search to prevent interference
+    isSearching = true;
+    try
+    {
+        cmbParty.SelectedValue = party.PartyID;
+        cmbParty.Text = party.PartyName;
+        
+        // Update party details
+        var brokerInfo = !string.IsNullOrEmpty(party.BrokerName) ? $"\n{party.BrokerInfo}" : "";
+        lblPartyDetails.Text = $"{party.FullAddress}\n{party.ContactInfo}\nCredit Days: {party.CreditDays}{brokerInfo}";
+        
+        // Auto-calculate due date based on bill date and party's credit days
+        CalculateDueDate(party.CreditDays);
+        
+        // Auto-select broker if party has one
+        if (party.BrokerID.HasValue && party.BrokerID.Value > 0)
+        {
+            cmbBroker.SelectedValue = party.BrokerID.Value;
+        }
+        else
+        {
+            cmbBroker.SelectedValue = 0; // No Broker
+        }
+    }
+    finally
+    {
+        isSearching = false;
+    }
+}
+        private void CmbParty_KeyDown(object sender, KeyEventArgs e)
+{
+    switch (e.KeyCode)
+    {
+        case Keys.Enter:
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            
+            // If a party is selected, move to next control
+            if (cmbParty.SelectedValue is int partyId && partyId > 0)
             {
                 var party = parties.FirstOrDefault(p => p.PartyID == partyId);
                 if (party != null)
                 {
-                    var brokerInfo = !string.IsNullOrEmpty(party.BrokerName) ? $"\n{party.BrokerInfo}" : "";
-                    lblPartyDetails.Text = $"{party.FullAddress}\n{party.ContactInfo}\nCredit Days: {party.CreditDays}{brokerInfo}";
-                    
-                    // Auto-calculate due date based on bill date and party's credit days
-                    CalculateDueDate(party.CreditDays);
-                    
-                    // Auto-select broker if party has one
-                    if (party.BrokerID.HasValue && party.BrokerID.Value > 0)
-                    {
-                        cmbBroker.SelectedValue = party.BrokerID.Value;
-                    }
-                    else
-                    {
-                        cmbBroker.SelectedValue = 0; // No Broker
-                    }
+                    SelectParty(party);
+                    dtpBillDate.Focus();
                 }
+                return;
             }
-        }
-
-        private void CmbParty_TextChanged(object sender, EventArgs e)
-        {
-            if (isSearching) return; // Prevent recursive calls
-
-            string searchText = cmbParty.Text.ToLower().Trim();
             
-            // Only filter if search text has changed
-            if (searchText == lastSearchText) return;
-            lastSearchText = searchText;
-
-            try
+            // If text matches a party name exactly, select that party
+            var matchingParty = parties.FirstOrDefault(p => 
+                p.PartyName.Equals(cmbParty.Text, StringComparison.OrdinalIgnoreCase));
+            if (matchingParty != null)
             {
-                isSearching = true;
-                
-                // Clear party details when searching
-                lblPartyDetails.Text = "Party details will appear here";
-                
-                if (string.IsNullOrWhiteSpace(searchText))
-                {
-                    // Show all parties if search is empty
-                    filteredParties = new List<Party>(parties);
-                }
-                else
-                {
-                    // Filter parties based on search text
-                    filteredParties = FilterPartiesBySearch(searchText);
-                }
-
-                // Update the dropdown
-                RefreshPartyDropdown();
+                SelectParty(matchingParty);
+                dtpBillDate.Focus();
+                return;
             }
-            finally
-            {
-                isSearching = false;
-            }
-        }
+            
+            // Move to next control anyway
+            dtpBillDate.Focus();
+            break;
 
-        private void CmbParty_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                // If there's exactly one filtered party, select it
-                if (filteredParties.Count == 1)
-                {
-                    cmbParty.SelectedValue = filteredParties[0].PartyID;
-                    e.SuppressKeyPress = true;
-                    e.Handled = true;
-                    
-                    // Move focus to next control
-                    dtpDueDate.Focus();
-                }
-            }
-            else if (e.KeyCode == Keys.Down && !cmbParty.DroppedDown)
-            {
-                // Show dropdown when down arrow is pressed
-                if (filteredParties.Count > 0)
-                {
-                    cmbParty.DroppedDown = true;
-                    e.SuppressKeyPress = true;
-                    e.Handled = true;
-                }
-            }
-        }
-
-        private List<Party> FilterPartiesBySearch(string searchText)
-        {
-            return parties.Where(party => 
-            {
-                string partyName = party.PartyName.ToLower();
-                
-                // Direct contains match
-                if (partyName.Contains(searchText))
-                    return true;
-                
-                // Split search text and party name into words for multi-word matching
-                string[] searchWords = searchText.Split(new char[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-                string[] partyWords = partyName.Split(new char[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
-                
-                // Check if all search words match at least one party word (substring match)
-                return searchWords.All(searchWord => 
-                    partyWords.Any(partyWord => partyWord.Contains(searchWord))
-                );
-            }).ToList();
-        }
+        case Keys.Escape:
+            cmbParty.Text = "";
+            lblPartyDetails.Text = "Party details will appear here";
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            break;
+    }
+}
 
         private void RefreshPartyDropdown()
+{
+    // Store current text and cursor position BEFORE any changes
+    string currentText = cmbParty.Text;
+    int currentCursorPosition = cmbParty.SelectionStart;
+    
+    // Temporarily remove event handlers to prevent interference
+    cmbParty.TextChanged -= CmbParty_TextChanged;
+    cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+    
+    try
+    {
+        // Update data source
+        cmbParty.DataSource = null;
+        cmbParty.DataSource = filteredParties;
+        cmbParty.DisplayMember = "PartyName";
+        cmbParty.ValueMember = "PartyID";
+        
+        // Restore the original text EXACTLY as user typed it
+        cmbParty.Text = currentText;
+        
+        // Restore cursor position safely
+        if (currentCursorPosition >= 0 && currentCursorPosition <= currentText.Length)
         {
-            // Store current selection
-            int currentCursorPosition = cmbParty.SelectionStart;
-            string currentText = cmbParty.Text;
-            
-            // Update data source
-            cmbParty.DataSource = null;
-            cmbParty.DataSource = filteredParties;
-            cmbParty.DisplayMember = "PartyName";
-            cmbParty.ValueMember = "PartyID";
-            
-            // Restore text and cursor position
-            cmbParty.Text = currentText;
             cmbParty.SelectionStart = currentCursorPosition;
             cmbParty.SelectionLength = 0;
-            
-            // Show dropdown if there are filtered results and text is not empty
-            if (filteredParties.Count > 0 && !string.IsNullOrWhiteSpace(currentText))
-            {
-                cmbParty.DroppedDown = true;
-            }
         }
+        
+        // Show dropdown if there are filtered results and text is not empty
+        if (filteredParties.Count > 0 && !string.IsNullOrWhiteSpace(currentText))
+        {
+            cmbParty.DroppedDown = true;
+        }
+    }
+    finally
+    {
+        // Re-add event handlers
+        cmbParty.TextChanged += CmbParty_TextChanged;
+        cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+    }
+}
 
         private void CalculateDueDate(int creditDays)
         {
@@ -978,27 +943,58 @@ namespace SaleBillSystem.NET.Forms
         }
 
         private void SetupSearchablePartyComboBox()
-        {
-            cmbParty.DataSource = null;
-            cmbParty.DataSource = filteredParties;
-            cmbParty.DisplayMember = "PartyName";
-            cmbParty.ValueMember = "PartyID";
-            cmbParty.SelectedIndex = -1;
-            cmbParty.Text = string.Empty; // Clear any existing text
-        }
-
+{
+    // Configure party combo box
+    cmbParty.DropDownStyle = ComboBoxStyle.DropDown;
+    cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+    cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
+    
+    // Remove any existing handlers
+    cmbParty.TextChanged -= CmbParty_TextChanged;
+    cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+    cmbParty.KeyDown -= CmbParty_KeyDown;
+    
+    // Add event handlers
+    cmbParty.TextChanged += CmbParty_TextChanged;
+    cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+    cmbParty.KeyDown += CmbParty_KeyDown;
+    
+    // Set up data source
+    cmbParty.DataSource = null;
+    cmbParty.DataSource = parties;
+    cmbParty.DisplayMember = "PartyName";
+    cmbParty.ValueMember = "PartyID";
+    cmbParty.SelectedIndex = -1;
+    cmbParty.Text = string.Empty;
+}
         private void SetupSearchableBrokerComboBox()
         {
-            // Create a list with an empty option and filtered brokers
+            // Configure broker combo box
+            cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
+            
+            // Remove any existing handlers
+            cmbBroker.TextChanged -= CmbBroker_TextChanged;
+            cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
+            cmbBroker.KeyDown -= CmbBroker_KeyDown;
+            
+            // Add event handlers
+            cmbBroker.TextChanged += CmbBroker_TextChanged;
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+            cmbBroker.KeyDown += CmbBroker_KeyDown;
+            
+            // Create list with "No Broker" option
             var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
-            brokerList.AddRange(filteredBrokers);
-
+            brokerList.AddRange(brokers);
+            
+            // Set up data source
             cmbBroker.DataSource = null;
             cmbBroker.DataSource = brokerList;
             cmbBroker.DisplayMember = "BrokerName";
             cmbBroker.ValueMember = "BrokerID";
-            cmbBroker.SelectedValue = 0; // Default to "No Broker"
-            cmbBroker.Text = string.Empty; // Clear any existing text
+            cmbBroker.SelectedValue = 0;
+            cmbBroker.Text = string.Empty;
         }
 
         private void SetupDataGridView()

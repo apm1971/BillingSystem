@@ -336,6 +336,8 @@ namespace SaleBillSystem.NET.Forms
             SetupDataGrid();
             
             // Set default values
+            dtpPaymentDate.Format = DateTimePickerFormat.Custom;
+            dtpPaymentDate.CustomFormat = "dd-MM-yyyy";
             dtpPaymentDate.Value = DateTime.Today;
             txtPaymentAmount.Text = "0.00";
             
@@ -463,13 +465,98 @@ namespace SaleBillSystem.NET.Forms
 
         private void SetupPartyComboBox()
         {
-            var partyList = new List<Party> { new Party { PartyID = 0, PartyName = "-- Select Party --" } };
-            partyList.AddRange(parties);
+            // Configure party combo box
+            cmbParty.DropDownStyle = ComboBoxStyle.DropDown;
+            cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
+            
+            // Remove any existing handlers
+            cmbParty.TextChanged -= CmbParty_TextChanged;
+            cmbParty.KeyDown -= CmbParty_KeyDown;
+            
+            // Add event handlers
+            cmbParty.TextChanged += CmbParty_TextChanged;
+            cmbParty.KeyDown += CmbParty_KeyDown;
+            
+            // Initialize with all parties
+            RefreshPartyList();
+        }
 
-            cmbParty.DataSource = partyList;
-            cmbParty.DisplayMember = "PartyName";
-            cmbParty.ValueMember = "PartyID";
-            cmbParty.SelectedValue = 0;
+        private void RefreshPartyList()
+        {
+            try
+            {
+                // Remember the currently selected party
+                int selectedPartyId = cmbParty.SelectedValue != null ? (int)cmbParty.SelectedValue : -1;
+                
+                // Set up the combo box
+                cmbParty.DataSource = null;
+                cmbParty.DataSource = parties;
+                cmbParty.DisplayMember = "PartyName";
+                cmbParty.ValueMember = "PartyID";
+                
+                // Restore selection if possible
+                if (selectedPartyId != -1)
+                {
+                    cmbParty.SelectedValue = selectedPartyId;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing party list: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CmbParty_TextChanged(object sender, EventArgs e)
+        {
+            // If text is empty, just load outstanding bills with no filter
+            if (string.IsNullOrWhiteSpace(cmbParty.Text))
+            {
+                LoadOutstandingBills();
+                return;
+            }
+
+            // If a party is selected, load its bills
+            if (cmbParty.SelectedValue != null)
+            {
+                LoadOutstandingBills();
+            }
+        }
+
+        private void CmbParty_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Enter:
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    
+                    // If a party is selected, move to payment amount
+                    if (cmbParty.SelectedValue != null)
+                    {
+                        LoadOutstandingBills();
+                        txtPaymentAmount.Focus();
+                    }
+                    // If text matches a single party exactly, select it
+                    else
+                    {
+                        var matchingParty = parties.FirstOrDefault(p => 
+                            p.PartyName.Equals(cmbParty.Text, StringComparison.OrdinalIgnoreCase));
+                        if (matchingParty != null)
+                        {
+                            cmbParty.SelectedValue = matchingParty.PartyID;
+                            LoadOutstandingBills();
+                            txtPaymentAmount.Focus();
+                        }
+                    }
+                    break;
+
+                case Keys.Escape:
+                    cmbParty.Text = "";
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    break;
+            }
         }
 
         private void SetupBrokerComboBox()

@@ -20,6 +20,7 @@ namespace SaleBillSystem.NET.Forms
         private ComboBox cmbBroker;
         private Label lblBroker;
         private List<Broker> brokers;
+        private ContextMenuStrip gridContextMenu; // Add context menu for grid
 
         // Add fields for searchable party dropdown
         private List<Party> filteredParties;
@@ -211,6 +212,7 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.DefaultValuesNeeded += DgvItems_DefaultValuesNeeded;
             dgvItems.DataError += DgvItems_DataError;
             dgvItems.RowsAdded += DgvItems_RowsAdded;
+            dgvItems.KeyDown += DgvItems_KeyDown; // Add KeyDown handler for delete key
             this.KeyDown += SaleBillForm_KeyDown;
             this.KeyPreview = true;
         }
@@ -358,18 +360,17 @@ namespace SaleBillSystem.NET.Forms
                     e.SuppressKeyPress = true;
                 }
             }
-            else if (e.KeyCode == Keys.Delete)
+            else if (e.KeyCode == Keys.F8 || (e.Control && e.KeyCode == Keys.D))
             {
-                // Delete: Delete current row in items grid
-                if (dgvItems.Focused && dgvItems.CurrentRow != null && !dgvItems.CurrentRow.IsNewRow)
+                // F8 or Ctrl+D: Delete current row if grid is focused
+                if (dgvItems.Focused || dgvItems.ContainsFocus)
                 {
-                    dgvItems.Rows.Remove(dgvItems.CurrentRow);
-                    CalculateTotals();
+                    DeleteCurrentRow();
                     e.SuppressKeyPress = true;
                 }
             }
         }
-        
+
         private void ShowBillEntryHelp()
         {
             MessageBox.Show(
@@ -381,7 +382,8 @@ namespace SaleBillSystem.NET.Forms
                 "F2: Focus on Party Selection\n" +
                 "F3: Focus on Items Grid\n" +
                 "Ctrl+N: Add New Row (in Items Grid)\n" +
-                "Delete: Delete Current Row (in Items Grid)\n" +
+                "F8 or Ctrl+D: Delete Current Row (in Items Grid)\n" +
+                "Right-Click: Show Context Menu for Row Operations\n" +
                 "F1: Show this help\n\n" +
                 "Navigation:\n" +
                 "Tab: Move to next field\n" +
@@ -1002,7 +1004,8 @@ private void SelectParty(Party party)
             dgvItems.AutoGenerateColumns = false;
             dgvItems.AllowUserToAddRows = true;
             dgvItems.AllowUserToDeleteRows = true;
-            dgvItems.RowHeadersVisible = false;
+            dgvItems.RowHeadersVisible = true;
+            dgvItems.RowHeadersWidth = 30;
             dgvItems.BackgroundColor = Color.White;
             dgvItems.BorderStyle = BorderStyle.Fixed3D;
             dgvItems.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
@@ -1016,6 +1019,9 @@ private void SelectParty(Party party)
             dgvItems.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
             dgvItems.EditMode = DataGridViewEditMode.EditOnEnter;
             dgvItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            // Create context menu for the grid
+            SetupGridContextMenu();
 
             // Clear existing columns
             dgvItems.Columns.Clear();
@@ -1085,11 +1091,129 @@ private void SelectParty(Party party)
             dgvItems.CellValueChanged -= DgvItems_CellValueChanged;
             dgvItems.CellEndEdit -= DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow -= DgvItems_UserDeletedRow;
+            dgvItems.KeyDown -= DgvItems_KeyDown;
+            dgvItems.MouseClick -= DgvItems_MouseClick;
             
             // Add event handlers
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
             dgvItems.CellEndEdit += DgvItems_CellEndEdit;
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
+            dgvItems.KeyDown += DgvItems_KeyDown;
+            dgvItems.MouseClick += DgvItems_MouseClick;
+        }
+
+        private void SetupGridContextMenu()
+        {
+            // Create context menu
+            gridContextMenu = new ContextMenuStrip();
+            
+            // Add "Delete Row" menu item
+            var deleteItem = new ToolStripMenuItem("Delete Row");
+            deleteItem.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            // Remove the icon that might be causing issues
+            // deleteItem.Image = SystemIcons.Delete.ToBitmap();
+            deleteItem.Click += DeleteMenuItem_Click;
+            
+            // Add "Add New Row" menu item
+            var addItem = new ToolStripMenuItem("Add New Row");
+            addItem.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular);
+            addItem.Click += AddRowMenuItem_Click;
+            
+            // Add items to context menu
+            gridContextMenu.Items.Add(deleteItem);
+            gridContextMenu.Items.Add(new ToolStripSeparator());
+            gridContextMenu.Items.Add(addItem);
+            
+            // Assign context menu to grid
+            dgvItems.ContextMenuStrip = gridContextMenu;
+        }
+
+        private void DeleteMenuItem_Click(object sender, EventArgs e)
+        {
+            DeleteCurrentRow();
+        }
+
+        private void AddRowMenuItem_Click(object sender, EventArgs e)
+        {
+            int newRowIndex = dgvItems.Rows.Add();
+            dgvItems.CurrentCell = dgvItems.Rows[newRowIndex].Cells["ItemName"];
+            dgvItems.BeginEdit(true);
+        }
+
+        private void DgvItems_MouseClick(object sender, MouseEventArgs e)
+        {
+            // Show context menu on right-click
+            if (e.Button == MouseButtons.Right)
+            {
+                // Get the row under the mouse
+                DataGridView.HitTestInfo hitTest = dgvItems.HitTest(e.X, e.Y);
+                if (hitTest.RowIndex >= 0 && hitTest.RowIndex < dgvItems.Rows.Count)
+                {
+                    dgvItems.ClearSelection();
+                    dgvItems.Rows[hitTest.RowIndex].Selected = true;
+                    
+                    // Enable/disable delete option based on whether it's a new row
+                    gridContextMenu.Items[0].Enabled = !dgvItems.Rows[hitTest.RowIndex].IsNewRow;
+                    
+                    // Show context menu
+                    gridContextMenu.Show(dgvItems, e.Location);
+                }
+            }
+        }
+
+        private void DeleteCurrentRow()
+        {
+            try
+            {
+                // First check if we have a current cell selected
+                if (dgvItems.CurrentCell != null)
+                {
+                    int rowIndex = dgvItems.CurrentCell.RowIndex;
+                    
+                    // Make sure it's a valid row (not the new row at the end)
+                    if (rowIndex >= 0 && rowIndex < dgvItems.Rows.Count && !dgvItems.Rows[rowIndex].IsNewRow)
+                    {
+                        if (MessageBox.Show("Are you sure you want to delete this item?", "Confirm Delete",
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                        {
+                            // Select the entire row to ensure proper deletion
+                            dgvItems.Rows[rowIndex].Selected = true;
+                            
+                            // Remove the row by index
+                            dgvItems.Rows.RemoveAt(rowIndex);
+                            
+                            // Recalculate totals
+                            CalculateTotals();
+                            
+                            // Select another row if available
+                            if (dgvItems.Rows.Count > 0 && rowIndex < dgvItems.Rows.Count)
+                            {
+                                dgvItems.CurrentCell = dgvItems.Rows[rowIndex].Cells[0];
+                            }
+                            else if (dgvItems.Rows.Count > 0 && rowIndex > 0)
+                            {
+                                dgvItems.CurrentCell = dgvItems.Rows[rowIndex - 1].Cells[0];
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting item: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DgvItems_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle F8 key for deletion
+            if (e.KeyCode == Keys.F8 || (e.Control && e.KeyCode == Keys.D))
+            {
+                DeleteCurrentRow();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -1204,6 +1328,28 @@ private void SelectParty(Party party)
                 if (!row.IsNewRow && row.Cells["ItemName"].Value != null)
                 {
                     itemCount++;
+
+                    // Check for zero quantity
+                    double quantity = Convert.ToDouble(row.Cells["Quantity"].Value ?? 0);
+                    if (quantity <= 0)
+                    {
+                        MessageBox.Show($"Quantity cannot be zero or negative for item: {items.FirstOrDefault(i => i.ItemID == Convert.ToInt32(row.Cells["ItemName"].Value))?.ItemName}", 
+                            "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        dgvItems.CurrentCell = row.Cells["Quantity"];
+                        dgvItems.BeginEdit(true);
+                        return false;
+                    }
+
+                    // Check for zero rate
+                    double rate = Convert.ToDouble(row.Cells["Rate"].Value ?? 0);
+                    if (rate <= 0)
+                    {
+                        MessageBox.Show($"Rate cannot be zero or negative for item: {items.FirstOrDefault(i => i.ItemID == Convert.ToInt32(row.Cells["ItemName"].Value))?.ItemName}", 
+                            "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        dgvItems.CurrentCell = row.Cells["Rate"];
+                        dgvItems.BeginEdit(true);
+                        return false;
+                    }
                 }
             }
 

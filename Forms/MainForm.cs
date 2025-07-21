@@ -262,14 +262,14 @@ namespace SaleBillSystem.NET.Forms
         
         private void ShowPartyMaster()
         {
-            var form = new PartyMasterForm();
-            form.ShowDialog();
+            var form = new PartyMasterForm(false); // Set isDialogMode to false
+            form.Show(); // Use Show() instead of ShowDialog() since it's not a dialog
         }
         
         private void ShowItemMaster()
         {
-            var form = new ItemMasterForm();
-            form.ShowDialog();
+            var form = new ItemMasterForm(false); // Set isDialogMode to false
+            form.Show(); // Use Show() instead of ShowDialog() since it's not a dialog
         }
 
         private void ShowBrokerMaster()

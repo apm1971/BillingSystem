@@ -31,7 +31,29 @@ namespace SaleBillSystem.NET.Forms
             // Email can remain in mixed case as emails are case-sensitive
             // txtEmail.CharacterCasing = CharacterCasing.Upper;
             
+            // Add a button to open full Party Master form
+            Button btnOpenPartyMaster = new Button();
+            btnOpenPartyMaster.Text = "Open Full Party Master";
+            btnOpenPartyMaster.Location = new System.Drawing.Point(btnCancel.Left - 150, btnCancel.Top);
+            btnOpenPartyMaster.Size = new System.Drawing.Size(140, btnCancel.Height);
+            btnOpenPartyMaster.Click += btnOpenPartyMaster_Click;
+            this.Controls.Add(btnOpenPartyMaster);
+            
             txtPartyName.Focus();
+        }
+
+        private void btnOpenPartyMaster_Click(object sender, EventArgs e)
+        {
+            // Open Party Master form in dialog mode
+            using (var partyMasterForm = new PartyMasterForm(true))
+            {
+                if (partyMasterForm.ShowDialog() == DialogResult.OK)
+                {
+                    // A party was added in the Party Master form, so we can close this form
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+            }
         }
 
         private void btnSave_Click(object sender, EventArgs e)

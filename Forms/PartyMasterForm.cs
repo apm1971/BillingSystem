@@ -14,12 +14,18 @@ namespace SaleBillSystem.NET.Forms
         private List<Broker> brokers = new List<Broker>();
         private Party currentParty = new Party();
         private bool isNewParty = true;
+        private bool isDialog = false; // Add this field to track if form is used as dialog
         
-        public PartyMasterForm()
+        public PartyMasterForm(bool isDialogMode = false) // Add parameter to constructor
         {
             InitializeComponent();
+            isDialog = isDialogMode; // Set the dialog mode
             LoadParties();
             LoadBrokers();
+            
+            // Enable key preview to handle keyboard shortcuts
+            this.KeyPreview = true;
+            this.KeyDown += PartyMasterForm_KeyDown;
         }
         
         private void PartyMasterForm_Load(object sender, EventArgs e)
@@ -316,8 +322,11 @@ namespace SaleBillSystem.NET.Forms
                     LoadParties();
                     ClearForm();
                     
-                    // Set DialogResult to OK so calling forms know a party was saved
-                    this.DialogResult = DialogResult.OK;
+                    // Only set DialogResult if form is being used as a dialog
+                    if (isDialog)
+                    {
+                        this.DialogResult = DialogResult.OK;
+                    }
                 }
             }
             catch (Exception ex)
@@ -443,5 +452,21 @@ namespace SaleBillSystem.NET.Forms
         }
         
         #endregion
+
+        private void PartyMasterForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                // Handle Escape key
+                e.Handled = true;
+                this.Close();
+            }
+            else if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Handle Ctrl+S
+                e.Handled = true;
+                btnSave.PerformClick();
+            }
+        }
     }
 } 

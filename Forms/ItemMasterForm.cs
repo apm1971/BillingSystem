@@ -11,14 +11,37 @@ namespace SaleBillSystem.NET.Forms
     public partial class ItemMasterForm : Form
     {
         private List<Item> items = new List<Item>();
+        private List<Item> filteredItems = new List<Item>(); // Add filtered items list
         private Item currentItem = new Item();
         private bool isNewItem = true;
+        private bool isDialog = false;
 
-        public ItemMasterForm()
+        public ItemMasterForm(bool isDialogMode = false)
         {
             InitializeComponent();
+            isDialog = isDialogMode;
             ConfigureControls();
             SetupDataGrid();
+            
+            // Enable key preview to handle keyboard shortcuts
+            this.KeyPreview = true;
+            this.KeyDown += ItemMasterForm_KeyDown;
+        }
+
+        private void ItemMasterForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                // Handle Escape key
+                e.Handled = true;
+                this.Close();
+            }
+            else if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Handle Ctrl+S
+                e.Handled = true;
+                btnSave.PerformClick();
+            }
         }
 
         private void ItemMasterForm_Load(object sender, EventArgs e)
@@ -229,8 +252,11 @@ namespace SaleBillSystem.NET.Forms
                     LoadItems();
                     ClearForm();
                     
-                    // Set DialogResult to OK so calling forms know an item was saved
-                    this.DialogResult = DialogResult.OK;
+                    // Only set DialogResult if form is being used as a dialog
+                    if (isDialog)
+                    {
+                        this.DialogResult = DialogResult.OK;
+                    }
                 }
             }
             catch (Exception ex)
@@ -278,10 +304,13 @@ namespace SaleBillSystem.NET.Forms
             if (dgvItems.SelectedRows.Count > 0)
             {
                 int selectedIndex = dgvItems.SelectedRows[0].Index;
+                
+                // Use the current displayed list (filtered or full)
+                var currentList = string.IsNullOrWhiteSpace(txtSearch.Text.Trim()) ? items : filteredItems;
 
-                if (selectedIndex >= 0 && selectedIndex < items.Count)
+                if (selectedIndex >= 0 && selectedIndex < currentList.Count)
                 {
-                    Item selectedItem = items[selectedIndex];
+                    Item selectedItem = currentList[selectedIndex];
                     PopulateForm(selectedItem);
                 }
             }
@@ -289,9 +318,12 @@ namespace SaleBillSystem.NET.Forms
 
         private void dgvItems_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0 && e.RowIndex < items.Count)
+            // Use the current displayed list (filtered or full)
+            var currentList = string.IsNullOrWhiteSpace(txtSearch.Text.Trim()) ? items : filteredItems;
+
+            if (e.RowIndex >= 0 && e.RowIndex < currentList.Count)
             {
-                Item selectedItem = items[e.RowIndex];
+                Item selectedItem = currentList[e.RowIndex];
                 PopulateForm(selectedItem);
                 txtItemName.Focus();
             }
@@ -304,18 +336,31 @@ namespace SaleBillSystem.NET.Forms
 
             if (string.IsNullOrWhiteSpace(searchText))
             {
-                LoadItems();
+                filteredItems = items;
+                dgvItems.DataSource = items;
             }
             else
             {
-                List<Item> filteredItems = items.FindAll(i => 
+                filteredItems = items.FindAll(i => 
                     i.ItemName.ToLower().Contains(searchText)
                 );
 
                 dgvItems.DataSource = null;
                 dgvItems.DataSource = filteredItems;
+            }
 
-                lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
+            lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
+
+            // If there are filtered items, select the first one
+            if (filteredItems.Count > 0)
+            {
+                dgvItems.ClearSelection();
+                dgvItems.Rows[0].Selected = true;
+                // The selection change event will handle populating the form
+            }
+            else
+            {
+                ClearForm(); // Clear the form if no items match the search
             }
         }
 

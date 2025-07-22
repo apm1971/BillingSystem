@@ -18,28 +18,6 @@ namespace SaleBillSystem.NET
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Check license
-            if (!LicenseService.ValidateLicense())
-            {
-                using (var licenseForm = new LicenseForm())
-                {
-                    if (licenseForm.ShowDialog() != DialogResult.OK)
-                    {
-                        MessageBox.Show("Application requires a valid license to run.", 
-                            "License Required", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                        return;
-                    }
-
-                    // Validate license again after activation
-                    if (!LicenseService.ValidateLicense())
-                    {
-                        MessageBox.Show("Invalid license. Application will now exit.", 
-                            "License Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
-                }
-            }
-
             // Initialize database
             if (!DatabaseManager.Initialize())
             {
@@ -55,9 +33,10 @@ namespace SaleBillSystem.NET
                 {
                     return;
                 }
+            
+                // Start the application with the main form
+                Application.Run(new MainForm());
             }
-
-            Application.Run(new MainForm());
         }
     }
 }

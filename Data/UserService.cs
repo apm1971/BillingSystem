@@ -305,11 +305,11 @@ namespace SaleBillSystem.NET.Data
                                 
                                 transaction.Commit();
                                 
-                                System.Windows.Forms.MessageBox.Show(
-                                    "Default admin user created.\nUsername: admin\nPassword: admin\n\nPlease change the password after logging in.",
-                                    "Initial Setup",
-                                    System.Windows.Forms.MessageBoxButtons.OK,
-                                    System.Windows.Forms.MessageBoxIcon.Information);
+                                // System.Windows.Forms.MessageBox.Show(
+                                //     "Default admin user created.\nUsername: admin\nPassword: admin\n\nPlease change the password after logging in.",
+                                //     "Initial Setup",
+                                //     System.Windows.Forms.MessageBoxButtons.OK,
+                                //     System.Windows.Forms.MessageBoxIcon.Information);
                             }
                             catch (Exception ex)
                             {

@@ -133,6 +133,17 @@ namespace SaleBillSystem.NET.Data
                     // Check if company already exists
                     if (company.CompanyID == 0)
                     {
+                        // First, deactivate all existing companies if this one will be active
+                        if (company.IsActive)
+                        {
+                            string deactivateAllSql = "UPDATE CompanyMaster SET IsActive = False";
+                            using (OleDbCommand cmd = new OleDbCommand(deactivateAllSql, conn))
+                            {
+                                cmd.Transaction = transaction;
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        
                         // Insert new company
                         string insertSql = @"
                             INSERT INTO CompanyMaster 
@@ -156,7 +167,13 @@ namespace SaleBillSystem.NET.Data
                             fyEndParam.Value = company.FinancialYearEnd;
                             cmd.Parameters.Add(fyEndParam);
                             
-                            cmd.Parameters.AddWithValue("IsActive", company.IsActive);
+                            // Always set IsActive to true for the first company
+                            bool isActive = company.IsActive;
+                            if (GetAllCompanies().Count == 0)
+                            {
+                                isActive = true;
+                            }
+                            cmd.Parameters.AddWithValue("IsActive", isActive);
                             
                             OleDbParameter createdOnParam = new OleDbParameter("CreatedOn", OleDbType.Date);
                             createdOnParam.Value = DateTime.Now;
@@ -165,16 +182,7 @@ namespace SaleBillSystem.NET.Data
                             cmd.ExecuteNonQuery();
                         }
                         
-                        // If this is the active company, deactivate others
-                        if (company.IsActive)
-                        {
-                            string deactivateSql = "UPDATE CompanyMaster SET IsActive = False WHERE CompanyID <> -1";
-                            using (OleDbCommand cmd = new OleDbCommand(deactivateSql, conn))
-                            {
-                                cmd.Transaction = transaction;
-                                cmd.ExecuteNonQuery();
-                            }
-                        }
+                        // We've already deactivated other companies before insertion
                     }
                     else
                     {

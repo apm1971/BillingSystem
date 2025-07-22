@@ -20,7 +20,7 @@ namespace SaleBillSystem.NET.Forms
         private ComboBox cmbBroker;
         private Label lblBroker;
         private List<Broker> brokers;
-        private ContextMenuStrip gridContextMenu; // Add context menu for grid
+        private ContextMenuStrip gridContextMenu;
 
         // Add fields for searchable party dropdown
         private List<Party> filteredParties;
@@ -113,20 +113,11 @@ namespace SaleBillSystem.NET.Forms
                 Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Regular)
             };
             
-            dtpBillDate = new DateTimePicker
-            {
-                Location = new Point(100, 53),
-                Size = new Size(120, 23),
-                Format = DateTimePickerFormat.Custom,
-                CustomFormat = "dd-MM-yyyy"
-            };
-            
             dtpDueDate = new DateTimePicker
             {
                 Location = new Point(425, 53),
                 Size = new Size(120, 23),
-                Format = DateTimePickerFormat.Custom,
-                CustomFormat = "dd-MM-yyyy"
+                Format = DateTimePickerFormat.Short
             };
             
             // Add Broker controls to groupBox1
@@ -212,7 +203,7 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.DefaultValuesNeeded += DgvItems_DefaultValuesNeeded;
             dgvItems.DataError += DgvItems_DataError;
             dgvItems.RowsAdded += DgvItems_RowsAdded;
-            dgvItems.KeyDown += DgvItems_KeyDown; // Add KeyDown handler for delete key
+            dgvItems.KeyDown += DgvItems_KeyDown;
             this.KeyDown += SaleBillForm_KeyDown;
             this.KeyPreview = true;
         }
@@ -370,7 +361,7 @@ namespace SaleBillSystem.NET.Forms
                 }
             }
         }
-
+        
         private void ShowBillEntryHelp()
         {
             MessageBox.Show(
@@ -428,7 +419,6 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbBroker_TextChanged(object sender, EventArgs e)
         {
-            // If a broker is selected, update the current bill
             if (cmbBroker.SelectedValue is int brokerId)
             {
                 currentBill.BrokerID = brokerId > 0 ? brokerId : (int?)null;
@@ -440,11 +430,13 @@ namespace SaleBillSystem.NET.Forms
         {
             switch (e.KeyCode)
             {
+                // If there's exactly one filtered broker, select it
                 case Keys.Enter:
                     e.SuppressKeyPress = true;
                     e.Handled = true;
-                    
-                    // If a broker is selected or text matches exactly, move to next control
+
+
+                     // If a broker is selected or text matches exactly, move to next control
                     if (cmbBroker.SelectedValue is int brokerId)
                     {
                         dgvItems.Focus();
@@ -461,10 +453,10 @@ namespace SaleBillSystem.NET.Forms
                         return;
                     }
                     
-                    // Move to next control anyway
+                    // Move focus to next control
                     dgvItems.Focus();
-                    break;
 
+                    break;
                 case Keys.Escape:
                     cmbBroker.SelectedValue = 0; // Select "No Broker"
                     cmbBroker.Text = "";
@@ -526,17 +518,17 @@ namespace SaleBillSystem.NET.Forms
             return BillService.GenerateNewBillNumber();
         }
 
-       private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
-{
+        private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
+        {
     if (isSearching) return; // Prevent interference during search operations
     
     if (cmbParty.SelectedValue is int partyId && partyId > 0)
     {
         var party = parties.FirstOrDefault(p => p.PartyID == partyId);
         if (party != null)
-        {
-            SelectParty(party);
-        }
+                {
+                    SelectParty(party);
+
     }
     else
     {
@@ -544,9 +536,9 @@ namespace SaleBillSystem.NET.Forms
         lblPartyDetails.Text = "Party details will appear here";
     }
 }
-
+        }
         private void CmbParty_TextChanged(object sender, EventArgs e)
-{
+        {
     // If text is empty, clear party details
     if (string.IsNullOrWhiteSpace(cmbParty.Text))
     {
@@ -554,7 +546,7 @@ namespace SaleBillSystem.NET.Forms
         return;
     }
 
-    // If a party is selected, update details
+ // If a party is selected, update details
     if (cmbParty.SelectedValue is int partyId && partyId > 0)
     {
         var party = parties.FirstOrDefault(p => p.PartyID == partyId);
@@ -586,7 +578,7 @@ private void SelectParty(Party party)
         // Auto-select broker if party has one
         if (party.BrokerID.HasValue && party.BrokerID.Value > 0)
         {
-            cmbBroker.SelectedValue = party.BrokerID.Value;
+              cmbBroker.SelectedValue = party.BrokerID.Value;
         }
         else
         {
@@ -609,24 +601,25 @@ private void SelectParty(Party party)
             // If a party is selected, move to next control
             if (cmbParty.SelectedValue is int partyId && partyId > 0)
             {
-                var party = parties.FirstOrDefault(p => p.PartyID == partyId);
+                                var party = parties.FirstOrDefault(p => p.PartyID == partyId);
                 if (party != null)
                 {
-                    SelectParty(party);
+                                        SelectParty(party);
                     dtpBillDate.Focus();
                 }
                 return;
             }
-            
+                        
             // If text matches a party name exactly, select that party
             var matchingParty = parties.FirstOrDefault(p => 
                 p.PartyName.Equals(cmbParty.Text, StringComparison.OrdinalIgnoreCase));
             if (matchingParty != null)
             {
-                SelectParty(matchingParty);
+                                SelectParty(matchingParty);
                 dtpBillDate.Focus();
                 return;
             }
+ 
             
             // Move to next control anyway
             dtpBillDate.Focus();
@@ -640,8 +633,7 @@ private void SelectParty(Party party)
             break;
     }
 }
-
-        private void RefreshPartyDropdown()
+ private void RefreshPartyDropdown()
 {
     // Store current text and cursor position BEFORE any changes
     string currentText = cmbParty.Text;
@@ -944,7 +936,7 @@ private void SelectParty(Party party)
             SetupSearchableBrokerComboBox();
         }
 
-        private void SetupSearchablePartyComboBox()
+         private void SetupSearchablePartyComboBox()
 {
     // Configure party combo box
     cmbParty.DropDownStyle = ComboBoxStyle.DropDown;
@@ -969,7 +961,8 @@ private void SelectParty(Party party)
     cmbParty.SelectedIndex = -1;
     cmbParty.Text = string.Empty;
 }
-        private void SetupSearchableBrokerComboBox()
+
+       private void SetupSearchableBrokerComboBox()
         {
             // Configure broker combo box
             cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
@@ -1020,9 +1013,7 @@ private void SelectParty(Party party)
             dgvItems.EditMode = DataGridViewEditMode.EditOnEnter;
             dgvItems.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-            // Create context menu for the grid
             SetupGridContextMenu();
-
             // Clear existing columns
             dgvItems.Columns.Clear();
 
@@ -1328,8 +1319,6 @@ private void SelectParty(Party party)
                 if (!row.IsNewRow && row.Cells["ItemName"].Value != null)
                 {
                     itemCount++;
-
-                    // Check for zero quantity
                     double quantity = Convert.ToDouble(row.Cells["Quantity"].Value ?? 0);
                     if (quantity <= 0)
                     {

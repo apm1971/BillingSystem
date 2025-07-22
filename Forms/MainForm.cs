@@ -21,13 +21,57 @@ namespace SaleBillSystem.NET.Forms
             // Check if active company exists
             if (Program.ActiveCompany == null)
             {
-                MessageBox.Show(
-                    "No active company selected. The application will now exit.",
+                DialogResult result = MessageBox.Show(
+                    "No active company found. Would you like to create a new company now?",
                     Program.APP_NAME,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                this.Close();
-                return;
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                
+                if (result == DialogResult.Yes)
+                {
+                    // Show company creation form
+                    bool companyCreated = CreateCompany();
+                    
+                    if (companyCreated)
+                    {
+                        // Refresh active company after creation
+                        Program.ActiveCompany = CompanyService.GetActiveCompany();
+                        
+                        // If still no active company, exit
+                        if (Program.ActiveCompany == null)
+                        {
+                            MessageBox.Show(
+                                "No active company selected. The application will now exit.",
+                                Program.APP_NAME,
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                            this.Close();
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // User canceled company creation, exit application
+                        MessageBox.Show(
+                            "Company creation canceled. An active company is required to use the application. The application will now exit.",
+                            Program.APP_NAME,
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        this.Close();
+                        return;
+                    }
+                }
+                else
+                {
+                    // User chose not to create a company, exit application
+                    MessageBox.Show(
+                        "An active company is required to use the application. The application will now exit.",
+                        Program.APP_NAME,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    this.Close();
+                    return;
+                }
             }
             
             // Set form properties
@@ -158,21 +202,6 @@ namespace SaleBillSystem.NET.Forms
             
             ToolStripMenuItem toolsNewDatabase = new ToolStripMenuItem("&Create New Database");
             toolsNewDatabase.Click += (s, e) => CreateNewDatabase();
-
-            ToolStripMenuItem toolsLicenseGenerator = new ToolStripMenuItem("License &Generator");
-            toolsLicenseGenerator.Click += (s, e) =>
-            {
-                using (var generator = new Tools.LicenseKeyGenerator())
-                {
-                    generator.ShowDialog();
-                }
-            };
-            
-            toolsMenu.DropDownItems.Add(toolsSettings);
-            toolsMenu.DropDownItems.Add(toolsLoadDatabase);
-            toolsMenu.DropDownItems.Add(toolsNewDatabase);
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(toolsLicenseGenerator);
             
             // === HELP MENU ===
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("&Help");
@@ -314,7 +343,7 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void CreateCompany()
+        private bool CreateCompany()
         {
             var companyForm = new CompanyForm();
             if (companyForm.ShowDialog() == DialogResult.OK)
@@ -327,7 +356,9 @@ namespace SaleBillSystem.NET.Forms
                 
                 MessageBox.Show("Company created successfully!", "Company Created", 
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return true;
             }
+            return false;
         }
 
         private void EditCompany()

@@ -522,8 +522,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Add CompanyID field to PartyMaster
                     ExecuteNonQuery(conn, "ALTER TABLE PartyMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
-                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to PartyMaster table.", "Database Upgrade",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    // System.Windows.Forms.MessageBox.Show("Added CompanyID field to PartyMaster table.", "Database Upgrade",
+                    //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 
                 // Check if ItemMaster table has CompanyID field
@@ -534,8 +534,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Add CompanyID field to ItemMaster
                     ExecuteNonQuery(conn, "ALTER TABLE ItemMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
-                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to ItemMaster table.", "Database Upgrade",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    // System.Windows.Forms.MessageBox.Show("Added CompanyID field to ItemMaster table.", "Database Upgrade",
+                    //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 
                 // Check if BillMaster table has CompanyID field
@@ -546,8 +546,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Add CompanyID field to BillMaster
                     ExecuteNonQuery(conn, "ALTER TABLE BillMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
-                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to BillMaster table.", "Database Upgrade",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    // System.Windows.Forms.MessageBox.Show("Added CompanyID field to BillMaster table.", "Database Upgrade",
+                    //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 
                 // Check if PaymentMaster table has CompanyID field
@@ -558,8 +558,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Add CompanyID field to PaymentMaster
                     ExecuteNonQuery(conn, "ALTER TABLE PaymentMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
-                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to PaymentMaster table.", "Database Upgrade",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    // System.Windows.Forms.MessageBox.Show("Added CompanyID field to PaymentMaster table.", "Database Upgrade",
+                    //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 
                 // Check if BrokerMaster table has CompanyID field
@@ -570,8 +570,8 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Add CompanyID field to BrokerMaster
                     ExecuteNonQuery(conn, "ALTER TABLE BrokerMaster ADD COLUMN CompanyID INTEGER DEFAULT 0");
-                    System.Windows.Forms.MessageBox.Show("Added CompanyID field to BrokerMaster table.", "Database Upgrade",
-                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    // System.Windows.Forms.MessageBox.Show("Added CompanyID field to BrokerMaster table.", "Database Upgrade",
+                    //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)

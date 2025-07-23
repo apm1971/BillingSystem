@@ -255,7 +255,7 @@ namespace SaleBillSystem.NET.Forms
                     // Only set DialogResult if form is being used as a dialog
                     if (isDialog)
                     {
-                        this.DialogResult = DialogResult.OK;
+                    this.DialogResult = DialogResult.OK;
                     }
                 }
             }
@@ -304,7 +304,7 @@ namespace SaleBillSystem.NET.Forms
             if (dgvItems.SelectedRows.Count > 0)
             {
                 int selectedIndex = dgvItems.SelectedRows[0].Index;
-                
+
                 // Use the current displayed list (filtered or full)
                 var currentList = string.IsNullOrWhiteSpace(txtSearch.Text.Trim()) ? items : filteredItems;
 
@@ -349,7 +349,7 @@ namespace SaleBillSystem.NET.Forms
                 dgvItems.DataSource = filteredItems;
             }
 
-            lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
+                lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
 
             // If there are filtered items, select the first one
             if (filteredItems.Count > 0)

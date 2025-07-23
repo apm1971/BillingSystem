@@ -325,7 +325,7 @@ namespace SaleBillSystem.NET.Forms
                     // Only set DialogResult if form is being used as a dialog
                     if (isDialog)
                     {
-                        this.DialogResult = DialogResult.OK;
+                    this.DialogResult = DialogResult.OK;
                     }
                 }
             }

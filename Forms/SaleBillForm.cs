@@ -21,6 +21,7 @@ namespace SaleBillSystem.NET.Forms
         private Label lblBroker;
         private List<Broker> brokers;
         private ContextMenuStrip gridContextMenu;
+        private Button btnViewPayments; // Add button field
 
         // Add fields for searchable party dropdown
         private List<Party> filteredParties;
@@ -135,10 +136,24 @@ namespace SaleBillSystem.NET.Forms
                 Size = new Size(250, 23),
                 DropDownStyle = ComboBoxStyle.DropDown
             };
+
+            // Add View Payments button
+            btnViewPayments = new Button
+            {
+                Text = "View Payments",
+                Location = new Point(550, 109),
+                Size = new Size(120, 23),
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold),
+                Visible = isEditMode // Only show in edit mode
+            };
+            btnViewPayments.Click += BtnViewPayments_Click;
             
             // Add controls to groupBox1
             groupBox1.Controls.AddRange(new Control[] {
-                lblDueDate, dtpDueDate, lblBroker, cmbBroker
+                lblDueDate, dtpDueDate, lblBroker, cmbBroker, btnViewPayments
             });
         }
 
@@ -495,6 +510,9 @@ namespace SaleBillSystem.NET.Forms
             {
                 cmbBroker.SelectedValue = currentBill.BrokerID.Value;
             }
+
+            // Show View Payments button in edit mode
+            btnViewPayments.Visible = true;
 
             // Load items
             foreach (var item in currentBill.BillItems)
@@ -1446,6 +1464,148 @@ private void SelectParty(Party party)
             catch (Exception ex)
             {
                 MessageBox.Show($"Error refreshing items list: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnViewPayments_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get all payments for this bill
+                var payments = PaymentService.GetAllPayments()
+                    .Where(p => p.PaymentDetails.Any(pd => pd.BillID == currentBill.BillID))
+                    .OrderByDescending(p => p.PaymentDate)
+                    .ToList();
+
+                if (payments.Count == 0)
+                {
+                    MessageBox.Show("No payments found for this bill.", "Payment Details",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Create and show payment details form
+                using (var form = new Form())
+                {
+                    form.Text = $"Payment Details - Bill #{currentBill.BillNo}";
+                    form.StartPosition = FormStartPosition.CenterParent;
+                    form.Size = new Size(800, 400);
+                    form.MinimizeBox = false;
+                    form.MaximizeBox = false;
+                    form.FormBorderStyle = FormBorderStyle.FixedDialog;
+
+                    // Create DataGridView for payments
+                    var dgvPayments = new DataGridView
+                    {
+                        Dock = DockStyle.Fill,
+                        AutoGenerateColumns = false,
+                        AllowUserToAddRows = false,
+                        AllowUserToDeleteRows = false,
+                        ReadOnly = true,
+                        SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                        BackgroundColor = Color.White,
+                        BorderStyle = BorderStyle.Fixed3D,
+                        ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                        {
+                            BackColor = Color.FromArgb(64, 64, 64),
+                            ForeColor = Color.White,
+                            Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
+                        }
+                    };
+
+                    // Add columns
+                    dgvPayments.Columns.AddRange(new DataGridViewColumn[]
+                    {
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "PaymentDate",
+                            HeaderText = "Payment Date",
+                            DataPropertyName = "PaymentDate",
+                            Width = 120,
+                            DefaultCellStyle = new DataGridViewCellStyle { Format = "dd/MM/yyyy" }
+                        },
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "PaymentMethod",
+                            HeaderText = "Payment Mode",
+                            DataPropertyName = "PaymentMethod",
+                            Width = 120
+                        },
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "Reference",
+                            HeaderText = "Reference",
+                            DataPropertyName = "Reference",
+                            Width = 120
+                        },
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "AllocatedAmount",
+                            HeaderText = "Amount",
+                            Width = 120,
+                            DefaultCellStyle = new DataGridViewCellStyle 
+                            { 
+                                Format = "N2",
+                                Alignment = DataGridViewContentAlignment.MiddleRight
+                            }
+                        },
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "Interest",
+                            HeaderText = "Interest",
+                            Width = 100,
+                            DefaultCellStyle = new DataGridViewCellStyle 
+                            { 
+                                Format = "N2",
+                                Alignment = DataGridViewContentAlignment.MiddleRight
+                            }
+                        },
+                        new DataGridViewTextBoxColumn
+                        {
+                            Name = "Discount",
+                            HeaderText = "Discount",
+                            Width = 100,
+                            DefaultCellStyle = new DataGridViewCellStyle 
+                            { 
+                                Format = "N2",
+                                Alignment = DataGridViewContentAlignment.MiddleRight
+                            }
+                        }
+                    });
+
+                    // Add rows
+                    foreach (var payment in payments)
+                    {
+                        var detail = payment.PaymentDetails.First(pd => pd.BillID == currentBill.BillID);
+                        var (interest, discount, _) = PaymentService.CalculateInterestAndDiscount(currentBill, payment.PaymentDate);
+                        
+                        dgvPayments.Rows.Add(
+                            payment.PaymentDate,
+                            payment.PaymentMethod,
+                            payment.Reference,
+                            detail.AllocatedAmount,
+                            interest,
+                            discount
+                        );
+                    }
+
+                    // Add total row
+                    var totalRow = dgvPayments.Rows[dgvPayments.Rows.Add()];
+                    totalRow.DefaultCellStyle.BackColor = Color.LightGray;
+                    totalRow.DefaultCellStyle.Font = new Font(dgvPayments.Font, FontStyle.Bold);
+                    totalRow.Cells[0].Value = "Total";
+                    totalRow.Cells[3].Value = payments.Sum(p => p.PaymentDetails.First(pd => pd.BillID == currentBill.BillID).AllocatedAmount);
+                    totalRow.Cells[4].Value = payments.Sum(p => PaymentService.CalculateInterestAndDiscount(currentBill, p.PaymentDate).interestAmount);
+                    totalRow.Cells[5].Value = payments.Sum(p => PaymentService.CalculateInterestAndDiscount(currentBill, p.PaymentDate).discountAmount);
+
+                    form.Controls.Add(dgvPayments);
+                    form.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error viewing payments: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

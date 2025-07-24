@@ -1,18 +1,71 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using System.Linq;
 
 namespace SaleBillSystem.NET.Forms
 {
     public partial class QuickAddPartyForm : Form
     {
         public Party? NewParty { get; private set; }
+        private List<Broker> brokers = new List<Broker>();
 
         public QuickAddPartyForm()
         {
             InitializeComponent();
             SetupForm();
+            LoadBrokers();
+            
+            // Enable key preview to handle keyboard shortcuts
+            this.KeyPreview = true;
+            this.KeyDown += QuickAddPartyForm_KeyDown;
+        }
+
+        private void QuickAddPartyForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                // Handle Escape key
+                e.Handled = true;
+                btnCancel.PerformClick();
+            }
+            else if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Handle Ctrl+S
+                e.Handled = true;
+                btnSave.PerformClick();
+            }
+        }
+
+        private void LoadBrokers()
+        {
+            try
+            {
+                brokers = BrokerService.GetAllBrokers();
+                SetupBrokerComboBox();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading brokers: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SetupBrokerComboBox()
+        {
+            if (cmbBroker != null)
+            {
+                // Create a list with an empty option
+                var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
+                brokerList.AddRange(brokers);
+
+                cmbBroker.DataSource = brokerList;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
+                cmbBroker.SelectedValue = 0; // Default to "No Broker"
+            }
         }
 
         private void SetupForm()
@@ -70,10 +123,24 @@ namespace SaleBillSystem.NET.Forms
                     City = txtCity.Text.Trim().ToUpper(),
                     Phone = txtPhone.Text.Trim().ToUpper(),
                     Email = txtEmail.Text.Trim(), // Email remains as-is (case-sensitive)
-                    // CreditLimit = 0,
                     CreditDays = 0,
-                    // OutstandingAmount = 0
                 };
+
+                // Set broker information
+                if (cmbBroker != null && cmbBroker.SelectedValue is int brokerID && brokerID > 0)
+                {
+                    var broker = brokers.FirstOrDefault(b => b.BrokerID == brokerID);
+                    if (broker != null)
+                    {
+                        party.BrokerID = broker.BrokerID;
+                        party.BrokerName = broker.BrokerName;
+                    }
+                }
+                else
+                {
+                    party.BrokerID = null;
+                    party.BrokerName = string.Empty;
+                }
 
                 if (PartyService.AddParty(party))
                 {

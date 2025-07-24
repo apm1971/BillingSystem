@@ -143,31 +143,106 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"UPDATE PartyMaster SET 
-                PartyName = ?, Address = ?, City = ?, Phone = ?, Email = ?, 
-                CreditDays = ?, BrokerID = ?, BrokerName = ?, CompanyID = ? 
-                WHERE PartyID = ?";
-            
-            OleDbParameter[] parameters = {
-                new OleDbParameter("PartyName", party.PartyName),
-                new OleDbParameter("Address", party.Address),
-                new OleDbParameter("City", party.City),
-                new OleDbParameter("Phone", party.Phone),
-                new OleDbParameter("Email", party.Email),
-                // new OleDbParameter("GSTNo", party.GSTNo),
-                // new OleDbParameter("PAN", party.PAN),
-                // new OleDbParameter("OpeningBalance", party.OpeningBalance),
-                // new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
-                new OleDbParameter("CreditDays", party.CreditDays),
-                party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
-                new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
-                new OleDbParameter("CompanyID", companyID),
-                new OleDbParameter("PartyID", party.PartyID)
-            };
-            
-            int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
-            
-            return result > 0;
+            using (OleDbConnection conn = DatabaseManager.GetConnection())
+            {
+                conn.Open();
+                OleDbTransaction transaction = conn.BeginTransaction();
+                
+                try
+                {
+                    // First get the current party data to check if broker changed
+                    string getCurrentSql = "SELECT BrokerID FROM PartyMaster WHERE PartyID = ? AND CompanyID = ?";
+                    int? currentBrokerId = null;
+                    
+                    using (OleDbCommand getCurrentCmd = new OleDbCommand(getCurrentSql, conn, transaction))
+                    {
+                        getCurrentCmd.Parameters.AddWithValue("PartyID", party.PartyID);
+                        getCurrentCmd.Parameters.AddWithValue("CompanyID", companyID);
+                        object result = getCurrentCmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                        {
+                            currentBrokerId = Convert.ToInt32(result);
+                        }
+                    }
+                    
+                    // Update the party master
+                    string sql = @"UPDATE PartyMaster SET 
+                        PartyName = ?, Address = ?, City = ?, Phone = ?, Email = ?, 
+                        CreditDays = ?, BrokerID = ?, BrokerName = ?, CompanyID = ? 
+                        WHERE PartyID = ?";
+                    
+                    OleDbParameter[] parameters = {
+                        new OleDbParameter("PartyName", party.PartyName),
+                        new OleDbParameter("Address", party.Address),
+                        new OleDbParameter("City", party.City),
+                        new OleDbParameter("Phone", party.Phone),
+                        new OleDbParameter("Email", party.Email),
+                        new OleDbParameter("CreditDays", party.CreditDays),
+                        party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
+                        new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
+                        new OleDbParameter("CompanyID", companyID),
+                        new OleDbParameter("PartyID", party.PartyID)
+                    };
+                    
+                    using (OleDbCommand cmd = new OleDbCommand(sql, conn, transaction))
+                    {
+                        cmd.Parameters.AddRange(parameters);
+                        int result = cmd.ExecuteNonQuery();
+                        
+                        if (result > 0)
+                        {
+                            // Update party name in all bills for this party
+                            string updateBillsSql = @"UPDATE BillMaster 
+                                SET PartyName = ? 
+                                WHERE PartyID = ? AND CompanyID = ?";
+                                
+                            using (OleDbCommand updateBillsCmd = new OleDbCommand(updateBillsSql, conn, transaction))
+                            {
+                                updateBillsCmd.Parameters.AddWithValue("PartyName", party.PartyName);
+                                updateBillsCmd.Parameters.AddWithValue("PartyID", party.PartyID);
+                                updateBillsCmd.Parameters.AddWithValue("CompanyID", companyID);
+                                updateBillsCmd.ExecuteNonQuery();
+                            }
+                            
+                            // If broker has changed, update broker info in bills
+                            if (currentBrokerId != party.BrokerID)
+                            {
+                                string updateBillsBrokerSql = @"UPDATE BillMaster 
+                                    SET BrokerID = ?, BrokerName = ? 
+                                    WHERE PartyID = ? AND CompanyID = ?";
+                                    
+                                using (OleDbCommand updateBillsBrokerCmd = new OleDbCommand(updateBillsBrokerSql, conn, transaction))
+                                {
+                                    if (party.BrokerID.HasValue)
+                                    {
+                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerID", party.BrokerID.Value);
+                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerName", party.BrokerName);
+                                    }
+                                    else
+                                    {
+                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerID", DBNull.Value);
+                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerName", DBNull.Value);
+                                    }
+                                    updateBillsBrokerCmd.Parameters.AddWithValue("PartyID", party.PartyID);
+                                    updateBillsBrokerCmd.Parameters.AddWithValue("CompanyID", companyID);
+                                    updateBillsBrokerCmd.ExecuteNonQuery();
+                                }
+                            }
+                            
+                            transaction.Commit();
+                            return true;
+                        }
+                    }
+                    
+                    transaction.Rollback();
+                    return false;
+                }
+                catch (Exception)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+            }
         }
         
         // Delete a party

@@ -14,6 +14,8 @@ namespace SaleBillSystem.NET.Forms
         private List<Bill> bills = new List<Bill>();
         private List<Bill> filteredBills = new List<Bill>();
         private Button btnViewPayments; // Add new button field
+        private string currentSortColumn = "BillDate"; // Default sort column
+        private SortOrder currentSortOrder = SortOrder.Descending; // Default sort order
 
         public BillListForm()
         {
@@ -44,6 +46,158 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.SelectionChanged += dgvBills_SelectionChanged;
             dgvBills.CellDoubleClick += dgvBills_CellDoubleClick;
             dgvBills.KeyDown += dgvBills_KeyDown;
+            dgvBills.ColumnHeaderMouseClick += DgvBills_ColumnHeaderMouseClick;
+        }
+
+        private void DgvBills_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            // Get the column that was clicked
+            DataGridViewColumn column = dgvBills.Columns[e.ColumnIndex];
+            
+            // Skip sorting for non-sortable columns or if this is the summary row
+            if (column.Name == "ItemCount" || column.Name == "InterestDiscountInfo")
+                return;
+                
+            // Toggle sort order if clicking on the same column
+            if (column.Name == currentSortColumn)
+            {
+                currentSortOrder = currentSortOrder == SortOrder.Ascending ? 
+                    SortOrder.Descending : SortOrder.Ascending;
+            }
+            else
+            {
+                currentSortColumn = column.Name;
+                currentSortOrder = SortOrder.Ascending; // Default to ascending for new column
+            }
+            
+            // Apply the sort
+            ApplySorting();
+            
+            // Update the column header text to show sort direction
+            UpdateColumnHeaderSortIndicator();
+        }
+        
+        private void UpdateColumnHeaderSortIndicator()
+        {
+            // Reset all column headers
+            foreach (DataGridViewColumn column in dgvBills.Columns)
+            {
+                if (column.HeaderText.EndsWith(" ▲") || column.HeaderText.EndsWith(" ▼"))
+                {
+                    column.HeaderText = column.HeaderText.Substring(0, column.HeaderText.Length - 2);
+                }
+            }
+            
+            // Add indicator to current sort column
+            DataGridViewColumn sortColumn = dgvBills.Columns[currentSortColumn];
+            if (sortColumn != null)
+            {
+                sortColumn.HeaderText += currentSortOrder == SortOrder.Ascending ? " ▲" : " ▼";
+            }
+        }
+        
+        private void ApplySorting()
+        {
+            if (dgvBills.DataSource is BindingList<BillDisplayData> dataSource)
+            {
+                // Create a new sorted list
+                List<BillDisplayData> sortedList = new List<BillDisplayData>();
+                
+                // Extract the summary row if it exists
+                BillDisplayData summaryRow = null;
+                foreach (BillDisplayData item in dataSource)
+                {
+                    if (item.IsSummaryRow)
+                    {
+                        summaryRow = item;
+                    }
+                    else
+                    {
+                        sortedList.Add(item);
+                    }
+                }
+                
+                // Sort the list based on the current sort column and order
+                switch (currentSortColumn)
+                {
+                    case "BillNo":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.BillNo).ToList() :
+                            sortedList.OrderByDescending(b => b.BillNo).ToList();
+                        break;
+                    case "BillDate":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.BillDate).ToList() :
+                            sortedList.OrderByDescending(b => b.BillDate).ToList();
+                        break;
+                    case "DueDate":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.DueDate).ToList() :
+                            sortedList.OrderByDescending(b => b.DueDate).ToList();
+                        break;
+                    case "PartyName":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.PartyName).ToList() :
+                            sortedList.OrderByDescending(b => b.PartyName).ToList();
+                        break;
+                    case "BrokerName":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.BrokerName).ToList() :
+                            sortedList.OrderByDescending(b => b.BrokerName).ToList();
+                        break;
+                    case "TotalAmount":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.TotalAmount).ToList() :
+                            sortedList.OrderByDescending(b => b.TotalAmount).ToList();
+                        break;
+                    case "TotalCharges":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.TotalCharges).ToList() :
+                            sortedList.OrderByDescending(b => b.TotalCharges).ToList();
+                        break;
+                    case "NetAmount":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.NetAmount).ToList() :
+                            sortedList.OrderByDescending(b => b.NetAmount).ToList();
+                        break;
+                    case "AdjustedNetAmount":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.AdjustedNetAmount).ToList() :
+                            sortedList.OrderByDescending(b => b.AdjustedNetAmount).ToList();
+                        break;
+                    case "PaidAmount":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.PaidAmount).ToList() :
+                            sortedList.OrderByDescending(b => b.PaidAmount).ToList();
+                        break;
+                    case "BalanceAmount":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.BalanceAmount).ToList() :
+                            sortedList.OrderByDescending(b => b.BalanceAmount).ToList();
+                        break;
+                    case "PaymentStatusText":
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.PaymentStatusText).ToList() :
+                            sortedList.OrderByDescending(b => b.PaymentStatusText).ToList();
+                        break;
+                    default:
+                        // Default to bill date if column not recognized
+                        sortedList = currentSortOrder == SortOrder.Ascending ?
+                            sortedList.OrderBy(b => b.BillDate).ToList() :
+                            sortedList.OrderByDescending(b => b.BillDate).ToList();
+                        break;
+                }
+                
+                // Add the summary row back at the end if it exists
+                if (summaryRow != null)
+                {
+                    sortedList.Add(summaryRow);
+                }
+                
+                // Update the data source
+                dgvBills.DataSource = null;
+                dgvBills.DataSource = new BindingList<BillDisplayData>(sortedList);
+            }
         }
         
         private void BillListForm_KeyDown(object sender, KeyEventArgs e)
@@ -648,6 +802,12 @@ namespace SaleBillSystem.NET.Forms
                 
                 // Set the new data source
                 dgvBills.DataSource = bindingList;
+                
+                // Apply current sorting
+                ApplySorting();
+                
+                // Update column headers to show sort indicators
+                UpdateColumnHeaderSortIndicator();
                 
                 lblTotalBills.Text = $"Total Bills: {filteredBills.Count}";
                 lblTotalAmount.Text = $"Total Amount: {netAmount:N2}";

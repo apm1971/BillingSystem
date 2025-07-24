@@ -122,22 +122,74 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"UPDATE BrokerMaster SET 
-                         BrokerName = ?, Phone = ?, Email = ?, CompanyID = ? 
-                         WHERE BrokerID = ? AND CompanyID = ?";
-            
-            OleDbParameter[] parameters = {
-                new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
-                new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
-                new OleDbParameter("Email", OleDbType.VarChar) { Value = broker.Email },
-                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
-                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = broker.BrokerID },
-                new OleDbParameter("CompanyID2", OleDbType.Integer) { Value = companyID }
-            };
-            
-            int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
-            
-            return result > 0;
+            using (OleDbConnection conn = DatabaseManager.GetConnection())
+            {
+                conn.Open();
+                OleDbTransaction transaction = conn.BeginTransaction();
+                
+                try
+                {
+                    // First update the broker master
+                    string sql = @"UPDATE BrokerMaster SET 
+                                BrokerName = ?, Phone = ?, Email = ?, CompanyID = ? 
+                                WHERE BrokerID = ? AND CompanyID = ?";
+                    
+                    OleDbParameter[] parameters = {
+                        new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
+                        new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
+                        new OleDbParameter("Email", OleDbType.VarChar) { Value = broker.Email },
+                        new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
+                        new OleDbParameter("BrokerID", OleDbType.Integer) { Value = broker.BrokerID },
+                        new OleDbParameter("CompanyID2", OleDbType.Integer) { Value = companyID }
+                    };
+                    
+                    using (OleDbCommand cmd = new OleDbCommand(sql, conn, transaction))
+                    {
+                        cmd.Parameters.AddRange(parameters);
+                        int result = cmd.ExecuteNonQuery();
+                        
+                        if (result > 0)
+                        {
+                            // Update broker name in bills
+                            string updateBillsSql = @"UPDATE BillMaster 
+                                SET BrokerName = ? 
+                                WHERE BrokerID = ? AND CompanyID = ?";
+                                
+                            using (OleDbCommand updateBillsCmd = new OleDbCommand(updateBillsSql, conn, transaction))
+                            {
+                                updateBillsCmd.Parameters.AddWithValue("BrokerName", broker.BrokerName);
+                                updateBillsCmd.Parameters.AddWithValue("BrokerID", broker.BrokerID);
+                                updateBillsCmd.Parameters.AddWithValue("CompanyID", companyID);
+                                updateBillsCmd.ExecuteNonQuery();
+                            }
+                            
+                            // Update broker name in parties
+                            string updatePartiesSql = @"UPDATE PartyMaster 
+                                SET BrokerName = ? 
+                                WHERE BrokerID = ? AND CompanyID = ?";
+                                
+                            using (OleDbCommand updatePartiesCmd = new OleDbCommand(updatePartiesSql, conn, transaction))
+                            {
+                                updatePartiesCmd.Parameters.AddWithValue("BrokerName", broker.BrokerName);
+                                updatePartiesCmd.Parameters.AddWithValue("BrokerID", broker.BrokerID);
+                                updatePartiesCmd.Parameters.AddWithValue("CompanyID", companyID);
+                                updatePartiesCmd.ExecuteNonQuery();
+                            }
+                            
+                            transaction.Commit();
+                            return true;
+                        }
+                    }
+                    
+                    transaction.Rollback();
+                    return false;
+                }
+                catch (Exception)
+                {
+                    transaction.Rollback();
+                    return false;
+                }
+            }
         }
         
         // Delete a broker

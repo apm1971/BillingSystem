@@ -729,26 +729,46 @@ private void SelectParty(Party party)
                 var columnName = dgvItems.Columns[e.ColumnIndex].Name;
                 
                 // Handle ItemName selection specifically - auto-fill rate and charges
-                if (columnName == "ItemName" && row.Cells["ItemName"].Value != null)
+                if (columnName == "ItemName")
                 {
-                    int itemId = Convert.ToInt32(row.Cells["ItemName"].Value);
-                    var item = items.FirstOrDefault(i => i.ItemID == itemId);
-                    if (item != null)
+                    if (row.Cells["ItemName"].Value != null)
                     {
-                        // Set default quantity if it's not already set
-                        if (row.Cells["Quantity"].Value == null || Convert.ToDouble(row.Cells["Quantity"].Value) == 0)
+                        int itemId = Convert.ToInt32(row.Cells["ItemName"].Value);
+                        var item = items.FirstOrDefault(i => i.ItemID == itemId);
+                        if (item != null)
                         {
+                            // Initialize all values when an item is first selected
                             row.Cells["Quantity"].Value = 1.0;
+                            row.Cells["Rate"].Value = item.Rate;
+                            row.Cells["Charges"].Value = item.Charges;
+                            row.Cells["Amount"].Value = item.Rate; // Quantity (1) * Rate
+                            row.Cells["TotalAmount"].Value = item.Rate + item.Charges;
                         }
-                        
-                        // Set item rate and charges
-                        row.Cells["Rate"].Value = item.Rate;
-                        row.Cells["Charges"].Value = item.Charges;
+                    }
+                    else
+                    {
+                        // Clear all values if item is deselected
+                        row.Cells["Quantity"].Value = null;
+                        row.Cells["Rate"].Value = null;
+                        row.Cells["Charges"].Value = null;
+                        row.Cells["Amount"].Value = null;
+                        row.Cells["TotalAmount"].Value = null;
                     }
                 }
-                
-                // Calculate row totals
-                CalculateRowTotal(e.RowIndex);
+                // Special handling for the Charges column to ensure 0 is accepted
+                else if (columnName == "Charges")
+                {
+                    // Ensure we recalculate even if charges is set to 0
+                    CalculateRowTotal(e.RowIndex);
+                }
+                else
+                {
+                    // Only calculate row total if we have an item selected
+                    if (row.Cells["ItemName"].Value != null)
+                    {
+                        CalculateRowTotal(e.RowIndex);
+                    }
+                }
                 
                 // If this is the last non-new row and we're adding a new item, tab to the next row automatically
                 if (e.RowIndex == dgvItems.Rows.Count - 2 && columnName == "TotalAmount")
@@ -819,11 +839,8 @@ private void SelectParty(Party party)
 
         private void DgvItems_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
         {
-            e.Row.Cells["Quantity"].Value = 1.0;
-            e.Row.Cells["Rate"].Value = 0.0;
-            e.Row.Cells["Charges"].Value = 0.0;
-            e.Row.Cells["Amount"].Value = 0.0;
-            e.Row.Cells["TotalAmount"].Value = 0.0;
+            // Don't set any default values for new rows
+            // Values will be set when an item is selected
         }
 
         private void DgvItems_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
@@ -871,8 +888,8 @@ private void SelectParty(Party party)
                             row.Cells["Rate"].Value = item.Rate;
                         }
                         
-                        // Set charges from item if empty
-                        if (row.Cells["Charges"].Value == null || Convert.ToDouble(row.Cells["Charges"].Value) == 0)
+                        // Only set charges from item if the cell is null (not if it's explicitly set to 0)
+                        if (row.Cells["Charges"].Value == null)
                         {
                             row.Cells["Charges"].Value = item.Charges;
                         }
@@ -1102,6 +1119,7 @@ private void SelectParty(Party party)
             dgvItems.UserDeletedRow -= DgvItems_UserDeletedRow;
             dgvItems.KeyDown -= DgvItems_KeyDown;
             dgvItems.MouseClick -= DgvItems_MouseClick;
+            dgvItems.EditingControlShowing -= DgvItems_EditingControlShowing;
             
             // Add event handlers
             dgvItems.CellValueChanged += DgvItems_CellValueChanged;
@@ -1109,6 +1127,57 @@ private void SelectParty(Party party)
             dgvItems.UserDeletedRow += DgvItems_UserDeletedRow;
             dgvItems.KeyDown += DgvItems_KeyDown;
             dgvItems.MouseClick += DgvItems_MouseClick;
+            dgvItems.EditingControlShowing += DgvItems_EditingControlShowing;
+        }
+
+        // Add this new method to handle ComboBox selection change immediately
+        private void DgvItems_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            if (dgvItems.CurrentCell.ColumnIndex == dgvItems.Columns["ItemName"].Index && e.Control is ComboBox comboBox)
+            {
+                // Remove previous event handler to avoid multiple subscriptions
+                comboBox.SelectedIndexChanged -= ComboBox_SelectedIndexChanged;
+                
+                // Add event handler for SelectedIndexChanged
+                comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
+            }
+        }
+
+        private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (sender is ComboBox comboBox && comboBox.SelectedValue != null)
+            {
+                // Get the current row
+                int rowIndex = dgvItems.CurrentCell.RowIndex;
+                if (rowIndex >= 0 && rowIndex < dgvItems.Rows.Count)
+                {
+                    var row = dgvItems.Rows[rowIndex];
+                    
+                    try
+                    {
+                        // Get the selected item
+                        int itemId = Convert.ToInt32(comboBox.SelectedValue);
+                        var item = items.FirstOrDefault(i => i.ItemID == itemId);
+                        
+                        if (item != null)
+                        {
+                            // Set values immediately without waiting for cell value changed event
+                            row.Cells["Quantity"].Value = 1.0;
+                            row.Cells["Rate"].Value = item.Rate;
+                            row.Cells["Charges"].Value = item.Charges;
+                            row.Cells["Amount"].Value = item.Rate; // Quantity (1) * Rate
+                            row.Cells["TotalAmount"].Value = item.Rate + item.Charges;
+                            
+                            // Update totals
+                            CalculateTotals();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error in combo box selection: {ex.Message}");
+                    }
+                }
+            }
         }
 
         private void SetupGridContextMenu()

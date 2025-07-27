@@ -15,6 +15,21 @@ namespace SaleBillSystem.NET.Forms
         
         private void InitializeUI()
         {
+            // Set application icon
+            try
+            {
+                string iconPath = Path.Combine(Application.StartupPath, "Resources", "app-icon.ico");
+                if (File.Exists(iconPath))
+                {
+                    this.Icon = new Icon(iconPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Icon loading failed, continue without it
+                Console.WriteLine($"Could not load application icon: {ex.Message}");
+            }
+            
             // Refresh active company from database
             Program.ActiveCompany = CompanyService.GetActiveCompany();
             
@@ -142,12 +157,12 @@ namespace SaleBillSystem.NET.Forms
             
             ToolStripMenuItem reportsOutstanding = new ToolStripMenuItem("&Outstanding Reports");
             reportsOutstanding.ShortcutKeys = Keys.Control | Keys.R;
-            ToolStripMenuItem reportsPayment = new ToolStripMenuItem("&Payment Reports");
-            ToolStripMenuItem reportsSales = new ToolStripMenuItem("&Sales Reports");
+            // ToolStripMenuItem reportsPayment = new ToolStripMenuItem("&Payment Reports");
+            // ToolStripMenuItem reportsSales = new ToolStripMenuItem("&Sales Reports");
             
             reportsMenu.DropDownItems.Add(reportsOutstanding);
-            reportsMenu.DropDownItems.Add(reportsPayment);
-            reportsMenu.DropDownItems.Add(reportsSales);
+            // reportsMenu.DropDownItems.Add(reportsPayment);
+            // reportsMenu.DropDownItems.Add(reportsSales);
             
             // === UTILITIES MENU ===
             ToolStripMenuItem utilitiesMenu = new ToolStripMenuItem("&Utilities");
@@ -185,8 +200,8 @@ namespace SaleBillSystem.NET.Forms
             utilitiesMenu.DropDownItems.Add(utilitiesClearAllData);
             
             // === TOOLS MENU ===
-            ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
-            toolsMenu.ForeColor = Color.White;
+            // ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
+            // toolsMenu.ForeColor = Color.White;
             
             ToolStripMenuItem toolsSettings = new ToolStripMenuItem("&Settings");
             toolsSettings.Click += (s, e) => 
@@ -221,7 +236,7 @@ namespace SaleBillSystem.NET.Forms
             mainMenu.Items.Add(mastersMenu);
             mainMenu.Items.Add(reportsMenu);
             mainMenu.Items.Add(utilitiesMenu);
-            mainMenu.Items.Add(toolsMenu);
+            // mainMenu.Items.Add(toolsMenu);
             mainMenu.Items.Add(helpMenu);
             
             // Add menu strip to form
@@ -671,13 +686,31 @@ namespace SaleBillSystem.NET.Forms
             dashboardPanel.BackColor = Color.FromArgb(250, 250, 250);
             dashboardPanel.Padding = new Padding(20);
             
+            // Create application icon
+            PictureBox appIcon = new PictureBox();
+            try
+            {
+                string iconPath = Path.Combine(Application.StartupPath, "Resources", "app-icon.png");
+                if (File.Exists(iconPath))
+                {
+                    appIcon.Image = Image.FromFile(iconPath);
+                    appIcon.SizeMode = PictureBoxSizeMode.Zoom;
+                    appIcon.Size = new Size(80, 80);
+                    appIcon.Location = new Point(50, 50);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not load dashboard icon: {ex.Message}");
+            }
+            
             // Create title label
             Label titleLabel = new Label();
             titleLabel.Text = Program.APP_NAME;
             titleLabel.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
             titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
             titleLabel.AutoSize = true;
-            titleLabel.Location = new Point(50, 50);
+            titleLabel.Location = new Point(150, 50);
             
             // Create subtitle label
             Label subtitleLabel = new Label();
@@ -685,21 +718,18 @@ namespace SaleBillSystem.NET.Forms
             subtitleLabel.Font = new Font("Segoe UI", 12F, FontStyle.Regular);
             subtitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
             subtitleLabel.AutoSize = true;
-            subtitleLabel.Location = new Point(50, 90);
+            subtitleLabel.Location = new Point(150, 90);
             
             // Create quick access panel
             Panel quickAccessPanel = CreateQuickAccessPanel();
             quickAccessPanel.Location = new Point(50, 150);
             
-            // Create recent activities panel
-            Panel recentPanel = CreateRecentActivitiesPanel();
-            recentPanel.Location = new Point(450, 150);
             
             // Add controls to dashboard
+            dashboardPanel.Controls.Add(appIcon);
             dashboardPanel.Controls.Add(titleLabel);
             dashboardPanel.Controls.Add(subtitleLabel);
             dashboardPanel.Controls.Add(quickAccessPanel);
-            dashboardPanel.Controls.Add(recentPanel);
             
             // Add dashboard to form
             this.Controls.Add(dashboardPanel);
@@ -775,34 +805,6 @@ namespace SaleBillSystem.NET.Forms
             return btn;
         }
         
-        private Panel CreateRecentActivitiesPanel()
-        {
-            Panel panel = new Panel();
-            panel.Size = new Size(350, 400);
-            panel.BackColor = Color.White;
-            panel.BorderStyle = BorderStyle.FixedSingle;
-            
-            // Title
-            Label titleLabel = new Label();
-            titleLabel.Text = "Recent Activities";
-            titleLabel.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
-            titleLabel.Location = new Point(15, 15);
-            titleLabel.AutoSize = true;
-            
-            // Placeholder content
-            Label placeholderLabel = new Label();
-            placeholderLabel.Text = "No recent activities to display.\nStart by creating a new bill or payment.";
-            placeholderLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-            placeholderLabel.ForeColor = Color.FromArgb(150, 150, 150);
-            placeholderLabel.Location = new Point(15, 60);
-            placeholderLabel.Size = new Size(320, 40);
-            
-            panel.Controls.Add(titleLabel);
-            panel.Controls.Add(placeholderLabel);
-            
-            return panel;
-        }
         
         private void CreateStatusBar()
         {

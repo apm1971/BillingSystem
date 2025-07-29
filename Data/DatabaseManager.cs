@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb; // Changed from SQLite to OleDb
 using System.IO;
+using System.Linq;
 // Remove ADOX reference
 
 namespace SaleBillSystem.NET.Data
@@ -984,9 +986,165 @@ namespace SaleBillSystem.NET.Data
         // Begin a transaction
         public static OleDbTransaction BeginTransaction()
         {
-            OleDbConnection conn = GetConnection();
-            conn.Open();
-            return conn.BeginTransaction();
+            OleDbConnection connection = GetConnection();
+            return connection.BeginTransaction();
+        }
+
+        /// <summary>
+        /// Creates a backup of the current database
+        /// </summary>
+        /// <param name="backupPath">Optional custom backup path. If null, uses default backup directory.</param>
+        /// <returns>True if backup was successful, false otherwise</returns>
+        public static bool BackupDatabase(string backupPath = null)
+        {
+            try
+            {
+                // Get current database path
+                string currentDbPath = CustomDatabasePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                
+                if (!File.Exists(currentDbPath))
+                {
+                    throw new FileNotFoundException("Current database file not found.", currentDbPath);
+                }
+
+                // Determine backup path
+                if (string.IsNullOrEmpty(backupPath))
+                {
+                    // Create backup directory in user's documents folder
+                    string backupDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "SaleBillSystem",
+                        "Backups"
+                    );
+                    
+                    if (!Directory.Exists(backupDir))
+                    {
+                        Directory.CreateDirectory(backupDir);
+                    }
+
+                    // Generate backup filename with timestamp
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    string backupFileName = $"SaleSystem_Backup_{timestamp}.accdb";
+                    backupPath = Path.Combine(backupDir, backupFileName);
+                }
+
+                // Ensure backup directory exists
+                string backupDirPath = Path.GetDirectoryName(backupPath);
+                if (!Directory.Exists(backupDirPath))
+                {
+                    Directory.CreateDirectory(backupDirPath);
+                }
+
+                // Close any existing connections to the database
+                // This is important for Access databases to ensure no locks
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                // Copy the database file
+                File.Copy(currentDbPath, backupPath, true);
+
+                // Verify the backup was created successfully
+                if (!File.Exists(backupPath))
+                {
+                    throw new Exception("Backup file was not created successfully.");
+                }
+
+                // Test the backup by trying to open it
+                string backupConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={backupPath};Persist Security Info=False;";
+                using (OleDbConnection testConn = new OleDbConnection(backupConnectionString))
+                {
+                    testConn.Open();
+                    // If we can open the connection, the backup is valid
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Backup failed: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets a list of available backups
+        /// </summary>
+        /// <returns>List of backup file paths</returns>
+        public static List<string> GetAvailableBackups()
+        {
+            List<string> backups = new List<string>();
+            
+            try
+            {
+                string backupDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "SaleBillSystem",
+                    "Backups"
+                );
+
+                if (Directory.Exists(backupDir))
+                {
+                    string[] backupFiles = Directory.GetFiles(backupDir, "SaleSystem_Backup_*.accdb");
+                    backups.AddRange(backupFiles.OrderByDescending(f => File.GetLastWriteTime(f)));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error getting backup list: {ex.Message}", ex);
+            }
+
+            return backups;
+        }
+
+        /// <summary>
+        /// Restores a database from a backup file
+        /// </summary>
+        /// <param name="backupPath">Path to the backup file</param>
+        /// <returns>True if restore was successful, false otherwise</returns>
+        public static bool RestoreDatabase(string backupPath)
+        {
+            try
+            {
+                if (!File.Exists(backupPath))
+                {
+                    throw new FileNotFoundException("Backup file not found.", backupPath);
+                }
+
+                // Get current database path
+                string currentDbPath = CustomDatabasePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+
+                // Test the backup file first
+                string backupConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={backupPath};Persist Security Info=False;";
+                using (OleDbConnection testConn = new OleDbConnection(backupConnectionString))
+                {
+                    testConn.Open();
+                    // If we can open the connection, the backup is valid
+                }
+
+                // Close any existing connections
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                // Create a backup of the current database before restoring
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string preRestoreBackup = currentDbPath.Replace(".accdb", $"_BeforeRestore_{timestamp}.accdb");
+                
+                if (File.Exists(currentDbPath))
+                {
+                    File.Copy(currentDbPath, preRestoreBackup, true);
+                }
+
+                // Copy the backup to the current database location
+                File.Copy(backupPath, currentDbPath, true);
+
+                // Update the connection string to use the restored database
+                _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={currentDbPath};Persist Security Info=False;";
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Restore failed: {ex.Message}", ex);
+            }
         }
     }
 } 

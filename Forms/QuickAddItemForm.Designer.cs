@@ -39,7 +39,7 @@ namespace SaleBillSystem.NET.Forms
             this.label3 = new System.Windows.Forms.Label();
             this.txtItemName = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.txtItemCode = new System.Windows.Forms.TextBox();
+            // this.txtItemCode = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -58,7 +58,7 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.txtItemName);
             this.groupBox1.Controls.Add(this.label2);
-            this.groupBox1.Controls.Add(this.txtItemCode);
+            // this.groupBox1.Controls.Add(this.txtItemCode);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
@@ -150,12 +150,6 @@ namespace SaleBillSystem.NET.Forms
             this.label2.TabIndex = 2;
             this.label2.Text = "Item Name:*";
             // 
-            // txtItemCode
-            // 
-            this.txtItemCode.Location = new System.Drawing.Point(120, 30);
-            this.txtItemCode.Name = "txtItemCode";
-            this.txtItemCode.Size = new System.Drawing.Size(200, 23);
-            this.txtItemCode.TabIndex = 1;
             // 
             // label1
             // 
@@ -164,7 +158,7 @@ namespace SaleBillSystem.NET.Forms
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(71, 15);
             this.label1.TabIndex = 0;
-            this.label1.Text = "Item Code:*";
+            // this.label1.Text = "Item Code:*";
             // 
             // btnSave
             // 
@@ -222,7 +216,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox txtItemName;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox txtItemCode;
+        // private System.Windows.Forms.TextBox txtItemCode;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

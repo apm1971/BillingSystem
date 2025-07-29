@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using System.Drawing;
@@ -176,13 +178,11 @@ namespace SaleBillSystem.NET.Forms
 
             ToolStripMenuItem utilitiesBackup = new ToolStripMenuItem("&Backup Data");
             ToolStripMenuItem utilitiesRestore = new ToolStripMenuItem("&Restore Data");
-            ToolStripMenuItem utilitiesGenerateMockData = new ToolStripMenuItem("&Generate Mock Data");
-            ToolStripMenuItem utilitiesClearAllData = new ToolStripMenuItem("&Clear All Data");
             
             // Add keyboard shortcuts for utilities
             utilitiesSettings.ShortcutKeys = Keys.Control | Keys.Alt | Keys.S;
-            utilitiesGenerateMockData.ShortcutKeys = Keys.Control | Keys.G;
-            utilitiesClearAllData.ShortcutKeys = Keys.Control | Keys.Shift | Keys.Delete;
+            utilitiesBackup.ShortcutKeys = Keys.Control | Keys.B;
+            utilitiesRestore.ShortcutKeys = Keys.Control | Keys.Alt | Keys.R;
             
             // Add company submenu
             utilitiesCompany.DropDownItems.Add(utilitiesCreateCompany);
@@ -195,9 +195,6 @@ namespace SaleBillSystem.NET.Forms
             utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             utilitiesMenu.DropDownItems.Add(utilitiesBackup);
             utilitiesMenu.DropDownItems.Add(utilitiesRestore);
-            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
-            utilitiesMenu.DropDownItems.Add(utilitiesGenerateMockData);
-            utilitiesMenu.DropDownItems.Add(utilitiesClearAllData);
             
             // === TOOLS MENU ===
             // ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
@@ -262,8 +259,8 @@ namespace SaleBillSystem.NET.Forms
             utilitiesEditCompany.Click += (s, e) => EditCompany();
             utilitiesSwitchCompany.Click += (s, e) => SwitchCompany();
 
-            utilitiesGenerateMockData.Click += (s, e) => GenerateMockData();
-            utilitiesClearAllData.Click += (s, e) => ClearAllData();
+            utilitiesBackup.Click += (s, e) => BackupData();
+            utilitiesRestore.Click += (s, e) => RestoreData();
             helpAbout.Click += (s, e) => ShowAbout();
             // Setup keyboard shortcuts
             this.KeyDown += MainForm_KeyDown;
@@ -459,27 +456,7 @@ namespace SaleBillSystem.NET.Forms
             }
         }
         
-        private void GenerateMockData()
-        {
-            MockDataGenerator.GenerateMockData();
-        }
-        
-        private void ClearAllData()
-        {
-            if (MessageBox.Show(
-                "Are you sure you want to clear all data?\n\n" +
-                "This will permanently delete:\n" +
-                "• All parties\n" +
-                "• All items\n" +
-                "• All bills\n\n" +
-                "This action cannot be undone!",
-                "Confirm Clear All Data",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning) == DialogResult.Yes)
-            {
-                MockDataGenerator.ClearAllData();
-            }
-        }
+
         
         private void LoadDatabase()
         {
@@ -513,6 +490,282 @@ namespace SaleBillSystem.NET.Forms
                     // Use the DatabaseManager to create and set the database path
                     DatabaseManager.SetDatabasePath(dialog.FileName);
                 }
+            }
+        }
+
+        private void BackupData()
+        {
+            try
+            {
+                // Show save dialog for backup location
+                using (SaveFileDialog dialog = new SaveFileDialog())
+                {
+                    dialog.Filter = "Access Database (*.accdb)|*.accdb";
+                    dialog.Title = "Save Database Backup";
+                    dialog.OverwritePrompt = true;
+                    dialog.InitialDirectory = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "SaleBillSystem",
+                        "Backups"
+                    );
+                    
+                    // Generate default filename with timestamp
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    dialog.FileName = $"SaleSystem_Backup_{timestamp}.accdb";
+                    
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        // Show progress dialog
+                        using (var progressForm = new Form())
+                        {
+                            progressForm.Text = "Creating Backup";
+                            progressForm.Size = new Size(400, 150);
+                            progressForm.StartPosition = FormStartPosition.CenterParent;
+                            progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                            progressForm.MaximizeBox = false;
+                            progressForm.MinimizeBox = false;
+                            progressForm.ControlBox = false;
+                            
+                            Label lblProgress = new Label
+                            {
+                                Text = "Creating database backup...",
+                                Location = new Point(20, 20),
+                                Size = new Size(350, 20),
+                                TextAlign = ContentAlignment.MiddleCenter
+                            };
+                            
+                            ProgressBar progressBar = new ProgressBar
+                            {
+                                Location = new Point(20, 50),
+                                Size = new Size(350, 20),
+                                Style = ProgressBarStyle.Marquee,
+                                MarqueeAnimationSpeed = 30
+                            };
+                            
+                            progressForm.Controls.Add(lblProgress);
+                            progressForm.Controls.Add(progressBar);
+                            
+                            // Show progress form
+                            progressForm.Show();
+                            Application.DoEvents();
+                            
+                            try
+                            {
+                                // Perform the backup
+                                bool success = DatabaseManager.BackupDatabase(dialog.FileName);
+                                
+                                if (success)
+                                {
+                                    progressForm.Close();
+                                    MessageBox.Show(
+                                        $"Database backup created successfully!\n\nBackup location:\n{dialog.FileName}",
+                                        "Backup Successful",
+                                        MessageBoxButtons.OK,
+                                        MessageBoxIcon.Information);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                progressForm.Close();
+                                throw new Exception($"Backup failed: {ex.Message}", ex);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error creating backup: {ex.Message}",
+                    "Backup Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void RestoreData()
+        {
+            try
+            {
+                // Get available backups
+                List<string> availableBackups = DatabaseManager.GetAvailableBackups();
+                
+                if (availableBackups.Count == 0)
+                {
+                    MessageBox.Show(
+                        "No backup files found.\n\nBackup files should be located in:\n" +
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SaleBillSystem", "Backups"),
+                        "No Backups Found",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+                
+                // Show backup selection dialog
+                using (var selectionForm = new Form())
+                {
+                    selectionForm.Text = "Select Backup to Restore";
+                    selectionForm.Size = new Size(600, 400);
+                    selectionForm.StartPosition = FormStartPosition.CenterParent;
+                    selectionForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                    selectionForm.MaximizeBox = false;
+                    selectionForm.MinimizeBox = false;
+                    
+                    Label lblTitle = new Label
+                    {
+                        Text = "Select a backup file to restore:",
+                        Location = new Point(20, 20),
+                        Size = new Size(550, 20),
+                        Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
+                    };
+                    
+                    ListBox lstBackups = new ListBox
+                    {
+                        Location = new Point(20, 50),
+                        Size = new Size(550, 250),
+                        Font = new Font("Consolas", 9F)
+                    };
+                    
+                    // Add backup files to list with formatted display
+                    foreach (string backupPath in availableBackups)
+                    {
+                        string fileName = Path.GetFileName(backupPath);
+                        DateTime fileTime = File.GetLastWriteTime(backupPath);
+                        string displayText = $"{fileTime:yyyy-MM-dd HH:mm:ss} - {fileName}";
+                        lstBackups.Items.Add(displayText);
+                    }
+                    
+                    // Select the most recent backup
+                    if (lstBackups.Items.Count > 0)
+                    {
+                        lstBackups.SelectedIndex = 0;
+                    }
+                    
+                    Button btnRestore = new Button
+                    {
+                        Text = "Restore",
+                        Location = new Point(400, 320),
+                        Size = new Size(80, 30),
+                        BackColor = Color.LightGreen,
+                        Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
+                    };
+                    
+                    Button btnCancel = new Button
+                    {
+                        Text = "Cancel",
+                        Location = new Point(490, 320),
+                        Size = new Size(80, 30),
+                        BackColor = Color.LightCoral
+                    };
+                    
+                    selectionForm.Controls.Add(lblTitle);
+                    selectionForm.Controls.Add(lstBackups);
+                    selectionForm.Controls.Add(btnRestore);
+                    selectionForm.Controls.Add(btnCancel);
+                    
+                    // Event handlers
+                    btnRestore.Click += (s, e) =>
+                    {
+                        if (lstBackups.SelectedIndex >= 0)
+                        {
+                            string selectedBackupPath = availableBackups[lstBackups.SelectedIndex];
+                            
+                            // Confirm restore
+                            DialogResult confirm = MessageBox.Show(
+                                $"Are you sure you want to restore the database from:\n{Path.GetFileName(selectedBackupPath)}\n\n" +
+                                "This will replace all current data with the backup data.\n" +
+                                "A backup of your current database will be created before restoring.",
+                                "Confirm Restore",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Warning);
+                            
+                            if (confirm == DialogResult.Yes)
+                            {
+                                selectionForm.DialogResult = DialogResult.OK;
+                                selectionForm.Close();
+                                
+                                // Show progress dialog
+                                using (var progressForm = new Form())
+                                {
+                                    progressForm.Text = "Restoring Database";
+                                    progressForm.Size = new Size(400, 150);
+                                    progressForm.StartPosition = FormStartPosition.CenterParent;
+                                    progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                                    progressForm.MaximizeBox = false;
+                                    progressForm.MinimizeBox = false;
+                                    progressForm.ControlBox = false;
+                                    
+                                    Label lblProgress = new Label
+                                    {
+                                        Text = "Restoring database from backup...",
+                                        Location = new Point(20, 20),
+                                        Size = new Size(350, 20),
+                                        TextAlign = ContentAlignment.MiddleCenter
+                                    };
+                                    
+                                    ProgressBar progressBar = new ProgressBar
+                                    {
+                                        Location = new Point(20, 50),
+                                        Size = new Size(350, 20),
+                                        Style = ProgressBarStyle.Marquee,
+                                        MarqueeAnimationSpeed = 30
+                                    };
+                                    
+                                    progressForm.Controls.Add(lblProgress);
+                                    progressForm.Controls.Add(progressBar);
+                                    
+                                    progressForm.Show();
+                                    Application.DoEvents();
+                                    
+                                    try
+                                    {
+                                        // Perform the restore
+                                        bool success = DatabaseManager.RestoreDatabase(selectedBackupPath);
+                                        
+                                        if (success)
+                                        {
+                                            progressForm.Close();
+                                            MessageBox.Show(
+                                                "Database restored successfully!\n\n" +
+                                                "The application will now restart to load the restored data.",
+                                                "Restore Successful",
+                                                MessageBoxButtons.OK,
+                                                MessageBoxIcon.Information);
+                                            
+                                            // Restart the application
+                                            Application.Restart();
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        progressForm.Close();
+                                        MessageBox.Show(
+                                            $"Error restoring database: {ex.Message}",
+                                            "Restore Error",
+                                            MessageBoxButtons.OK,
+                                            MessageBoxIcon.Error);
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    
+                    btnCancel.Click += (s, e) =>
+                    {
+                        selectionForm.DialogResult = DialogResult.Cancel;
+                        selectionForm.Close();
+                    };
+                    
+                    selectionForm.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error during restore process: {ex.Message}",
+                    "Restore Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
         
@@ -554,8 +807,8 @@ namespace SaleBillSystem.NET.Forms
                 "Ctrl+R: Outstanding Report\n\n" +
                 "=== UTILITIES ===\n" +
                 "Ctrl+Alt+S: Settings\n" +
-                "Ctrl+G: Generate Mock Data\n" +
-                "Ctrl+Shift+Delete: Clear All Data\n\n" +
+                "Ctrl+B: Backup Data\n" +
+                "Ctrl+Alt+R: Restore Data\n\n" +
                 "=== HELP & SYSTEM ===\n" +
                 "F1: Show Keyboard Shortcuts\n" +
                 "Ctrl+F1: About\n" +
@@ -652,16 +905,16 @@ namespace SaleBillSystem.NET.Forms
                 ShowSettings();
                 e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.KeyCode == Keys.G)
+            else if (e.Control && e.KeyCode == Keys.B)
             {
-                // Ctrl+G: Generate Mock Data
-                GenerateMockData();
+                // Ctrl+B: Backup Data
+                BackupData();
                 e.SuppressKeyPress = true;
             }
-            else if (e.Control && e.Shift && e.KeyCode == Keys.Delete)
+            else if (e.Control && e.Alt && e.KeyCode == Keys.R)
             {
-                // Ctrl+Shift+Delete: Clear All Data
-                ClearAllData();
+                // Ctrl+Alt+R: Restore Data
+                RestoreData();
                 e.SuppressKeyPress = true;
             }
             else if (e.KeyCode == Keys.F1)

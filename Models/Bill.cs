@@ -6,84 +6,36 @@ namespace SaleBillSystem.NET.Models
     public class Bill
     {
         public int BillID { get; set; }
-        public string BillNo { get; set; } = string.Empty;
-        public DateTime BillDate { get; set; } = DateTime.Today;
-        public DateTime DueDate { get; set; } = DateTime.Today;
+        public string BillNo { get; set; }
+        public System.DateTime BillDate { get; set; }
         public int PartyID { get; set; }
         public string PartyName { get; set; } = string.Empty;
-        public int? BrokerID { get; set; }
-        public string BrokerName { get; set; } = string.Empty;
-        public double TotalAmount { get; set; }
-        public double TotalCharges { get; set; }
-        public double NetAmount { get; set; }
-        public double PaidAmount { get; set; }
-        public double InterestAmount { get; set; }
-        public double DiscountAmount { get; set; }
-        public string Notes { get; set; } = string.Empty;
-        public double BalanceAmount => (NetAmount + InterestAmount - DiscountAmount) - PaidAmount;
-        public double AdjustedNetAmount => NetAmount + InterestAmount - DiscountAmount;
-        public List<BillItem> BillItems { get; set; } = new List<BillItem>();
-        public int CompanyID { get; set; }
-
-        // Calculate bill totals from items
-        public void CalculateTotals()
-        {
-            TotalAmount = 0;
-            TotalCharges = 0;
-            NetAmount = 0;
-
-            foreach (var item in BillItems)
-            {
-                TotalAmount += item.Amount;
-                TotalCharges += item.Charges;
-                NetAmount += item.TotalAmount;
-            }
-        }
-
-        // Calculate due date based on bill date and credit days
-        public void CalculateDueDate(int creditDays)
-        {
-            DueDate = BillDate.AddDays(creditDays);
-        }
-
-        // Get days remaining until due date
-        public int DaysUntilDue => (DueDate - DateTime.Today).Days;
-
-        // Check if bill is overdue
-        public bool IsOverdue => DateTime.Today > DueDate;
-
-        // Get days overdue
-        public int DaysOverdue => IsOverdue ? (DateTime.Today - DueDate).Days : 0;
-
-        // Payment status text for display
-        public string PaymentStatusText
-        {
-            get
-            {
-                if (BalanceAmount <= 0.01)
-                    return "Paid";
-                else if (PaidAmount > 0)
-                    return "Partial";
-                else
-                    return "Unpaid";
-            }
-        }
-
-        // Item count for display
-        public int ItemCount => BillItems.Count;
         
-        // Interest and discount info for display
-        public string GetInterestDiscountInfo()
+        /// <summary>
+        /// The ID of the broker for this specific bill. Can be null.
+        /// </summary>
+        public int? BrokerID { get; set; }
+        
+        /// <summary>
+        /// The broker's name, stored at the time of the sale for historical record.
+        /// </summary>
+        public string BrokerName { get; set; }
+        
+        public decimal OriginalAmount { get; set; }
+        public decimal AdditionalCharges { get; set; }
+        public string Status { get; set; }
+        public string Notes { get; set; }
+        public int CompanyID { get; set; }
+        public decimal TotalAmount => OriginalAmount + AdditionalCharges;
+        /// <summary>
+        /// A list of all line items included in this bill.
+        /// </summary>
+        public List<BillItem> BillItems { get; set; }
+
+        public Bill()
         {
-            if (PaidAmount <= 0)
-                return string.Empty;
-                
-            if (InterestAmount > 0)
-                return $"+₹{InterestAmount:N2}";
-            else if (DiscountAmount > 0)
-                return $"-₹{DiscountAmount:N2}";
-            else
-                return string.Empty;
+            // Always initialize the list to prevent errors
+            BillItems = new List<BillItem>();
         }
     }
-} 
+}

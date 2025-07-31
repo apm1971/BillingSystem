@@ -1,1159 +1,152 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
-using System.Drawing;
+using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET.Forms
 {
     public partial class MainForm : Form
     {
+        // This field keeps track of the currently displayed UserControl
+        private UserControl _currentControl = null;
+
         public MainForm()
         {
             InitializeComponent();
-            InitializeUI();
         }
-        
-        private void InitializeUI()
+
+        private void MainForm_Load(object sender, EventArgs e)
         {
-            // Set application icon
-            try
+            // Temporarily bypass the login screen for development
+            ShowMainApplicationUI();
+            
+            // To re-enable login later, uncomment the line below and comment out the line above
+            // ShowLoginScreen();
+        }
+
+        #region Login Flow Management
+
+        private void ShowLoginScreen()
+        {
+            mainMenuStrip.Visible = false;
+
+            // The loginControl is already on the form from the Designer
+            loginControl.Visible = true;
+            loginControl.Dock = DockStyle.Fill;
+            loginControl.LoginSuccess += OnLoginSuccess;
+        }
+
+        private void OnLoginSuccess(object sender, User authenticatedUser)
+        {
+            Program.CurrentUser = authenticatedUser;
+            loginControl.LoginSuccess -= OnLoginSuccess;
+            loginControl.Visible = false;
+
+            // Once login is successful, show the main UI
+            ShowMainApplicationUI();
+        }
+
+        #endregion
+
+        #region Main UI and Control Management
+
+        private void ShowMainApplicationUI()
+        {
+            mainMenuStrip.Visible = true;
+            InitializeMainMenu();
+            this.Text = $"{Program.APP_NAME} - Main Dashboard";
+        }
+
+        /// <summary>
+        /// This is the core method for the "single-page" feel.
+        /// It closes any current control and displays the new one.
+        /// </summary>
+        public void ShowControl(UserControl controlToShow)
+        {
+            // Close any control that is currently open
+            CloseCurrentControl();
+
+            // Set up the new control
+            _currentControl = controlToShow;
+            _currentControl.Dock = DockStyle.Fill;
+            
+            // Add the new control to the form's controls
+            this.Controls.Add(_currentControl);
+
+            // Bring the new control to the front to be visible
+            _currentControl.BringToFront();
+
+            // Subscribe to the control's close request event
+            if (_currentControl is PartyMasterUserControl partyControl)
             {
-                string iconPath = Path.Combine(Application.StartupPath, "Resources", "app-icon.ico");
-                if (File.Exists(iconPath))
-                {
-                    this.Icon = new Icon(iconPath);
-                }
+                partyControl.PartySelected += (s, e) => CloseCurrentControl();
             }
-            catch (Exception ex)
+            // Add similar handlers for your other controls (ItemMasterControl, etc.)
+            // else if (_currentControl is ItemMasterControl itemControl) { ... }
+        }
+
+        /// <summary>
+        /// Removes the currently active UserControl from the screen.
+        /// </summary>
+        private void CloseCurrentControl()
+        {
+            if (_currentControl != null)
             {
-                // Icon loading failed, continue without it
-                Console.WriteLine($"Could not load application icon: {ex.Message}");
+                this.Controls.Remove(_currentControl);
+                _currentControl.Dispose();
+                _currentControl = null;
             }
-            
-            // Refresh active company from database
-            Program.ActiveCompany = CompanyService.GetActiveCompany();
-            
-            // Check if active company exists
-            if (Program.ActiveCompany == null)
-            {
-                DialogResult result = MessageBox.Show(
-                    "No active company found. Would you like to create a new company now?",
-                    Program.APP_NAME,
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-                
-                if (result == DialogResult.Yes)
-                {
-                    // Show company creation form
-                    bool companyCreated = CreateCompany();
-                    
-                    if (companyCreated)
-                    {
-                        // Refresh active company after creation
-                        Program.ActiveCompany = CompanyService.GetActiveCompany();
-                        
-                        // If still no active company, exit
-                        if (Program.ActiveCompany == null)
-                        {
-                            MessageBox.Show(
-                                "No active company selected. The application will now exit.",
-                                Program.APP_NAME,
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
-                            this.Close();
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        // User canceled company creation, exit application
-                        MessageBox.Show(
-                            "Company creation canceled. An active company is required to use the application. The application will now exit.",
-                            Program.APP_NAME,
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                        this.Close();
-                        return;
-                    }
-                }
-                else
-                {
-                    // User chose not to create a company, exit application
-                    MessageBox.Show(
-                        "An active company is required to use the application. The application will now exit.",
-                        Program.APP_NAME,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    this.Close();
-                    return;
-                }
-            }
-            
-            // Set form properties
-            this.Text = Program.APP_NAME + " - Main Menu";
-            this.Width = 1200;
-            this.Height = 800;
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.KeyPreview = true; // Enable form to receive key events first
-            this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.FromArgb(240, 240, 240);
-            
-            // Create menu
-            MenuStrip mainMenu = new MenuStrip();
-            this.MainMenuStrip = mainMenu;
-            mainMenu.BackColor = Color.FromArgb(45, 45, 48);
-            mainMenu.ForeColor = Color.White;
-            mainMenu.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-            
-            // === TRANSACTIONS MENU ===
-            ToolStripMenuItem transactionsMenu = new ToolStripMenuItem("&Transactions");
-            transactionsMenu.ForeColor = Color.White;
-            
-            ToolStripMenuItem transSales = new ToolStripMenuItem("&Sales");
-            ToolStripMenuItem transSalesEntry = new ToolStripMenuItem("Sales &Entry");
-            ToolStripMenuItem transSalesList = new ToolStripMenuItem("Sales &List");
-            transSalesEntry.ShortcutKeys = Keys.F9;
-            transSalesList.ShortcutKeys = Keys.Control | Keys.F9;
-            
-            ToolStripMenuItem transPayments = new ToolStripMenuItem("&Payments");
-            ToolStripMenuItem transPaymentEntry = new ToolStripMenuItem("Payment &Entry");
-            ToolStripMenuItem transPaymentList = new ToolStripMenuItem("Payment &List");
-            transPaymentEntry.ShortcutKeys = Keys.F5;
-            transPaymentList.ShortcutKeys = Keys.Control | Keys.F5;
-            
-            // Add sales submenu
-            transSales.DropDownItems.Add(transSalesEntry);
-            transSales.DropDownItems.Add(transSalesList);
-            
-            // Add payments submenu
-            transPayments.DropDownItems.Add(transPaymentEntry);
-            transPayments.DropDownItems.Add(transPaymentList);
-            
-            // Add to transactions menu
-            transactionsMenu.DropDownItems.Add(transSales);
-            transactionsMenu.DropDownItems.Add(new ToolStripSeparator());
-            transactionsMenu.DropDownItems.Add(transPayments);
-            
+        }
+
+        private void InitializeMainMenu()
+        {
+            // Clear existing items to prevent duplicates if called multiple times
+            mainMenuStrip.Items.Clear();
+
             // === MASTERS MENU ===
-            ToolStripMenuItem mastersMenu = new ToolStripMenuItem("&Masters");
-            mastersMenu.ForeColor = Color.White;
+            var mastersMenu = new ToolStripMenuItem("&Masters");
             
-            ToolStripMenuItem mastersParty = new ToolStripMenuItem("&Party Master");
-            ToolStripMenuItem mastersItem = new ToolStripMenuItem("&Item Master");
-            ToolStripMenuItem mastersBroker = new ToolStripMenuItem("&Broker Master");
+            var partyMasterItem = new ToolStripMenuItem("&Party Master");
+            partyMasterItem.Click += (s, e) => { ShowControl(new PartyMasterUserControl()); };
             
-            // Add keyboard shortcuts for masters
-            mastersParty.ShortcutKeys = Keys.Alt | Keys.F1;
-            mastersItem.ShortcutKeys = Keys.Alt | Keys.F2;
-            mastersBroker.ShortcutKeys = Keys.Alt | Keys.F3;
-            
-            mastersMenu.DropDownItems.Add(mastersParty);
-            mastersMenu.DropDownItems.Add(mastersItem);
-            mastersMenu.DropDownItems.Add(mastersBroker);
-            
-            // === REPORTS MENU ===
-            ToolStripMenuItem reportsMenu = new ToolStripMenuItem("&Reports");
-            reportsMenu.ForeColor = Color.White;
-            
-            ToolStripMenuItem reportsOutstanding = new ToolStripMenuItem("&Outstanding Reports");
-            reportsOutstanding.ShortcutKeys = Keys.Control | Keys.R;
-            // ToolStripMenuItem reportsPayment = new ToolStripMenuItem("&Payment Reports");
-            // ToolStripMenuItem reportsSales = new ToolStripMenuItem("&Sales Reports");
-            
-            reportsMenu.DropDownItems.Add(reportsOutstanding);
-            // reportsMenu.DropDownItems.Add(reportsPayment);
-            // reportsMenu.DropDownItems.Add(reportsSales);
-            
-            // === UTILITIES MENU ===
-            ToolStripMenuItem utilitiesMenu = new ToolStripMenuItem("&Utilities");
-            utilitiesMenu.ForeColor = Color.White;
-            
-            ToolStripMenuItem utilitiesSettings = new ToolStripMenuItem("&Settings");
-            ToolStripMenuItem utilitiesCompany = new ToolStripMenuItem("&Company");
-            ToolStripMenuItem utilitiesCreateCompany = new ToolStripMenuItem("&Create New Company");
-            ToolStripMenuItem utilitiesEditCompany = new ToolStripMenuItem("&Edit Company");
-            ToolStripMenuItem utilitiesSwitchCompany = new ToolStripMenuItem("&Switch Company");
+            var itemMasterItem = new ToolStripMenuItem("&Item Master");
+            itemMasterItem.Click += (s, e) => { ShowControl(new ItemMasterUserControl()); };
 
-            ToolStripMenuItem utilitiesBackup = new ToolStripMenuItem("&Backup Data");
-            ToolStripMenuItem utilitiesRestore = new ToolStripMenuItem("&Restore Data");
+            var brokerMasterItem = new ToolStripMenuItem("&Broker Master");
+            brokerMasterItem.Click += (s, e) => { ShowControl(new BrokerMasterUserControl()); };
             
-            // Add keyboard shortcuts for utilities
-            utilitiesSettings.ShortcutKeys = Keys.Control | Keys.Alt | Keys.S;
-            utilitiesBackup.ShortcutKeys = Keys.Control | Keys.B;
-            utilitiesRestore.ShortcutKeys = Keys.Control | Keys.Alt | Keys.R;
+            // Bills Menu
+            var billsMenu = new ToolStripMenuItem("&Bills");
             
-            // Add company submenu
-            utilitiesCompany.DropDownItems.Add(utilitiesCreateCompany);
-            utilitiesCompany.DropDownItems.Add(utilitiesEditCompany);
-            utilitiesCompany.DropDownItems.Add(utilitiesSwitchCompany);
-            
-            utilitiesMenu.DropDownItems.Add(utilitiesSettings);
-            utilitiesMenu.DropDownItems.Add(utilitiesCompany);
+            var newBillItem = new ToolStripMenuItem("&New Bill");
+            newBillItem.Click += (s, e) => { ShowControl(new SaleBillUserControl()); };
 
-            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
-            utilitiesMenu.DropDownItems.Add(utilitiesBackup);
-            utilitiesMenu.DropDownItems.Add(utilitiesRestore);
+            var paymentEntryItem = new ToolStripMenuItem("&Payment Entry");
+            paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
+            var billledgerItem = new ToolStripMenuItem("&Bill Ledger");
+            billledgerItem.Click += (s, e) => { ShowControl(new BillLedgerControl()); };
+            var billListItem = new ToolStripMenuItem("&Bill List");
+            billListItem.Click += (s, e) => { ShowControl(new BillListUserControl()); };
+            var paymentListItem = new ToolStripMenuItem("&Payment List");
+            paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };  
             
-            // === TOOLS MENU ===
-            // ToolStripMenuItem toolsMenu = new ToolStripMenuItem("&Tools");
-            // toolsMenu.ForeColor = Color.White;
+            billsMenu.DropDownItems.Add(newBillItem);
+            billsMenu.DropDownItems.Add(paymentEntryItem);
+            billsMenu.DropDownItems.Add(billledgerItem);
+            billsMenu.DropDownItems.Add(billListItem);
+            billsMenu.DropDownItems.Add(paymentListItem);
             
-            ToolStripMenuItem toolsSettings = new ToolStripMenuItem("&Settings");
-            toolsSettings.Click += (s, e) => 
-            {
-                using (var settingsForm = new SettingsForm())
-                {
-                    settingsForm.ShowDialog();
-                }
-            };
+            mastersMenu.DropDownItems.Add(partyMasterItem);
+            mastersMenu.DropDownItems.Add(itemMasterItem);
+            mastersMenu.DropDownItems.Add(brokerMasterItem);
             
-            ToolStripMenuItem toolsLoadDatabase = new ToolStripMenuItem("&Load Database");
-            toolsLoadDatabase.Click += (s, e) => LoadDatabase();
-            
-            ToolStripMenuItem toolsNewDatabase = new ToolStripMenuItem("&Create New Database");
-            toolsNewDatabase.Click += (s, e) => CreateNewDatabase();
-            
-            // === HELP MENU ===
-            ToolStripMenuItem helpMenu = new ToolStripMenuItem("&Help");
-            helpMenu.ForeColor = Color.White;
-            
-            ToolStripMenuItem helpAbout = new ToolStripMenuItem("&About");
-            helpAbout.Click += (s, e) => MessageBox.Show(
-                $"{Program.APP_NAME}\nVersion 1.0\n\n© 2023 Your Company",
-                "About",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-            
-            helpMenu.DropDownItems.Add(helpAbout);
-            
-            // Add menus to menu strip
-            mainMenu.Items.Add(transactionsMenu);
-            mainMenu.Items.Add(mastersMenu);
-            mainMenu.Items.Add(reportsMenu);
-            mainMenu.Items.Add(utilitiesMenu);
-            // mainMenu.Items.Add(toolsMenu);
-            mainMenu.Items.Add(helpMenu);
-            
-            // Add menu strip to form
-            this.Controls.Add(mainMenu);
-            
-            // Create main dashboard panel
-            CreateDashboardPanel();
-            
-            // Create status bar
-            CreateStatusBar();
-            
-            // Wire up event handlers
-            transSalesEntry.Click += (s, e) => NewBill();
-            transSalesList.Click += (s, e) => ShowBillList();
-            transPaymentEntry.Click += (s, e) => ShowPaymentEntry();
-            transPaymentList.Click += (s, e) => ShowPaymentList();
-            mastersParty.Click += (s, e) => ShowPartyMaster();
-            mastersItem.Click += (s, e) => ShowItemMaster();
-            mastersBroker.Click += (s, e) => ShowBrokerMaster();
-            reportsOutstanding.Click += (s, e) => ShowOutstandingReport();
-            utilitiesSettings.Click += (s, e) => ShowSettings();
-            utilitiesCreateCompany.Click += (s, e) => CreateCompany();
-            utilitiesEditCompany.Click += (s, e) => EditCompany();
-            utilitiesSwitchCompany.Click += (s, e) => SwitchCompany();
+            mainMenuStrip.Items.Add(billsMenu);
 
-            utilitiesBackup.Click += (s, e) => BackupData();
-            utilitiesRestore.Click += (s, e) => RestoreData();
-            helpAbout.Click += (s, e) => ShowAbout();
-            // Setup keyboard shortcuts
-            this.KeyDown += MainForm_KeyDown;
-            
-            // Add status strip
-            // SetupStatusStrip();
-            
-            // Update status bar
-            UpdateStatusBar();
-            
-            // Start timer for status bar updates
-            System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
-            timer.Interval = 1000; // 1 second
-            timer.Tick += (s, e) => UpdateStatusBar();
-            timer.Start();
-        }
-        
-        private void NewBill()
-        {
-            // Check if active company exists
-            if (Program.ActiveCompany == null)
-            {
-                MessageBox.Show(
-                    "No active company selected. Please select or create a company first.",
-                    Program.APP_NAME,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                return;
-            }
-            
-            var form = new SaleBillForm();
-            form.ShowDialog();
-        }
-        
-        private void ShowBillList()
-        {
-            var form = new BillListForm();
-            form.ShowDialog();
-        }
-        
-        private void ShowPartyMaster()
-        {
-            var form = new PartyMasterForm(false); // Set isDialogMode to false
-            form.Show(); // Use Show() instead of ShowDialog() since it's not a dialog
-        }
-        
-        private void ShowItemMaster()
-        {
-            var form = new ItemMasterForm(false); // Set isDialogMode to false
-            form.Show(); // Use Show() instead of ShowDialog() since it's not a dialog
+            // Add all top-level menus to the main menu strip
+            mainMenuStrip.Items.Add(mastersMenu);
+            // Add Transactions, Reports, etc. menus here
         }
 
-        private void ShowBrokerMaster()
-        {
-            var form = new BrokerListForm();
-            form.ShowDialog();
-        }
-
-        private void ShowOutstandingReport()
-        {
-            try
-            {
-                // Check if active company exists
-                if (Program.ActiveCompany == null)
-                {
-                    MessageBox.Show(
-                        "No active company selected. Please select or create a company first.",
-                        Program.APP_NAME,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    return;
-                }
-
-                var form = new OutstandingReportForm();
-                form.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error opening outstanding report: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ShowSettings()
-        {
-            var settingsForm = new SettingsForm();
-            if (settingsForm.ShowDialog() == DialogResult.OK)
-            {
-                // Settings were updated, you might want to refresh any cached values
-                MessageBox.Show("Settings updated successfully! Changes will take effect for new bills.", 
-                    "Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        private bool CreateCompany()
-        {
-            var companyForm = new CompanyForm();
-            if (companyForm.ShowDialog() == DialogResult.OK)
-            {
-                // Refresh active company
-                Program.ActiveCompany = CompanyService.GetActiveCompany();
-                
-                // Update status bar
-                UpdateStatusBar();
-                
-                MessageBox.Show("Company created successfully!", "Company Created", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return true;
-            }
-            return false;
-        }
-
-        private void EditCompany()
-        {
-            if (Program.ActiveCompany == null)
-            {
-                MessageBox.Show("No active company found. Please create a company first.", 
-                    "No Company", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            
-            var companyForm = new CompanyForm(Program.ActiveCompany);
-            if (companyForm.ShowDialog() == DialogResult.OK)
-            {
-                // Refresh active company
-                Program.ActiveCompany = CompanyService.GetActiveCompany();
-                
-                // Update status bar
-                UpdateStatusBar();
-                
-                MessageBox.Show("Company updated successfully!", "Company Updated", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        private void SwitchCompany()
-        {
-            var companyListForm = new CompanyListForm();
-            if (companyListForm.ShowDialog() == DialogResult.OK)
-            {
-                // Refresh active company from database
-                Program.ActiveCompany = CompanyService.GetActiveCompany();
-                
-                if (Program.ActiveCompany == null)
-                {
-                    MessageBox.Show(
-                        "No active company selected. The application will now exit.",
-                        Program.APP_NAME,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                    this.Close();
-                    return;
-                }
-                
-                // Update status bar
-                UpdateStatusBar();
-                
-                MessageBox.Show("Company switched successfully!", "Company Switched", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-
-        private void ShowPaymentEntry()
-        {
-            try
-            {
-                using (PaymentEntryForm paymentForm = new PaymentEntryForm())
-                {
-                    paymentForm.ShowDialog(this);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error opening payment entry: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void ShowPaymentList()
-        {
-            try
-            {
-                using (PaymentListForm paymentListForm = new PaymentListForm())
-                {
-                    paymentListForm.ShowDialog(this);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error opening payment list: {ex.Message}", "Error", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-        
-
-        
-        private void LoadDatabase()
-        {
-            using (OpenFileDialog dialog = new OpenFileDialog())
-            {
-                dialog.Filter = "Access Database (*.accdb)|*.accdb";
-                dialog.Title = "Select Database to Load";
-                dialog.CheckFileExists = true;
-                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    // Use the DatabaseManager to set the database path
-                    DatabaseManager.SetDatabasePath(dialog.FileName);
-                }
-            }
-        }
-
-        private void CreateNewDatabase()
-        {
-            using (SaveFileDialog dialog = new SaveFileDialog())
-            {
-                dialog.Filter = "Access Database (*.accdb)|*.accdb";
-                dialog.Title = "Create New Database";
-                dialog.OverwritePrompt = true;
-                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                dialog.FileName = "SaleSystem.accdb";
-                
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    // Use the DatabaseManager to create and set the database path
-                    DatabaseManager.SetDatabasePath(dialog.FileName);
-                }
-            }
-        }
-
-        private void BackupData()
-        {
-            try
-            {
-                // Show save dialog for backup location
-                using (SaveFileDialog dialog = new SaveFileDialog())
-                {
-                    dialog.Filter = "Access Database (*.accdb)|*.accdb";
-                    dialog.Title = "Save Database Backup";
-                    dialog.OverwritePrompt = true;
-                    dialog.InitialDirectory = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                        "SaleBillSystem",
-                        "Backups"
-                    );
-                    
-                    // Generate default filename with timestamp
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    dialog.FileName = $"SaleSystem_Backup_{timestamp}.accdb";
-                    
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        // Show progress dialog
-                        using (var progressForm = new Form())
-                        {
-                            progressForm.Text = "Creating Backup";
-                            progressForm.Size = new Size(400, 150);
-                            progressForm.StartPosition = FormStartPosition.CenterParent;
-                            progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                            progressForm.MaximizeBox = false;
-                            progressForm.MinimizeBox = false;
-                            progressForm.ControlBox = false;
-                            
-                            Label lblProgress = new Label
-                            {
-                                Text = "Creating database backup...",
-                                Location = new Point(20, 20),
-                                Size = new Size(350, 20),
-                                TextAlign = ContentAlignment.MiddleCenter
-                            };
-                            
-                            ProgressBar progressBar = new ProgressBar
-                            {
-                                Location = new Point(20, 50),
-                                Size = new Size(350, 20),
-                                Style = ProgressBarStyle.Marquee,
-                                MarqueeAnimationSpeed = 30
-                            };
-                            
-                            progressForm.Controls.Add(lblProgress);
-                            progressForm.Controls.Add(progressBar);
-                            
-                            // Show progress form
-                            progressForm.Show();
-                            Application.DoEvents();
-                            
-                            try
-                            {
-                                // Perform the backup
-                                bool success = DatabaseManager.BackupDatabase(dialog.FileName);
-                                
-                                if (success)
-                                {
-                                    progressForm.Close();
-                                    MessageBox.Show(
-                                        $"Database backup created successfully!\n\nBackup location:\n{dialog.FileName}",
-                                        "Backup Successful",
-                                        MessageBoxButtons.OK,
-                                        MessageBoxIcon.Information);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                progressForm.Close();
-                                throw new Exception($"Backup failed: {ex.Message}", ex);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"Error creating backup: {ex.Message}",
-                    "Backup Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
-        }
-
-        private void RestoreData()
-        {
-            try
-            {
-                // Get available backups
-                List<string> availableBackups = DatabaseManager.GetAvailableBackups();
-                
-                if (availableBackups.Count == 0)
-                {
-                    MessageBox.Show(
-                        "No backup files found.\n\nBackup files should be located in:\n" +
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "SaleBillSystem", "Backups"),
-                        "No Backups Found",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
-                
-                // Show backup selection dialog
-                using (var selectionForm = new Form())
-                {
-                    selectionForm.Text = "Select Backup to Restore";
-                    selectionForm.Size = new Size(600, 400);
-                    selectionForm.StartPosition = FormStartPosition.CenterParent;
-                    selectionForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                    selectionForm.MaximizeBox = false;
-                    selectionForm.MinimizeBox = false;
-                    
-                    Label lblTitle = new Label
-                    {
-                        Text = "Select a backup file to restore:",
-                        Location = new Point(20, 20),
-                        Size = new Size(550, 20),
-                        Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
-                    };
-                    
-                    ListBox lstBackups = new ListBox
-                    {
-                        Location = new Point(20, 50),
-                        Size = new Size(550, 250),
-                        Font = new Font("Consolas", 9F)
-                    };
-                    
-                    // Add backup files to list with formatted display
-                    foreach (string backupPath in availableBackups)
-                    {
-                        string fileName = Path.GetFileName(backupPath);
-                        DateTime fileTime = File.GetLastWriteTime(backupPath);
-                        string displayText = $"{fileTime:yyyy-MM-dd HH:mm:ss} - {fileName}";
-                        lstBackups.Items.Add(displayText);
-                    }
-                    
-                    // Select the most recent backup
-                    if (lstBackups.Items.Count > 0)
-                    {
-                        lstBackups.SelectedIndex = 0;
-                    }
-                    
-                    Button btnRestore = new Button
-                    {
-                        Text = "Restore",
-                        Location = new Point(400, 320),
-                        Size = new Size(80, 30),
-                        BackColor = Color.LightGreen,
-                        Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold)
-                    };
-                    
-                    Button btnCancel = new Button
-                    {
-                        Text = "Cancel",
-                        Location = new Point(490, 320),
-                        Size = new Size(80, 30),
-                        BackColor = Color.LightCoral
-                    };
-                    
-                    selectionForm.Controls.Add(lblTitle);
-                    selectionForm.Controls.Add(lstBackups);
-                    selectionForm.Controls.Add(btnRestore);
-                    selectionForm.Controls.Add(btnCancel);
-                    
-                    // Event handlers
-                    btnRestore.Click += (s, e) =>
-                    {
-                        if (lstBackups.SelectedIndex >= 0)
-                        {
-                            string selectedBackupPath = availableBackups[lstBackups.SelectedIndex];
-                            
-                            // Confirm restore
-                            DialogResult confirm = MessageBox.Show(
-                                $"Are you sure you want to restore the database from:\n{Path.GetFileName(selectedBackupPath)}\n\n" +
-                                "This will replace all current data with the backup data.\n" +
-                                "A backup of your current database will be created before restoring.",
-                                "Confirm Restore",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Warning);
-                            
-                            if (confirm == DialogResult.Yes)
-                            {
-                                selectionForm.DialogResult = DialogResult.OK;
-                                selectionForm.Close();
-                                
-                                // Show progress dialog
-                                using (var progressForm = new Form())
-                                {
-                                    progressForm.Text = "Restoring Database";
-                                    progressForm.Size = new Size(400, 150);
-                                    progressForm.StartPosition = FormStartPosition.CenterParent;
-                                    progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                                    progressForm.MaximizeBox = false;
-                                    progressForm.MinimizeBox = false;
-                                    progressForm.ControlBox = false;
-                                    
-                                    Label lblProgress = new Label
-                                    {
-                                        Text = "Restoring database from backup...",
-                                        Location = new Point(20, 20),
-                                        Size = new Size(350, 20),
-                                        TextAlign = ContentAlignment.MiddleCenter
-                                    };
-                                    
-                                    ProgressBar progressBar = new ProgressBar
-                                    {
-                                        Location = new Point(20, 50),
-                                        Size = new Size(350, 20),
-                                        Style = ProgressBarStyle.Marquee,
-                                        MarqueeAnimationSpeed = 30
-                                    };
-                                    
-                                    progressForm.Controls.Add(lblProgress);
-                                    progressForm.Controls.Add(progressBar);
-                                    
-                                    progressForm.Show();
-                                    Application.DoEvents();
-                                    
-                                    try
-                                    {
-                                        // Perform the restore
-                                        bool success = DatabaseManager.RestoreDatabase(selectedBackupPath);
-                                        
-                                        if (success)
-                                        {
-                                            progressForm.Close();
-                                            MessageBox.Show(
-                                                "Database restored successfully!\n\n" +
-                                                "The application will now restart to load the restored data.",
-                                                "Restore Successful",
-                                                MessageBoxButtons.OK,
-                                                MessageBoxIcon.Information);
-                                            
-                                            // Restart the application
-                                            Application.Restart();
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        progressForm.Close();
-                                        MessageBox.Show(
-                                            $"Error restoring database: {ex.Message}",
-                                            "Restore Error",
-                                            MessageBoxButtons.OK,
-                                            MessageBoxIcon.Error);
-                                    }
-                                }
-                            }
-                        }
-                    };
-                    
-                    btnCancel.Click += (s, e) =>
-                    {
-                        selectionForm.DialogResult = DialogResult.Cancel;
-                        selectionForm.Close();
-                    };
-                    
-                    selectionForm.ShowDialog();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    $"Error during restore process: {ex.Message}",
-                    "Restore Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-            }
-        }
-        
-        private void ShowAbout()
-        {
-            MessageBox.Show(
-                $"{Program.APP_NAME} v1.0\n" +
-                "© 2025 Your Company\n\n" +
-                "A complete sales billing system with multi-item bills,\n" +
-                "party master, broker management, and payment tracking.\n\n" +
-                "Features:\n" +
-                "• Party management with credit days\n" +
-                "• Item management with charges\n" +
-                "• Multi-item billing\n" +
-                "• Broker management system\n" +
-                "• Payment tracking with partial payment support\n" +
-                "• Outstanding bills management\n" +
-                "• Mock data generation for testing",
-                "About " + Program.APP_NAME,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
-        }
-
-        private void ShowKeyboardShortcuts()
-        {
-            MessageBox.Show(
-                "ACCOUNTING SOFTWARE KEYBOARD SHORTCUTS\n\n" +
-                "=== TRANSACTIONS ===\n" +
-                "F9: New Sales Entry\n" +
-                "Ctrl+F9: Sales List\n" +
-                "F5: Payment Entry\n" +
-                "Ctrl+F5: Payment List\n\n" +
-                "=== MASTERS ===\n" +
-                "Alt+F1: Party Master\n" +
-                "Alt+F2: Item Master\n" +
-                "Alt+F3: Broker Master\n\n" +
-                "=== REPORTS ===\n" +
-                "Ctrl+R: Outstanding Report\n\n" +
-                "=== UTILITIES ===\n" +
-                "Ctrl+Alt+S: Settings\n" +
-                "Ctrl+B: Backup Data\n" +
-                "Ctrl+Alt+R: Restore Data\n\n" +
-                "=== HELP & SYSTEM ===\n" +
-                "F1: Show Keyboard Shortcuts\n" +
-                "Ctrl+F1: About\n" +
-                "Alt+F4: Exit Application\n\n" +
-                "=== FORM NAVIGATION ===\n" +
-                "Tab: Next Field\n" +
-                "Shift+Tab: Previous Field\n" +
-                "Enter: Confirm/Next Cell\n" +
-                "Escape: Cancel/Close\n" +
-                "F4: Open Dropdown\n" +
-                "Arrow Keys: Navigate in Grids\n" +
-                "Page Up/Down: Scroll Lists\n" +
-                "Home/End: First/Last Item\n" +
-                "Delete: Delete Selected Item\n" +
-                "F2: Edit Selected Item\n" +
-                "F5: Refresh (in lists)\n" +
-                "Ctrl+F: Find/Search\n\n" +
-                "=== BILL ENTRY ===\n" +
-                "Ctrl+S: Save Bill\n" +
-                "F2: Focus on Party\n" +
-                "F3: Focus on Items Grid\n" +
-                "Ctrl+N: Add New Row\n\n" +
-                "=== PAYMENT ENTRY ===\n" +
-                "Ctrl+S: Save Payment\n" +
-                "Ctrl+A: Auto Allocate\n" +
-                "Ctrl+R: Clear Allocation\n" +
-                "Alt+P: Party Filter\n" +
-                "Alt+B: Broker Filter",
-                "Complete Keyboard Shortcuts Reference",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
-        }
-
-        private void MainForm_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.F9)
-            {
-                // F9: New Sales Entry
-                NewBill();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.F9)
-            {
-                // Ctrl+F9: Sales List
-                ShowBillList();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.KeyCode == Keys.F5)
-            {
-                // F5: Payment Entry
-                ShowPaymentEntry();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.F5)
-            {
-                // Ctrl+F5: Payment List
-                ShowPaymentList();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Alt && e.KeyCode == Keys.F1)
-            {
-                // Alt+F1: Party Master
-                ShowPartyMaster();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Alt && e.KeyCode == Keys.F2)
-            {
-                // Alt+F2: Item Master
-                ShowItemMaster();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Alt && e.KeyCode == Keys.F3)
-            {
-                // Alt+F3: Broker Master
-                ShowBrokerMaster();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.R)
-            {
-                // Ctrl+R: Outstanding Report
-                ShowOutstandingReport();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Alt && e.KeyCode == Keys.F4)
-            {
-                // Alt+F4: Exit
-                this.Close();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.Alt && e.KeyCode == Keys.S)
-            {
-                // Ctrl+Alt+S: Settings
-                ShowSettings();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.B)
-            {
-                // Ctrl+B: Backup Data
-                BackupData();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.Alt && e.KeyCode == Keys.R)
-            {
-                // Ctrl+Alt+R: Restore Data
-                RestoreData();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.KeyCode == Keys.F1)
-            {
-                // F1: Keyboard Shortcuts
-                ShowKeyboardShortcuts();
-                e.SuppressKeyPress = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.F1)
-            {
-                // Ctrl+F1: About
-                ShowAbout();
-                e.SuppressKeyPress = true;
-            }
-        }
-        
-        private void CreateDashboardPanel()
-        {
-            // Create main dashboard panel
-            Panel dashboardPanel = new Panel();
-            dashboardPanel.Dock = DockStyle.Fill;
-            dashboardPanel.BackColor = Color.FromArgb(250, 250, 250);
-            dashboardPanel.Padding = new Padding(20);
-            
-            // Create application icon
-            PictureBox appIcon = new PictureBox();
-            try
-            {
-                string iconPath = Path.Combine(Application.StartupPath, "Resources", "app-icon.png");
-                if (File.Exists(iconPath))
-                {
-                    appIcon.Image = Image.FromFile(iconPath);
-                    appIcon.SizeMode = PictureBoxSizeMode.Zoom;
-                    appIcon.Size = new Size(80, 80);
-                    appIcon.Location = new Point(50, 50);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not load dashboard icon: {ex.Message}");
-            }
-            
-            // Create title label
-            Label titleLabel = new Label();
-            titleLabel.Text = Program.APP_NAME;
-            titleLabel.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
-            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
-            titleLabel.AutoSize = true;
-            titleLabel.Location = new Point(150, 50);
-            
-            // Create subtitle label
-            Label subtitleLabel = new Label();
-            subtitleLabel.Text = "Complete Billing & Accounting Solution";
-            subtitleLabel.Font = new Font("Segoe UI", 12F, FontStyle.Regular);
-            subtitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
-            subtitleLabel.AutoSize = true;
-            subtitleLabel.Location = new Point(150, 90);
-            
-            // Create quick access panel
-            Panel quickAccessPanel = CreateQuickAccessPanel();
-            quickAccessPanel.Location = new Point(50, 150);
-            
-            
-            // Add controls to dashboard
-            dashboardPanel.Controls.Add(appIcon);
-            dashboardPanel.Controls.Add(titleLabel);
-            dashboardPanel.Controls.Add(subtitleLabel);
-            dashboardPanel.Controls.Add(quickAccessPanel);
-            
-            // Add dashboard to form
-            this.Controls.Add(dashboardPanel);
-        }
-        
-        private Panel CreateQuickAccessPanel()
-        {
-            Panel panel = new Panel();
-            panel.Size = new Size(350, 400);
-            panel.BackColor = Color.White;
-            panel.BorderStyle = BorderStyle.FixedSingle;
-            
-            // Title
-            Label titleLabel = new Label();
-            titleLabel.Text = "Quick Access";
-            titleLabel.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            titleLabel.ForeColor = Color.FromArgb(45, 45, 48);
-            titleLabel.Location = new Point(15, 15);
-            titleLabel.AutoSize = true;
-            
-            // Create buttons
-            Button btnNewBill = CreateQuickAccessButton("New Sales Entry", "F9", 50);
-            Button btnPayment = CreateQuickAccessButton("Payment Entry", "F5", 90);
-            Button btnBillList = CreateQuickAccessButton("Sales List", "Ctrl+F9", 130);
-            Button btnPaymentList = CreateQuickAccessButton("Payment List", "Ctrl+F5", 170);
-            Button btnPartyMaster = CreateQuickAccessButton("Party Master", "Alt+F1", 210);
-            Button btnItemMaster = CreateQuickAccessButton("Item Master", "Alt+F2", 250);
-            
-            // Wire up events
-            btnNewBill.Click += (s, e) => NewBill();
-            btnPayment.Click += (s, e) => ShowPaymentEntry();
-            btnBillList.Click += (s, e) => ShowBillList();
-            btnPaymentList.Click += (s, e) => ShowPaymentList();
-            btnPartyMaster.Click += (s, e) => ShowPartyMaster();
-            btnItemMaster.Click += (s, e) => ShowItemMaster();
-            
-            // Add controls
-            panel.Controls.Add(titleLabel);
-            panel.Controls.Add(btnNewBill);
-            panel.Controls.Add(btnPayment);
-            panel.Controls.Add(btnBillList);
-            panel.Controls.Add(btnPaymentList);
-            panel.Controls.Add(btnPartyMaster);
-            panel.Controls.Add(btnItemMaster);
-            
-            return panel;
-        }
-        
-        private Button CreateQuickAccessButton(string text, string shortcut, int top)
-        {
-            Button btn = new Button();
-            btn.Text = $"{text} ({shortcut})";
-            btn.Size = new Size(320, 30);
-            btn.Location = new Point(15, top);
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
-            btn.BackColor = Color.FromArgb(245, 245, 245);
-            btn.ForeColor = Color.FromArgb(45, 45, 48);
-            btn.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
-            btn.TextAlign = ContentAlignment.MiddleLeft;
-            btn.Cursor = Cursors.Hand;
-            
-            // Hover effects
-            btn.MouseEnter += (s, e) => {
-                btn.BackColor = Color.FromArgb(230, 230, 230);
-                btn.FlatAppearance.BorderColor = Color.FromArgb(100, 100, 100);
-            };
-            btn.MouseLeave += (s, e) => {
-                btn.BackColor = Color.FromArgb(245, 245, 245);
-                btn.FlatAppearance.BorderColor = Color.FromArgb(200, 200, 200);
-            };
-            
-            return btn;
-        }
-        
-        
-        private void CreateStatusBar()
-        {
-            // Status bar at bottom
-            StatusStrip statusStrip = new StatusStrip();
-            statusStrip.BackColor = Color.FromArgb(45, 45, 48);
-            statusStrip.ForeColor = Color.White;
-            
-            // Create status bar labels
-            statusUserLabel = new ToolStripStatusLabel();
-            statusUserLabel.ForeColor = Color.White;
-            statusUserLabel.Padding = new Padding(5, 0, 5, 0);
-            
-            statusCompanyLabel = new ToolStripStatusLabel();
-            statusCompanyLabel.ForeColor = Color.LightGreen;
-            statusCompanyLabel.Padding = new Padding(5, 0, 5, 0);
-            statusCompanyLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            statusCompanyLabel.BorderStyle = Border3DStyle.Etched;
-            
-            statusFYLabel = new ToolStripStatusLabel();
-            statusFYLabel.ForeColor = Color.LightBlue;
-            statusFYLabel.Padding = new Padding(5, 0, 5, 0);
-            statusFYLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            statusFYLabel.BorderStyle = Border3DStyle.Etched;
-            
-            statusDateLabel = new ToolStripStatusLabel();
-            statusDateLabel.ForeColor = Color.White;
-            statusDateLabel.Padding = new Padding(5, 0, 5, 0);
-            statusDateLabel.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            statusDateLabel.BorderStyle = Border3DStyle.Etched;
-            
-            statusTimeLabel = new ToolStripStatusLabel();
-            statusTimeLabel.ForeColor = Color.White;
-            statusTimeLabel.Padding = new Padding(5, 0, 5, 0);
-            
-            // Add labels to status strip
-            statusStrip.Items.Add(statusUserLabel);
-            statusStrip.Items.Add(statusCompanyLabel);
-            statusStrip.Items.Add(statusFYLabel);
-            statusStrip.Items.Add(new ToolStripStatusLabel() { Spring = true });
-            statusStrip.Items.Add(statusDateLabel);
-            statusStrip.Items.Add(statusTimeLabel);
-            
-            this.Controls.Add(statusStrip);
-            
-            UpdateStatusBar();
-        }
-        
-        private ToolStripStatusLabel statusDateLabel;
-        private ToolStripStatusLabel statusTimeLabel;
-        private ToolStripStatusLabel statusUserLabel;
-        private ToolStripStatusLabel statusCompanyLabel;
-        private ToolStripStatusLabel statusFYLabel;
-        
-        private void UpdateStatusBar()
-        {
-            // Update date and time
-            statusDateLabel.Text = DateTime.Now.ToString("dddd, dd MMM yyyy");
-            statusTimeLabel.Text = DateTime.Now.ToString("hh:mm:ss tt");
-            
-            // Update user info
-            if (Program.CurrentUser != null)
-            {
-                statusUserLabel.Text = $"User: {Program.CurrentUser.DisplayName}";
-            }
-            else
-            {
-                statusUserLabel.Text = "User: N/A";
-            }
-            
-            // Update company and financial year info
-            if (Program.ActiveCompany != null)
-            {
-                statusCompanyLabel.Text = $"Company: {Program.ActiveCompany.CompanyName}";
-                statusFYLabel.Text = $"FY: {Program.ActiveCompany.FinancialYearStart:dd/MM/yyyy} to {Program.ActiveCompany.FinancialYearEnd:dd/MM/yyyy}";
-            }
-            else
-            {
-                statusCompanyLabel.Text = "Company: N/A";
-                statusFYLabel.Text = "FY: N/A";
-            }
-        }
-        
-        // Required by Windows Forms designer
-        private void InitializeComponent()
-        {
-            this.SuspendLayout();
-            // 
-            // MainForm
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Name = "MainForm";
-            this.Text = "MainForm";
-            this.ResumeLayout(false);
-        }
+        #endregion
     }
-} 
+}

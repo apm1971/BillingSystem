@@ -1,8 +1,8 @@
 using System;
 using System.Windows.Forms;
+using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Forms;
 using SaleBillSystem.NET.Models;
-using SaleBillSystem.NET.Data;
 
 namespace SaleBillSystem.NET
 {
@@ -21,22 +21,16 @@ namespace SaleBillSystem.NET
             // Initialize database
             if (!DatabaseManager.Initialize())
             {
-                MessageBox.Show("Failed to initialize database. Application will now exit.", 
+                MessageBox.Show("Failed to initialize database. Application will now exit.",
                     "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Show login form
-            using (var loginForm = new LoginForm())
-            {
-                if (loginForm.ShowDialog() != DialogResult.OK)
-                {
-                    return;
-                }
-            
-                // Start the application with the main form
-                Application.Run(new MainForm());
-            }
+            // Update database schema to add any missing columns
+            DatabaseManager.UpdateDatabaseSchema();
+
+            // Start the application with the main form, which will handle the login process internally.
+            Application.Run(new MainForm());
         }
     }
 }

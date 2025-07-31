@@ -16,7 +16,11 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = "SELECT * FROM PartyMaster WHERE CompanyID = ? ORDER BY PartyName";
+            string sql = @"SELECT p.*, b.BrokerName 
+                          FROM PartyMaster p 
+                          LEFT JOIN BrokerMaster b ON p.BrokerID = b.BrokerID AND p.CompanyID = b.CompanyID 
+                          WHERE p.CompanyID = ? 
+                          ORDER BY p.PartyName";
             OleDbParameter param = new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID };
             
             DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
@@ -35,7 +39,10 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = "SELECT * FROM PartyMaster WHERE PartyID = ? AND CompanyID = ?";
+            string sql = @"SELECT p.*, b.BrokerName 
+                          FROM PartyMaster p 
+                          LEFT JOIN BrokerMaster b ON p.BrokerID = b.BrokerID AND p.CompanyID = b.CompanyID 
+                          WHERE p.PartyID = ? AND p.CompanyID = ?";
             OleDbParameter[] parameters = {
                 new OleDbParameter("PartyID", OleDbType.Integer) { Value = partyID },
                 new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
@@ -89,12 +96,15 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = "SELECT * FROM PartyMaster WHERE (PartyName LIKE ? OR City LIKE ? OR Phone LIKE ?) AND CompanyID = ? ORDER BY PartyName";
+            string sql = @"SELECT p.*, b.BrokerName 
+                          FROM PartyMaster p 
+                          LEFT JOIN BrokerMaster b ON p.BrokerID = b.BrokerID AND p.CompanyID = b.CompanyID 
+                          WHERE (p.PartyName LIKE ? OR p.Phone LIKE ?) AND p.CompanyID = ? 
+                          ORDER BY p.PartyName";
             
             string param = "%" + searchText + "%";
             DataTable dt = DatabaseManager.ExecuteQuery(sql, 
                 new OleDbParameter("PartyName", OleDbType.VarChar) { Value = param },
-                new OleDbParameter("City", OleDbType.VarChar) { Value = param },
                 new OleDbParameter("Phone", OleDbType.VarChar) { Value = param },
                 new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID });
                 
@@ -106,144 +116,62 @@ namespace SaleBillSystem.NET.Data
             return parties;
         }
         
-        // Add a new party
-        public static bool AddParty(Party party)
-        {
-            // Get the active company ID
-            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
-            
-            string sql = @"INSERT INTO PartyMaster 
-                (PartyName, Address, City, Phone, Email, CreditDays, BrokerID, BrokerName, CompanyID) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            
-            OleDbParameter[] parameters = {
-                new OleDbParameter("PartyName", party.PartyName),
-                new OleDbParameter("Address", party.Address),
-                new OleDbParameter("City", party.City),
-                new OleDbParameter("Phone", party.Phone),
-                new OleDbParameter("Email", party.Email),
-                // new OleDbParameter("GSTNo", party.GSTNo),
-                // new OleDbParameter("PAN", party.PAN),
-                // new OleDbParameter("OpeningBalance", party.OpeningBalance),
-                // new OleDbParameter("OpeningBalanceDate", party.OpeningBalanceDate),
-                new OleDbParameter("CreditDays", party.CreditDays),
-                party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
-                new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
-                new OleDbParameter("CompanyID", companyID)
-            };
-            
-            int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
-            
-            return result > 0;
-        }
+                 // Add a new party
+         public static bool AddParty(Party party)
+         {
+             // Get the active company ID
+             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+             
+             string sql = @"INSERT INTO PartyMaster 
+                 (PartyName, Address, Phone, BrokerID, CompanyID) 
+                 VALUES (?, ?, ?, ?, ?)";
+             
+             OleDbParameter[] parameters = {
+                 new OleDbParameter("PartyName", party.PartyName),
+                 new OleDbParameter("Address", party.Address),
+                 new OleDbParameter("Phone", party.Phone),
+                 party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
+                 new OleDbParameter("CompanyID", companyID)
+             };
+             
+             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
+             
+             return result > 0;
+         }
         
-        // Update an existing party
-        public static bool UpdateParty(Party party)
-        {
-            // Get the active company ID
-            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
-            
-            using (OleDbConnection conn = DatabaseManager.GetConnection())
-            {
-                conn.Open();
-                OleDbTransaction transaction = conn.BeginTransaction();
-                
-                try
-                {
-                    // First get the current party data to check if broker changed
-                    string getCurrentSql = "SELECT BrokerID FROM PartyMaster WHERE PartyID = ? AND CompanyID = ?";
-                    int? currentBrokerId = null;
-                    
-                    using (OleDbCommand getCurrentCmd = new OleDbCommand(getCurrentSql, conn, transaction))
-                    {
-                        getCurrentCmd.Parameters.AddWithValue("PartyID", party.PartyID);
-                        getCurrentCmd.Parameters.AddWithValue("CompanyID", companyID);
-                        object result = getCurrentCmd.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                        {
-                            currentBrokerId = Convert.ToInt32(result);
-                        }
-                    }
-                    
-                    // Update the party master
-                    string sql = @"UPDATE PartyMaster SET 
-                        PartyName = ?, Address = ?, City = ?, Phone = ?, Email = ?, 
-                        CreditDays = ?, BrokerID = ?, BrokerName = ?, CompanyID = ? 
-                        WHERE PartyID = ?";
-                    
-                    OleDbParameter[] parameters = {
-                        new OleDbParameter("PartyName", party.PartyName),
-                        new OleDbParameter("Address", party.Address),
-                        new OleDbParameter("City", party.City),
-                        new OleDbParameter("Phone", party.Phone),
-                        new OleDbParameter("Email", party.Email),
-                        new OleDbParameter("CreditDays", party.CreditDays),
-                        party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
-                        new OleDbParameter("BrokerName", party.BrokerName ?? string.Empty),
-                        new OleDbParameter("CompanyID", companyID),
-                        new OleDbParameter("PartyID", party.PartyID)
-                    };
-                    
-                    using (OleDbCommand cmd = new OleDbCommand(sql, conn, transaction))
-                    {
-                        cmd.Parameters.AddRange(parameters);
-                        int result = cmd.ExecuteNonQuery();
-                        
-                        if (result > 0)
-                        {
-                            // Update party name in all bills for this party
-                            string updateBillsSql = @"UPDATE BillMaster 
-                                SET PartyName = ? 
-                                WHERE PartyID = ? AND CompanyID = ?";
-                                
-                            using (OleDbCommand updateBillsCmd = new OleDbCommand(updateBillsSql, conn, transaction))
-                            {
-                                updateBillsCmd.Parameters.AddWithValue("PartyName", party.PartyName);
-                                updateBillsCmd.Parameters.AddWithValue("PartyID", party.PartyID);
-                                updateBillsCmd.Parameters.AddWithValue("CompanyID", companyID);
-                                updateBillsCmd.ExecuteNonQuery();
-                            }
-                            
-                            // If broker has changed, update broker info in bills
-                            if (currentBrokerId != party.BrokerID)
-                            {
-                                string updateBillsBrokerSql = @"UPDATE BillMaster 
-                                    SET BrokerID = ?, BrokerName = ? 
-                                    WHERE PartyID = ? AND CompanyID = ?";
-                                    
-                                using (OleDbCommand updateBillsBrokerCmd = new OleDbCommand(updateBillsBrokerSql, conn, transaction))
-                                {
-                                    if (party.BrokerID.HasValue)
-                                    {
-                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerID", party.BrokerID.Value);
-                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerName", party.BrokerName);
-                                    }
-                                    else
-                                    {
-                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerID", DBNull.Value);
-                                        updateBillsBrokerCmd.Parameters.AddWithValue("BrokerName", DBNull.Value);
-                                    }
-                                    updateBillsBrokerCmd.Parameters.AddWithValue("PartyID", party.PartyID);
-                                    updateBillsBrokerCmd.Parameters.AddWithValue("CompanyID", companyID);
-                                    updateBillsBrokerCmd.ExecuteNonQuery();
-                                }
-                            }
-                            
-                            transaction.Commit();
-                            return true;
-                        }
-                    }
-                    
-                    transaction.Rollback();
-                    return false;
-                }
-                catch (Exception)
-                {
-                    transaction.Rollback();
-                    return false;
-                }
-            }
-        }
+                 // Update an existing party
+         public static bool UpdateParty(Party party)
+         {
+             try
+             {
+                 // Get the active company ID
+                 int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+                 
+                 // Simple update without complex transaction
+                 string sql = @"UPDATE PartyMaster SET 
+                     PartyName = ?, Address = ?, Phone = ?, BrokerID = ? 
+                     WHERE PartyID = ? AND CompanyID = ?";
+                 
+                 OleDbParameter[] parameters = {
+                     new OleDbParameter("PartyName", party.PartyName),
+                     new OleDbParameter("Address", party.Address),
+                     new OleDbParameter("Phone", party.Phone),
+                     party.BrokerID.HasValue ? new OleDbParameter("BrokerID", party.BrokerID) : new OleDbParameter("BrokerID", DBNull.Value),
+                     new OleDbParameter("PartyID", party.PartyID),
+                     new OleDbParameter("CompanyID", companyID)
+                 };
+                 
+                 int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
+                 
+                 return result > 0;
+             }
+             catch (Exception ex)
+             {
+                 System.Windows.Forms.MessageBox.Show($"Error updating party: {ex.Message}", "Database Error", 
+                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                 return false;
+             }
+         }
         
         // Delete a party
         public static bool DeleteParty(int partyID)
@@ -286,14 +214,7 @@ namespace SaleBillSystem.NET.Data
                 PartyID = Convert.ToInt32(row["PartyID"]),
                 PartyName = row["PartyName"].ToString(),
                 Address = row["Address"].ToString(),
-                City = row["City"].ToString(),
                 Phone = row["Phone"].ToString(),
-                Email = row["Email"].ToString(),
-                // GSTNo = row["GSTNo"] != DBNull.Value ? row["GSTNo"].ToString() : string.Empty,
-                // PAN = row["PAN"] != DBNull.Value ? row["PAN"].ToString() : string.Empty,
-                // OpeningBalance = row["OpeningBalance"] != DBNull.Value ? Convert.ToDouble(row["OpeningBalance"]) : 0,
-                // OpeningBalanceDate = row["OpeningBalanceDate"] != DBNull.Value ? Convert.ToDateTime(row["OpeningBalanceDate"]) : DateTime.Today,
-                CreditDays = row["CreditDays"] != DBNull.Value ? Convert.ToInt32(row["CreditDays"]) : 0,
                 BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
                 BrokerName = row["BrokerName"] != DBNull.Value ? row["BrokerName"].ToString() : string.Empty,
                 CompanyID = row["CompanyID"] != DBNull.Value ? Convert.ToInt32(row["CompanyID"]) : 0

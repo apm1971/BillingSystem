@@ -1,18 +1,29 @@
 using System;
 using System.Data;
-using System.Data.OleDb; // Changed from SQLite to OleDb
+using System.Data.OleDb;
+using System.Windows.Forms;
 
 namespace SaleBillSystem.NET.Data
 {
-    public class SettingsService
+    /// <summary>
+    /// Manages reading and writing application settings to the database.
+    /// </summary>
+    public static class SettingsService
     {
-        // Get setting value by key
+        #region == Generic Core Methods ==
+
+        /// <summary>
+        /// Gets a setting's value by its key.
+        /// </summary>
+        /// <param name="key">The unique key of the setting.</param>
+        /// <param name="defaultValue">The value to return if the key is not found.</param>
+        /// <returns>The setting value as a string.</returns>
         public static string GetSetting(string key, string defaultValue = "")
         {
             try
             {
                 string sql = "SELECT SettingValue FROM Settings WHERE SettingKey = ?";
-                OleDbParameter param = new OleDbParameter("SettingKey", key);
+                var param = new OleDbParameter("SettingKey", key);
                 
                 object result = DatabaseManager.ExecuteScalar(sql, param);
                 
@@ -20,132 +31,96 @@ namespace SaleBillSystem.NET.Data
             }
             catch (Exception)
             {
+                // In case of error (e.g., table not ready), return the safe default.
                 return defaultValue;
             }
         }
 
-        // Set setting value
+        /// <summary>
+        /// Sets a setting's value. Creates the setting if it doesn't exist, otherwise updates it.
+        /// </summary>
+        /// <param name="key">The unique key of the setting.</param>
+        /// <param name="value">The value to save.</param>
+        /// <param name="description">An optional description of the setting.</param>
         public static bool SetSetting(string key, string value, string description = "")
         {
             try
             {
-                // Check if setting exists
                 string checkSql = "SELECT COUNT(*) FROM Settings WHERE SettingKey = ?";
-                OleDbParameter checkParam = new OleDbParameter("SettingKey", key);
-                
+                var checkParam = new OleDbParameter("SettingKey", key);
                 int count = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkSql, checkParam));
                 
                 if (count > 0)
                 {
                     // Update existing setting
                     string updateSql = "UPDATE Settings SET SettingValue = ?, Description = ? WHERE SettingKey = ?";
-                    OleDbParameter[] updateParams = {
+                    var updateParams = new OleDbParameter[]
+                    {
                         new OleDbParameter("SettingValue", value),
                         new OleDbParameter("Description", description),
                         new OleDbParameter("SettingKey", key)
                     };
-                    
                     DatabaseManager.ExecuteNonQuery(updateSql, updateParams);
                 }
                 else
                 {
                     // Insert new setting
                     string insertSql = "INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES (?, ?, ?)";
-                    OleDbParameter[] insertParams = {
+                    var insertParams = new OleDbParameter[]
+                    {
                         new OleDbParameter("SettingKey", key),
                         new OleDbParameter("SettingValue", value),
                         new OleDbParameter("Description", description)
                     };
-                    
                     DatabaseManager.ExecuteNonQuery(insertSql, insertParams);
                 }
-                
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                MessageBox.Show($"Error saving setting '{key}': {ex.Message}", "Database Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
         }
+        
+        #endregion
 
-        // Get interest rate
-        public static double GetInterestRate()
+        #region == Specific Setting Helpers ==
+
+        public static int GetDefaultCreditDays()
         {
-            string value = GetSetting("InterestRate", "12.0");
-            if (double.TryParse(value, out double rate))
-                return rate;
-            return 12.0; // Default 12%
+            string value = GetSetting("DefaultCreditDays", "30");
+            return int.TryParse(value, out int days) ? days : 30;
         }
 
-        // Set interest rate
-        public static bool SetInterestRate(double rate)
+        public static bool SetDefaultCreditDays(int days)
         {
-            return SetSetting("InterestRate", rate.ToString(), "Annual interest rate percentage for overdue bills");
+            return SetSetting("DefaultCreditDays", days.ToString(), "Default credit days to show on payment screen");
         }
 
-        // Get discount rate
-        public static double GetDiscountRate()
+        public static decimal GetDefaultInterestRate()
         {
-            string value = GetSetting("DiscountRate", "1.0");
-            if (double.TryParse(value, out double rate))
-                return rate;
-            return 1.0; // Default 1%
+            string value = GetSetting("DefaultInterestRate", "18.0");
+            return decimal.TryParse(value, out decimal rate) ? rate : 18.0m;
         }
 
-        // Set discount rate
-        public static bool SetDiscountRate(double rate)
+        public static bool SetDefaultInterestRate(decimal rate)
         {
-            return SetSetting("DiscountRate", rate.ToString(), "Discount rate percentage for early payment");
+            return SetSetting("DefaultInterestRate", rate.ToString("F2"), "Default annual interest rate (%) to show on payment screen");
         }
 
-        // Get company name
-        public static string GetCompanyName()
+        public static decimal GetDefaultDiscountRate()
         {
-            return GetSetting("CompanyName", "Your Company Name");
+            string value = GetSetting("DefaultDiscountRate", "1.0");
+            return decimal.TryParse(value, out decimal rate) ? rate : 1.0m;
         }
 
-        // Set company name
-        public static bool SetCompanyName(string name)
+        public static bool SetDefaultDiscountRate(decimal rate)
         {
-            return SetSetting("CompanyName", name, "Company name for reports");
+            return SetSetting("DefaultDiscountRate", rate.ToString("F2"), "Default discount rate (%) for early payments to show on payment screen");
         }
 
-        // Get company address
-        public static string GetCompanyAddress()
-        {
-            return GetSetting("CompanyAddress", "Your Company Address");
-        }
-
-        // Set company address
-        public static bool SetCompanyAddress(string address)
-        {
-            return SetSetting("CompanyAddress", address, "Company address for reports");
-        }
-
-        // Get database path
-        public static string GetDatabasePath()
-        {
-            return GetSetting("DatabasePath", "");
-        }
-
-        // Set database path
-        public static bool SetDatabasePath(string path)
-        {
-            return DatabaseManager.SetDatabasePath(path);
-        }
-
-        // Get all settings
-        public static DataTable GetAllSettings()
-        {
-            try
-            {
-                string sql = "SELECT * FROM Settings ORDER BY SettingKey";
-                return DatabaseManager.ExecuteQuery(sql);
-            }
-            catch (Exception)
-            {
-                return new DataTable();
-            }
-        }
+        #endregion
     }
-} 
+}

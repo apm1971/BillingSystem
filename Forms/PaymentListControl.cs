@@ -1,0 +1,161 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using SaleBillSystem.NET.Data;
+using SaleBillSystem.NET.Models;
+
+namespace SaleBillSystem.NET.Forms
+{
+    public partial class PaymentListControl : UserControl
+    {
+        public event EventHandler? CloseRequested;
+        private List<PaymentViewModel> _allPayments;
+
+        public PaymentListControl()
+        {
+            InitializeComponent();
+        }
+
+        private void PaymentListControl_Load(object? sender, EventArgs e)
+        {
+            SetupDataGridView();
+            LoadPayments();
+            SetupEventHandlers();
+        }
+
+        #region Setup
+
+        private void SetupDataGridView()
+        {
+            dgvPayments.AutoGenerateColumns = false;
+            dgvPayments.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvPayments.MultiSelect = false;
+            dgvPayments.AllowUserToAddRows = false;
+            dgvPayments.RowHeadersVisible = false;
+            dgvPayments.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 120, 215);
+            dgvPayments.DefaultCellStyle.SelectionForeColor = Color.White;
+            dgvPayments.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            dgvPayments.DefaultCellStyle.Font = new Font("Segoe UI", 9.75F);
+            dgvPayments.RowTemplate.Height = 28;
+
+            dgvPayments.Columns.Clear();
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentID", HeaderText = "ID", Width = 80 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentDate", HeaderText = "Payment Date", DefaultCellStyle = new DataGridViewCellStyle { Format = "dd-MMM-yyyy" }, Width = 120 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PartyName", HeaderText = "Party Name", Width = 250 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentMethod", HeaderText = "Method", Width = 100 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Reference", HeaderText = "Reference", Width = 150 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmountPaid", HeaderText = "Amount Paid (₹)", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
+        }
+
+        private void SetupEventHandlers()
+        {
+            txtSearch.TextChanged += TxtSearch_TextChanged;
+            btnNewPayment.Click += BtnNewPayment_Click;
+            btnDelete.Click += BtnDelete_Click;
+            btnRefresh.Click += BtnRefresh_Click;
+            dgvPayments.CellDoubleClick += DgvPayments_CellDoubleClick;
+            this.KeyDown += PaymentListControl_KeyDown;
+        }
+
+        #endregion
+
+        #region Data Operations
+
+        private void LoadPayments()
+        {
+            try
+            {
+                int companyId = 1; // Replace with Program.ActiveCompany.CompanyID
+                _allPayments = PaymentService.GetAllPaymentsForDisplay(companyId);
+                FilterAndBindPayments();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading payments: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void FilterAndBindPayments()
+        {
+            string searchText = txtSearch.Text.Trim().ToLower();
+            List<PaymentViewModel> filteredList;
+
+            if (string.IsNullOrEmpty(searchText))
+            {
+                filteredList = _allPayments;
+            }
+            else
+            {
+                filteredList = _allPayments
+                    .Where(p => p.PartyName.ToLower().Contains(searchText) ||
+                                (p.Reference != null && p.Reference.ToLower().Contains(searchText)))
+                    .ToList();
+            }
+            dgvPayments.DataSource = filteredList;
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void TxtSearch_TextChanged(object? sender, EventArgs e)
+        {
+            FilterAndBindPayments();
+        }
+
+        private void BtnNewPayment_Click(object? sender, EventArgs e)
+        {
+            var parentForm = this.FindForm() as MainForm;
+            parentForm?.ShowControl(new PaymentEntryControl());
+        }
+
+        private void BtnDelete_Click(object? sender, EventArgs e)
+        {
+            if (dgvPayments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a payment to delete.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var selectedPayment = dgvPayments.SelectedRows[0].DataBoundItem as PaymentViewModel;
+            if (selectedPayment == null) return;
+
+            if (MessageBox.Show($"Are you sure you want to delete Payment ID {selectedPayment.PaymentID}?\nThis will also delete all associated ledger entries and cannot be undone.", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                // Call the new, fully implemented delete method
+                if (PaymentService.DeletePayment(selectedPayment.PaymentID))
+                {
+                    MessageBox.Show("Payment deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    LoadPayments(); // Refresh the list
+                }
+            }
+        }
+
+        private void BtnRefresh_Click(object? sender, EventArgs e)
+        {
+            LoadPayments();
+        }
+
+        private void DgvPayments_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            // Future feature: Open a detailed view of the selected payment voucher.
+            MessageBox.Show("Viewing payment voucher details can be implemented here.", "View Details", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void PaymentListControl_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                CloseRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (e.KeyCode == Keys.F5)
+            {
+                LoadPayments();
+            }
+        }
+
+        #endregion
+    }
+}

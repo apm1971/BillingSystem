@@ -28,9 +28,8 @@ namespace SaleBillSystem.NET.Data
                     ItemID = Convert.ToInt32(row["ItemID"]),
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
-                    Rate = Convert.ToDouble(row["Rate"]),
-                    Charges = Convert.ToDouble(row["Charges"]),
-                    StockQuantity = Convert.ToDouble(row["StockQuantity"]),
+                    DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
+                    Charges = Convert.ToDecimal(row["Charges"]),
                     CompanyID = Convert.ToInt32(row["CompanyID"])
                 };
                 
@@ -63,9 +62,8 @@ namespace SaleBillSystem.NET.Data
                     ItemID = Convert.ToInt32(row["ItemID"]),
                     ItemName = row["ItemName"].ToString(),
                     Unit = row["Unit"].ToString(),
-                    Rate = Convert.ToDouble(row["Rate"]),
-                    Charges = Convert.ToDouble(row["Charges"]),
-                    StockQuantity = Convert.ToDouble(row["StockQuantity"]),
+                    DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
+                    Charges = Convert.ToDecimal(row["Charges"]),
                     CompanyID = Convert.ToInt32(row["CompanyID"])
                 };
                 
@@ -104,15 +102,14 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"INSERT INTO ItemMaster (ItemName, Unit, Rate, Charges, StockQuantity, CompanyID) 
-                         VALUES (?, ?, ?, ?, ?, ?)";
+            string sql = @"INSERT INTO ItemMaster (ItemName, Unit, DefaultRate, Charges, CompanyID) 
+                         VALUES (?, ?, ?, ?, ?)";
             
             OleDbParameter[] parameters = {
                 new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
                 new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
-                new OleDbParameter("Rate", OleDbType.Double) { Value = item.Rate },
-                new OleDbParameter("Charges", OleDbType.Double) { Value = item.Charges },
-                new OleDbParameter("StockQuantity", OleDbType.Double) { Value = item.StockQuantity },
+                new OleDbParameter("DefaultRate", OleDbType.Decimal) { Value = item.DefaultRate },
+                new OleDbParameter("Charges", OleDbType.Decimal) { Value = item.Charges },
                 new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
             };
             
@@ -124,27 +121,34 @@ namespace SaleBillSystem.NET.Data
         // Update an existing item
         public static bool UpdateItem(Item item)
         {
-            // Get the active company ID
-            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
-            
-            string sql = @"UPDATE ItemMaster SET 
-                         ItemName = ?, Unit = ?, Rate = ?, Charges = ?, StockQuantity = ?, CompanyID = ? 
-                         WHERE ItemID = ? AND CompanyID = ?";
-            
-            OleDbParameter[] parameters = {
-                new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
-                new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
-                new OleDbParameter("Rate", OleDbType.Double) { Value = item.Rate },
-                new OleDbParameter("Charges", OleDbType.Double) { Value = item.Charges },
-                new OleDbParameter("StockQuantity", OleDbType.Double) { Value = item.StockQuantity },
-                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
-                new OleDbParameter("ItemID", OleDbType.Integer) { Value = item.ItemID },
-                new OleDbParameter("CompanyID2", OleDbType.Integer) { Value = companyID }
-            };
-            
-            int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
-            
-            return result > 0;
+            try
+            {
+                // Get the active company ID
+                int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+                
+                string sql = @"UPDATE ItemMaster SET 
+                             ItemName = ?, Unit = ?, DefaultRate = ?, Charges = ? 
+                             WHERE ItemID = ? AND CompanyID = ?";
+                
+                OleDbParameter[] parameters = {
+                    new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
+                    new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
+                    new OleDbParameter("DefaultRate", OleDbType.Decimal) { Value = item.DefaultRate },
+                    new OleDbParameter("Charges", OleDbType.Decimal) { Value = item.Charges },
+                    new OleDbParameter("ItemID", OleDbType.Integer) { Value = item.ItemID },
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+                };
+                
+                int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
+                
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error updating item: {ex.Message}", "Database Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
         }
         
         // Delete an item
@@ -189,9 +193,8 @@ namespace SaleBillSystem.NET.Data
                 ItemID = Convert.ToInt32(row["ItemID"]),
                 ItemName = row["ItemName"].ToString(),
                 Unit = row["Unit"].ToString(),
-                Rate = Convert.ToDouble(row["Rate"]),
-                Charges = Convert.ToDouble(row["Charges"]),
-                StockQuantity = Convert.ToDouble(row["StockQuantity"]),
+                DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
+                Charges = Convert.ToDecimal(row["Charges"]),
                 CompanyID = Convert.ToInt32(row["CompanyID"])
             };
         }

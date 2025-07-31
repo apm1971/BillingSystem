@@ -8,66 +8,42 @@ using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET.Forms
 {
-    public partial class ItemMasterForm : Form
+    public partial class ItemMasterUserControl : UserControl
     {
         private List<Item> items = new List<Item>();
-        private List<Item> filteredItems = new List<Item>(); // Add filtered items list
+        private List<Item> filteredItems = new List<Item>();
         private Item currentItem = new Item();
         private bool isNewItem = true;
-        private bool isDialog = false;
 
-        public ItemMasterForm(bool isDialogMode = false)
+        public ItemMasterUserControl()
         {
             InitializeComponent();
-            isDialog = isDialogMode;
+            LoadItems();
             ConfigureControls();
             SetupDataGrid();
             
-            // Enable key preview to handle keyboard shortcuts
-            this.KeyPreview = true;
-            this.KeyDown += ItemMasterForm_KeyDown;
+            // Handle key events for the UserControl
+            this.KeyDown += ItemMasterUserControl_KeyDown;
         }
 
-        private void ItemMasterForm_KeyDown(object sender, KeyEventArgs e)
+        private void ItemMasterUserControl_Load(object sender, EventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
-            {
-                // Handle Escape key
-                e.Handled = true;
-                this.Close();
-            }
-            else if (e.Control && e.KeyCode == Keys.S)
-            {
-                // Handle Ctrl+S
-                e.Handled = true;
-                btnSave.PerformClick();
-            }
-        }
-
-        private void ItemMasterForm_Load(object sender, EventArgs e)
-        {
-            LoadItems();
+            ConfigureControls();
+            SetupDataGrid();
             ClearForm();
         }
 
         private void ConfigureControls()
         {
-            // Set form properties
-            this.Text = "Item Master";
-            this.WindowState = FormWindowState.Maximized;
-            this.StartPosition = FormStartPosition.CenterScreen;
-
             // Configure text boxes
             txtItemName.MaxLength = 100;
             txtUnit.MaxLength = 20;
-            txtRate.TextAlign = HorizontalAlignment.Right;
+            txtDefaultRate.TextAlign = HorizontalAlignment.Right;
             txtCharges.TextAlign = HorizontalAlignment.Right;
-            txtStockQuantity.TextAlign = HorizontalAlignment.Right;
 
             // Set default values
-            txtRate.Text = "0.00";
+            txtDefaultRate.Text = "0.00";
             txtCharges.Text = "0.00";
-            txtStockQuantity.Text = "0.00";
 
             // Setup search functionality
             txtSearch.TextChanged += txtSearch_TextChanged;
@@ -103,9 +79,9 @@ namespace SaleBillSystem.NET.Forms
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Rate",
-                HeaderText = "Rate",
-                DataPropertyName = "Rate",
+                Name = "DefaultRate",
+                HeaderText = "Default Rate",
+                DataPropertyName = "DefaultRate",
                 Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
@@ -116,15 +92,6 @@ namespace SaleBillSystem.NET.Forms
                 HeaderText = "Charges",
                 DataPropertyName = "Charges",
                 Width = 80,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
-            });
-
-            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "StockQuantity",
-                HeaderText = "Stock Qty",
-                DataPropertyName = "StockQuantity",
-                Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
@@ -157,9 +124,8 @@ namespace SaleBillSystem.NET.Forms
 
             txtItemName.Text = string.Empty;
             txtUnit.Text = string.Empty;
-            txtRate.Text = "0.00";
+            txtDefaultRate.Text = "0.00";
             txtCharges.Text = "0.00";
-            txtStockQuantity.Text = "0.00";
 
             txtItemName.Focus();
             btnDelete.Enabled = false;
@@ -172,9 +138,8 @@ namespace SaleBillSystem.NET.Forms
 
             txtItemName.Text = item.ItemName;
             txtUnit.Text = item.Unit;
-            txtRate.Text = item.Rate.ToString("N2");
+            txtDefaultRate.Text = item.DefaultRate.ToString("N2");
             txtCharges.Text = item.Charges.ToString("N2");
-            txtStockQuantity.Text = item.StockQuantity.ToString("N2");
 
             btnDelete.Enabled = true;
         }
@@ -186,9 +151,9 @@ namespace SaleBillSystem.NET.Forms
                 ItemID = currentItem.ItemID,
                 ItemName = txtItemName.Text.Trim(),
                 Unit = txtUnit.Text.Trim(),
-                Rate = Convert.ToDouble(txtRate.Text),
-                Charges = Convert.ToDouble(txtCharges.Text),
-                StockQuantity = Convert.ToDouble(txtStockQuantity.Text)
+                DefaultRate = Convert.ToDecimal(txtDefaultRate.Text),
+                Charges = Convert.ToDecimal(txtCharges.Text),
+                CompanyID = Program.ActiveCompany?.CompanyID ?? 1
             };
 
             return item;
@@ -241,22 +206,23 @@ namespace SaleBillSystem.NET.Forms
                 }
                 else
                 {
+                    // Debug information
+                    string debugInfo = $"Updating item: ID={item.ItemID}, Name={item.ItemName}, CompanyID={item.CompanyID}";
+                    System.Diagnostics.Debug.WriteLine(debugInfo);
+                    
                     success = ItemService.UpdateItem(item);
                     if (success)
                         MessageBox.Show("Item updated successfully", "Success", 
                             MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    else
+                        MessageBox.Show("Failed to update item. No rows were affected.", "Update Failed",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
 
                 if (success)
                 {
                     LoadItems();
                     ClearForm();
-                    
-                    // Only set DialogResult if form is being used as a dialog
-                    if (isDialog)
-                    {
-                    this.DialogResult = DialogResult.OK;
-                    }
                 }
             }
             catch (Exception ex)
@@ -292,11 +258,6 @@ namespace SaleBillSystem.NET.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-        }
-
-        private void btnClose_Click(object sender, EventArgs e)
-        {
-            Close();
         }
 
         private void dgvItems_SelectionChanged(object sender, EventArgs e)
@@ -349,7 +310,7 @@ namespace SaleBillSystem.NET.Forms
                 dgvItems.DataSource = filteredItems;
             }
 
-                lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
+            lblTotalItems.Text = $"Total Items: {filteredItems.Count}";
 
             // If there are filtered items, select the first one
             if (filteredItems.Count > 0)
@@ -364,6 +325,43 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
+        private void ItemMasterUserControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                // In a UserControl, you typically don't close the control itself with Escape.
+                // You might raise an event for the parent form to handle or simply do nothing.
+                e.Handled = true;
+                // If you want to signal the parent form to close, you'd raise an event:
+                // OnCloseRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Handle Ctrl+S
+                e.Handled = true;
+                btnSave.PerformClick();
+            }
+        }
+
         #endregion
+
+        // Public event to notify the parent form if an item is selected (useful for dialog-like behavior)
+        public event EventHandler<ItemSelectedEventArgs> ItemSelected;
+
+        // Custom EventArgs for passing the selected Item
+        public class ItemSelectedEventArgs : EventArgs
+        {
+            public Item SelectedItem { get; }
+            public ItemSelectedEventArgs(Item item)
+            {
+                SelectedItem = item;
+            }
+        }
+
+        // Method to call when an item is selected and confirmed (e.g., from a double-click or a "Select" button)
+        private void OnItemSelected(Item item)
+        {
+            ItemSelected?.Invoke(this, new ItemSelectedEventArgs(item));
+        }
     }
 } 

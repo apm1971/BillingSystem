@@ -9,16 +9,10 @@ namespace SaleBillSystem.NET.Models
         public int ItemID { get; set; }
         public string ItemName { get; set; }
         public double Quantity { get; set; }
-        public double Rate { get; set; }
-        public double Amount { get; set; }
-        public double Charges { get; set; }
-        public double TotalAmount { get; set; }
-
-        // Calculate values based on quantity and rate
-        public void Calculate()
-        {
-            Amount = Quantity * Rate;
-            TotalAmount = Amount + Charges;
-        }
+        public decimal Rate { get; set; }
+        public decimal Amount { get; set; }
+        public decimal Charges { get; set; }
+        public decimal TotalAmount { get; set; }
+        public int CompanyID { get; set; }
     }
-} 
+}

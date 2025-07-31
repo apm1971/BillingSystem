@@ -95,7 +95,7 @@ namespace SaleBillSystem.NET.Data
                 using (OleDbConnection connection = new OleDbConnection(_connectionString))
                 {
                     connection.Open();
-                    UpgradeDatabase(connection);
+                    // UpgradeDatabase(connection);
                 }
                 
                 return true;
@@ -108,168 +108,6 @@ namespace SaleBillSystem.NET.Data
             }
         }
 
-        // Set a custom database path
-        public static bool SetDatabasePath(string newPath)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(newPath))
-                {
-                    return false;
-                }
-
-                // Validate the new database path
-                if (!File.Exists(newPath))
-                {
-                    // If file doesn't exist, check if we can create it
-                    string dir = Path.GetDirectoryName(newPath);
-                    if (!Directory.Exists(dir))
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(dir);
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    }
-                    
-                    // Try to create a new database at the specified path
-                    if (!CreateDatabase(newPath))
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    // Test if the file is a valid Access database
-                    try
-                    {
-                        if (!ValidateAndLoadExistingDatabase(newPath))
-                        {
-                            System.Windows.Forms.MessageBox.Show("The selected file is not a valid database or is missing required tables.", 
-                                "Invalid Database", System.Windows.Forms.MessageBoxButtons.OK, 
-                                System.Windows.Forms.MessageBoxIcon.Error);
-                            return false;
-                        }
-                    }
-                    catch
-                    {
-                        System.Windows.Forms.MessageBox.Show("The selected file is not a valid Access database.", 
-                            "Invalid Database", System.Windows.Forms.MessageBoxButtons.OK, 
-                            System.Windows.Forms.MessageBoxIcon.Error);
-                        return false;
-                    }
-                }
-
-                // Store the new path in settings
-                using (OleDbConnection conn = GetConnection())
-                {
-                    conn.Open();
-                    
-                    // Check if the setting already exists
-                    using (OleDbCommand cmd = new OleDbCommand("SELECT COUNT(*) FROM Settings WHERE SettingKey = 'DatabasePath'", conn))
-                    {
-                        int count = Convert.ToInt32(cmd.ExecuteScalar());
-                        
-                        if (count > 0)
-                        {
-                            // Update existing setting
-                            using (OleDbCommand updateCmd = new OleDbCommand(
-                                "UPDATE Settings SET SettingValue = ?, Description = ? WHERE SettingKey = 'DatabasePath'", conn))
-                            {
-                                updateCmd.Parameters.AddWithValue("SettingValue", newPath);
-                                updateCmd.Parameters.AddWithValue("Description", "Custom database path");
-                                updateCmd.ExecuteNonQuery();
-                            }
-                        }
-                        else
-                        {
-                            // Insert new setting
-                            using (OleDbCommand insertCmd = new OleDbCommand(
-                                "INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES (?, ?, ?)", conn))
-                            {
-                                insertCmd.Parameters.AddWithValue("SettingKey", "DatabasePath");
-                                insertCmd.Parameters.AddWithValue("SettingValue", newPath);
-                                insertCmd.Parameters.AddWithValue("Description", "Custom database path");
-                                insertCmd.ExecuteNonQuery();
-                            }
-                        }
-                    }
-                }
-                
-                CustomDatabasePath = newPath;
-                
-                // Show message to restart application
-                System.Windows.Forms.MessageBox.Show(
-                    "Database path has been changed. The application will now restart to apply the changes.", 
-                    "Database Path Changed", 
-                    System.Windows.Forms.MessageBoxButtons.OK, 
-                    System.Windows.Forms.MessageBoxIcon.Information);
-                
-                // Restart the application
-                System.Windows.Forms.Application.Restart();
-                Environment.Exit(0);
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show($"Error setting database path: {ex.Message}", 
-                    "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-                return false;
-            }
-        }
-
-        // Validate and load an existing database
-        private static bool ValidateAndLoadExistingDatabase(string dbPath)
-        {
-            try
-            {
-                string testConn = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
-                using (OleDbConnection conn = new OleDbConnection(testConn))
-                {
-                    conn.Open();
-                    
-                    // Check if essential tables exist
-                    var requiredTables = new[] { "Settings", "ItemMaster", "PartyMaster", "BillMaster", "BrokerMaster" };
-                    bool allTablesExist = true;
-                    
-                    foreach (var tableName in requiredTables)
-                    {
-                        var tableInfo = GetSchema(conn, "Tables", new string[] { null, null, tableName });
-                        if (tableInfo.Rows.Count == 0)
-                        {
-                            allTablesExist = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!allTablesExist)
-                    {
-                        // Ask user if they want to initialize the database with required tables
-                        if (System.Windows.Forms.MessageBox.Show(
-                            "The selected database is missing some required tables. Would you like to initialize it?",
-                            "Initialize Database",
-                            System.Windows.Forms.MessageBoxButtons.YesNo,
-                            System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes)
-                        {
-                            // Create required tables
-                            CreateTablesIfNeeded(conn);
-                            return true;
-                        }
-                        return false;
-                    }
-                    
-                    return true;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
         
         // Create database with required tables
         private static bool CreateDatabase(string dbPath)
@@ -329,110 +167,115 @@ namespace SaleBillSystem.NET.Data
                 using (OleDbConnection conn = new OleDbConnection(connectionString))
                 {
                     conn.Open();
-                    
+                    ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
+                            CompanyID COUNTER PRIMARY KEY,
+                            CompanyName TEXT(255) NOT NULL,
+                            Address MEMO,
+                            Phone TEXT(50)
+                    )");
+                    ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
+                            UserID COUNTER PRIMARY KEY,
+                            Username TEXT(50) UNIQUE NOT NULL,
+                            PasswordHash TEXT(255) NOT NULL,
+                            DisplayName TEXT(100),
+                            IsAdmin BIT 
+                    )");
                     // Create BrokerMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
                         BrokerID COUNTER PRIMARY KEY,
-                        BrokerName TEXT(255),
+                        BrokerName TEXT(255) NOT NULL,
                         Phone TEXT(50),
-                        Email TEXT(100)
+                        CompanyID INTEGER
                     )");
 
                     // Create PartyMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
                         PartyID COUNTER PRIMARY KEY,
-                        PartyName TEXT(255),
-                        Address TEXT(255),
-                        City TEXT(100),
+                        PartyName TEXT(255) NOT NULL,
+                        Address MEMO,
                         Phone TEXT(50),
-                        Email TEXT(100),
-                        GSTNo TEXT(50),
-                        PAN TEXT(50),
-                        OpeningBalance CURRENCY,
-                        OpeningBalanceDate DATETIME,
-                        CreditDays INTEGER,
-                        BrokerID INTEGER,
-                        BrokerName TEXT(255)
+                        CompanyID INTEGER,
+                        BrokerID INTEGER
                     )");
 
                     // Create ItemMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
                         ItemID COUNTER PRIMARY KEY,
-                        ItemCode TEXT(50),
-                        ItemName TEXT(255),
+                        ItemName TEXT(255) NOT NULL,
                         Unit TEXT(50),
-                        Rate CURRENCY,
-                        Charges CURRENCY,
-                        StockQuantity DOUBLE
+                        DefaultRate CURRENCY DEFAULT 0,
+                        Charges CURRENCY DEFAULT 0,
+                        CompanyID INTEGER
                     )");
 
                     // Create BillMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
                         BillID COUNTER PRIMARY KEY,
-                        BillNo TEXT(50),
-                        BillDate DATETIME,
-                        DueDate DATETIME,
-                        PartyID INTEGER,
-                        PartyName TEXT(255),
+                        BillNo TEXT(50) NOT NULL,
+                        BillDate DATETIME NOT NULL,
+                        PartyID INTEGER NOT NULL,
                         BrokerID INTEGER,
                         BrokerName TEXT(255),
-                        TotalAmount CURRENCY,
-                        TotalCharges CURRENCY,
-                        NetAmount CURRENCY,
-                        Notes MEMO
+                        OriginalAmount CURRENCY,
+                        AdditionalCharges CURRENCY DEFAULT 0,
+                        Status TEXT(20) DEFAULT 'Unpaid',
+                        Notes MEMO,
+                        CompanyID INTEGER
                     )");
 
                     // Create BillDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
                         BillDetailID COUNTER PRIMARY KEY,
-                        BillID INTEGER,
-                        ItemID INTEGER,
+                        BillID INTEGER NOT NULL,
+                        ItemID INTEGER NOT NULL,
                         ItemName TEXT(255),
-                        Quantity DOUBLE,
-                        Rate CURRENCY,
-                        Amount CURRENCY,
-                        Charges CURRENCY,
-                        TotalAmount CURRENCY
+                        Quantity DOUBLE NOT NULL,
+                        Rate CURRENCY NOT NULL,
+                        Amount CURRENCY NOT NULL,
+                        Charges CURRENCY DEFAULT 0,
+                        TotalAmount CURRENCY DEFAULT 0,
+                        CompanyID INTEGER
                     )");
 
-                    // Create PaymentMaster table
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
                         PaymentID COUNTER PRIMARY KEY,
-                        PaymentDate DATETIME,
-                        PaymentAmount CURRENCY,
+                        PartyID INTEGER NOT NULL,
+                        PaymentDate DATETIME NOT NULL,
+                        TotalAmountPaid CURRENCY NOT NULL,
                         PaymentMethod TEXT(50),
                         Reference TEXT(100),
-                        Notes MEMO
+                        CompanyID INTEGER
                     )");
-
                     // Create PaymentDetails table
-                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
-                        PaymentDetailID COUNTER PRIMARY KEY,
-                        PaymentID INTEGER,
+                    ExecuteNonQuery(conn, @"CREATE TABLE TransactionLedger (
+                        TransactionID COUNTER PRIMARY KEY,
+                        PartyID INTEGER NOT NULL,
                         BillID INTEGER,
-                        PreviousPaid CURRENCY,
-                        BalanceBefore CURRENCY,
-                        AllocatedAmount CURRENCY,
-                        BalanceAfter CURRENCY
+                        PaymentID INTEGER,
+                        TransactionDate DATETIME NOT NULL,
+                        TransactionType TEXT(50) NOT NULL,
+                        Description MEMO,
+                        DebitAmount CURRENCY DEFAULT 0,
+                        CreditAmount CURRENCY DEFAULT 0,
+                        PaymentMethod TEXT(50),
+                        Reference TEXT(100),
+                        UserID INTEGER,
+                        CompanyID INTEGER
                     )");
 
                     // Create Settings table
                     ExecuteNonQuery(conn, @"CREATE TABLE Settings (
-                        SettingID COUNTER PRIMARY KEY,
-                        SettingKey TEXT(100) UNIQUE,
+                        SettingKey TEXT(100) PRIMARY KEY,
                         SettingValue TEXT(255),
                         Description TEXT(255)
                     )");
 
                     // Insert default settings
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('CompanyName', 'Your Company Name', 'Company name for reports')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultCreditDays', '30', 'Default credit days to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultInterestRate', '18.0', 'Default annual interest rate (%) to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultDiscountRate', '1.0', 'Default discount rate (%) for early payments to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO UserMaster (Username, PasswordHash, DisplayName, IsAdmin) VALUES ('admin', 'admin', 'Admin', 1)");
+                    ExecuteNonQuery(conn, @"INSERT INTO CompanyMaster (CompanyName, Address, Phone) VALUES ('Your Company Name', 'Your Company Address', 'Your Company Phone')");
                 }
                 
                 return true;
@@ -456,59 +299,6 @@ namespace SaleBillSystem.NET.Data
         }
 
         // Upgrade database schema if needed
-        private static void UpgradeDatabase(OleDbConnection conn)
-        {
-            try
-            {
-                // Check for BrokerMaster table
-                var tableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
-
-                // Add other database upgrade checks here if needed
-                
-                // Check if UserMaster table exists
-                var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
-                if (userTableInfo.Rows.Count == 0)
-                {
-                    // Create UserMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
-                        UserID COUNTER PRIMARY KEY,
-                        Username TEXT(50) UNIQUE,
-                        PasswordHash TEXT(255),
-                        DisplayName TEXT(100),
-                        IsAdmin BIT,
-                        IsActive BIT,
-                        CreatedOn DATETIME,
-                        LastLogin DATETIME
-                    )");
-                }
-                
-                // Check if CompanyMaster table exists
-                var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
-                if (companyTableInfo.Rows.Count == 0)
-                {
-                    // Create CompanyMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
-                        CompanyID COUNTER PRIMARY KEY,
-                        CompanyName TEXT(255),
-                        PrintName TEXT(255),
-                        Address TEXT(255),
-                        City TEXT(100),
-                        FinancialYearStart DATETIME,
-                        FinancialYearEnd DATETIME,
-                        IsActive BIT,
-                        CreatedOn DATETIME
-                    )");
-                }
-
-                // Add CompanyID fields to existing tables
-                AddCompanyIDToTables(conn);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show($"Error upgrading database: {ex.Message}", "Database Error",
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-            }
-        }
 
         // Add CompanyID fields to relevant tables
         private static void AddCompanyIDToTables(OleDbConnection conn)
@@ -580,6 +370,80 @@ namespace SaleBillSystem.NET.Data
             {
                 System.Windows.Forms.MessageBox.Show($"Error adding CompanyID fields: {ex.Message}", "Database Error",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        // Update existing database schema to add missing columns
+        public static void UpdateDatabaseSchema(OleDbConnection existingConn = null)
+        {
+            OleDbConnection conn = existingConn ?? GetConnection();
+            bool shouldCloseConn = existingConn == null;
+            
+            try
+            {
+                if (shouldCloseConn)
+                {
+                    conn.Open();
+                }
+                
+                // Check if BillDetails table has Charges column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 Charges FROM BillDetails", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE BillDetails ADD COLUMN Charges CURRENCY DEFAULT 0", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding Charges column: {ex.Message}");
+                    }
+                }
+                
+                // Check if BillDetails table has TotalAmount column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 TotalAmount FROM BillDetails", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE BillDetails ADD COLUMN TotalAmount CURRENCY DEFAULT 0", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding TotalAmount column: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating database schema: {ex.Message}");
+            }
+            finally
+            {
+                if (shouldCloseConn && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
             }
         }
 
@@ -774,7 +638,7 @@ namespace SaleBillSystem.NET.Data
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
                         ('DiscountRate', '1.0', 'Discount rate percentage for early payment')");
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('CompanyName', 'Your Company Name', 'Company name for reports')");
+                        ('DefaultCreditDays', 'Your Company Name', 'Company name for reports')");
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
                         ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
                 }

@@ -1,6 +1,6 @@
 namespace SaleBillSystem.NET.Forms
 {
-    partial class ItemMasterForm
+    partial class ItemMasterUserControl
     {
         /// <summary>
         /// Required designer variable.
@@ -20,7 +20,7 @@ namespace SaleBillSystem.NET.Forms
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
+        #region Component Designer generated code
 
         /// <summary>
         /// Required method for Designer support - do not modify
@@ -34,18 +34,15 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.dgvItems = new System.Windows.Forms.DataGridView();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.txtStockQuantity = new System.Windows.Forms.TextBox();
-            this.label7 = new System.Windows.Forms.Label();
             this.txtCharges = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
-            this.txtRate = new System.Windows.Forms.TextBox();
+            this.txtDefaultRate = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.txtUnit = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.txtItemName = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.btnClose = new System.Windows.Forms.Button();
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnNew = new System.Windows.Forms.Button();
@@ -112,11 +109,9 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.txtStockQuantity);
-            this.groupBox3.Controls.Add(this.label7);
             this.groupBox3.Controls.Add(this.txtCharges);
             this.groupBox3.Controls.Add(this.label6);
-            this.groupBox3.Controls.Add(this.txtRate);
+            this.groupBox3.Controls.Add(this.txtDefaultRate);
             this.groupBox3.Controls.Add(this.label5);
             this.groupBox3.Controls.Add(this.txtUnit);
             this.groupBox3.Controls.Add(this.label4);
@@ -129,24 +124,6 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox3.TabIndex = 2;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Item Details";
-            // 
-            // txtStockQuantity
-            // 
-            this.txtStockQuantity.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtStockQuantity.Location = new System.Drawing.Point(150, 220);
-            this.txtStockQuantity.Name = "txtStockQuantity";
-            this.txtStockQuantity.Size = new System.Drawing.Size(150, 23);
-            this.txtStockQuantity.TabIndex = 11;
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label7.Location = new System.Drawing.Point(20, 223);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(92, 17);
-            this.label7.TabIndex = 10;
-            this.label7.Text = "Stock Quantity:";
             // 
             // txtCharges
             // 
@@ -166,13 +143,13 @@ namespace SaleBillSystem.NET.Forms
             this.label6.TabIndex = 8;
             this.label6.Text = "Charges:";
             // 
-            // txtRate
+            // txtDefaultRate
             // 
-            this.txtRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtRate.Location = new System.Drawing.Point(150, 150);
-            this.txtRate.Name = "txtRate";
-            this.txtRate.Size = new System.Drawing.Size(150, 23);
-            this.txtRate.TabIndex = 7;
+            this.txtDefaultRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtDefaultRate.Location = new System.Drawing.Point(150, 150);
+            this.txtDefaultRate.Name = "txtDefaultRate";
+            this.txtDefaultRate.Size = new System.Drawing.Size(150, 23);
+            this.txtDefaultRate.TabIndex = 7;
             // 
             // label5
             // 
@@ -182,7 +159,7 @@ namespace SaleBillSystem.NET.Forms
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(40, 17);
             this.label5.TabIndex = 6;
-            this.label5.Text = "Rate:";
+            this.label5.Text = "Default Rate:";
             // 
             // txtUnit
             // 
@@ -222,7 +199,6 @@ namespace SaleBillSystem.NET.Forms
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.btnClose);
             this.panel1.Controls.Add(this.btnDelete);
             this.panel1.Controls.Add(this.btnSave);
             this.panel1.Controls.Add(this.btnNew);
@@ -231,18 +207,6 @@ namespace SaleBillSystem.NET.Forms
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(450, 90);
             this.panel1.TabIndex = 3;
-            // 
-            // btnClose
-            // 
-            this.btnClose.BackColor = System.Drawing.Color.LightGray;
-            this.btnClose.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnClose.Location = new System.Drawing.Point(340, 20);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(90, 40);
-            this.btnClose.TabIndex = 3;
-            this.btnClose.Text = "Close";
-            this.btnClose.UseVisualStyleBackColor = false;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
             // 
             // btnDelete
             // 
@@ -296,21 +260,16 @@ namespace SaleBillSystem.NET.Forms
             this.lblTotalItems.Size = new System.Drawing.Size(70, 17);
             this.lblTotalItems.Text = "Total Items: 0";
             // 
-            // ItemMasterForm
+            // ItemMasterUserControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1200, 622);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.statusStrip1);
-            this.MinimumSize = new System.Drawing.Size(1000, 600);
-            this.Name = "ItemMasterForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Item Master";
-            this.Load += new System.EventHandler(this.ItemMasterForm_Load);
+            this.Name = "ItemMasterUserControl";
+            this.Size = new System.Drawing.Size(1200, 622);
+            this.Load += new System.EventHandler(this.ItemMasterUserControl_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
@@ -332,18 +291,15 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.DataGridView dgvItems;
         private System.Windows.Forms.GroupBox groupBox3;
-        private System.Windows.Forms.TextBox txtStockQuantity;
-        private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox txtCharges;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.TextBox txtRate;
+        private System.Windows.Forms.TextBox txtDefaultRate;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox txtUnit;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox txtItemName;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.Button btnClose;
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnNew;

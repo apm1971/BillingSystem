@@ -80,63 +80,23 @@ namespace SaleBillSystem.NET.Data
                     // Step 2: Insert the BillDetails records
                     foreach (var item in bill.BillItems)
                     {
-                        // Check if the new columns exist in the database
-                        bool hasChargesColumn = false;
-                        bool hasTotalAmountColumn = false;
+                        // Use the correct schema that matches the database table definition
+                        string detailSql = @"
+                            INSERT INTO BillDetails (BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, TotalAmount, CompanyID) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         
-                        try
+                        var itemParams = new OleDbParameter[]
                         {
-                            ExecuteScalar(conn, transaction, "SELECT TOP 1 Charges FROM BillDetails");
-                            hasChargesColumn = true;
-                        }
-                        catch { /* Column doesn't exist */ }
-                        
-                        try
-                        {
-                            ExecuteScalar(conn, transaction, "SELECT TOP 1 TotalAmount FROM BillDetails");
-                            hasTotalAmountColumn = true;
-                        }
-                        catch { /* Column doesn't exist */ }
-                        
-                        string detailSql;
-                        OleDbParameter[] itemParams;
-                        
-                        if (hasChargesColumn && hasTotalAmountColumn)
-                        {
-                            // Use new schema with all columns
-                            detailSql = @"
-                                INSERT INTO BillDetails (BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, TotalAmount, CompanyID) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                            itemParams = new OleDbParameter[]
-                            {
-                                new OleDbParameter("BillID", savedBillId),
-                                new OleDbParameter("ItemID", item.ItemID),
-                                new OleDbParameter("ItemName", item.ItemName),
-                                new OleDbParameter("Quantity", item.Quantity),
-                                new OleDbParameter("Rate", item.Rate),
-                                new OleDbParameter("Amount", item.Amount),
-                                new OleDbParameter("Charges", item.Charges),
-                                new OleDbParameter("TotalAmount", item.TotalAmount),
-                                new OleDbParameter("CompanyID", bill.CompanyID)
-                            };
-                        }
-                        else
-                        {
-                            // Use old schema without Charges and TotalAmount columns
-                            detailSql = @"
-                                INSERT INTO BillDetails (BillID, ItemID, ItemName, Quantity, Rate, Amount, CompanyID) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?)";
-                            itemParams = new OleDbParameter[]
-                            {
-                                new OleDbParameter("BillID", savedBillId),
-                                new OleDbParameter("ItemID", item.ItemID),
-                                new OleDbParameter("ItemName", item.ItemName),
-                                new OleDbParameter("Quantity", item.Quantity),
-                                new OleDbParameter("Rate", item.Rate),
-                                new OleDbParameter("Amount", item.Amount),
-                                new OleDbParameter("CompanyID", bill.CompanyID)
-                            };
-                        }
+                            new OleDbParameter("BillID", savedBillId),
+                            new OleDbParameter("ItemID", item.ItemID),
+                            new OleDbParameter("ItemName", item.ItemName),
+                            new OleDbParameter("Quantity", item.Quantity),
+                            new OleDbParameter("Rate", item.Rate),
+                            new OleDbParameter("Amount", item.Amount),
+                            new OleDbParameter("Charges", item.Charges),
+                            new OleDbParameter("TotalAmount", item.TotalAmount),
+                            new OleDbParameter("CompanyID", bill.CompanyID)
+                        };
                         
                         ExecuteNonQuery(conn, transaction, detailSql, itemParams);
                     }

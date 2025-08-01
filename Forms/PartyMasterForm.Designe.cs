@@ -172,7 +172,7 @@ namespace SaleBillSystem.NET.Forms
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(73, 15);
             this.label11.TabIndex = 12;
-            this.label11.Text = "Credit Days:";
+            // this.label11.Text = "Credit Days:";
             //
             // label8
             //
@@ -228,7 +228,7 @@ namespace SaleBillSystem.NET.Forms
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(31, 15);
             this.label4.TabIndex = 4;
-            this.label4.Text = "City:";
+            // this.label4.Text = "City:";
             //
             // txtAddress
             //

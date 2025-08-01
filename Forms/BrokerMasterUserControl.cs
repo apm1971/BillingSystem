@@ -35,45 +35,135 @@ namespace SaleBillSystem.NET.Forms
 
         private void ConfigureControls()
         {
-            // Configure text boxes
-            txtBrokerName.MaxLength = 100;
-            txtPhone.MaxLength = 20;
+            // Set up Tab order
+            txtSearch.TabIndex = 0;
+            txtBrokerName.TabIndex = 1;
+            txtPhone.TabIndex = 2;
+            btnSave.TabIndex = 3;
+            btnNew.TabIndex = 4;
+            btnDelete.TabIndex = 5;
             
-            // Set text fields to use uppercase
+            // Set up text fields to use uppercase
             txtBrokerName.CharacterCasing = CharacterCasing.Upper;
             txtPhone.CharacterCasing = CharacterCasing.Upper;
 
+            // Configure text boxes
+            txtBrokerName.MaxLength = 100;
+            txtPhone.MaxLength = 20;
+
             // Setup search functionality
             txtSearch.TextChanged += txtSearch_TextChanged;
+            
+            // Add KeyDown event handlers for all input controls
+            txtSearch.KeyDown += txtSearch_KeyDown;
+            txtBrokerName.KeyDown += Control_KeyDown;
+            txtPhone.KeyDown += Control_KeyDown;
+            dgvBrokers.KeyDown += Control_KeyDown;
+            
+            // Set up form controls
+            txtSearch.PlaceholderText = "Type to search brokers...";
+            txtBrokerName.PlaceholderText = "Enter broker name";
+            txtPhone.PlaceholderText = "Enter phone number";
+            
+            // Set up button styles with shortcuts
+            SetupButtonStyle(btnSave, System.Drawing.Color.FromArgb(0, 122, 204));
+            SetupButtonStyle(btnNew, System.Drawing.Color.FromArgb(40, 167, 69));
+            SetupButtonStyle(btnDelete, System.Drawing.Color.FromArgb(220, 53, 69));
+            
+            // Update button text to show shortcuts
+            btnSave.Text = "Save (Ctrl+S)";
+            btnNew.Text = "New (Ctrl+N)";
+            btnDelete.Text = "Delete (F8)";
+            
+            // Add tooltips for shortcuts
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(btnSave, "Save the current broker (Ctrl+S)");
+            toolTip.SetToolTip(btnNew, "Create a new broker (Ctrl+N)");
+            toolTip.SetToolTip(btnDelete, "Delete the selected broker (F8)");
+            toolTip.SetToolTip(txtSearch, "Search brokers by name or phone (F3)");
+            toolTip.SetToolTip(txtBrokerName, "Enter broker name (F2)");
+        }
+
+        private void SetupButtonStyle(Button button, System.Drawing.Color baseColor)
+        {
+            button.BackColor = baseColor;
+            button.ForeColor = System.Drawing.Color.White;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            
+            // Add hover effects
+            button.MouseEnter += (s, e) => {
+                button.BackColor = System.Drawing.Color.FromArgb(
+                    Math.Min(255, baseColor.R + 20),
+                    Math.Min(255, baseColor.G + 20),
+                    Math.Min(255, baseColor.B + 20)
+                );
+            };
+            
+            button.MouseLeave += (s, e) => {
+                button.BackColor = baseColor;
+            };
         }
 
         private void SetupDataGrid()
         {
+            // Configure data grid
             dgvBrokers.AutoGenerateColumns = false;
             dgvBrokers.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvBrokers.MultiSelect = false;
-            dgvBrokers.ReadOnly = true;
             dgvBrokers.AllowUserToAddRows = false;
             dgvBrokers.AllowUserToDeleteRows = false;
+            dgvBrokers.ReadOnly = true;
+            dgvBrokers.MultiSelect = false;
+            dgvBrokers.RowHeadersVisible = false;
+            dgvBrokers.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = System.Drawing.Color.FromArgb(245, 245, 245)
+            };
 
-            // Configure columns
+            // Set modern font and styling
+            dgvBrokers.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular);
+            dgvBrokers.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            dgvBrokers.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 64, 64);
+            dgvBrokers.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            dgvBrokers.ColumnHeadersHeight = 35;
+            dgvBrokers.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+
+            // Set row height for better readability
+            dgvBrokers.RowTemplate.Height = 30;
+
+            // Clear existing columns
             dgvBrokers.Columns.Clear();
 
+            // Add columns with proper sizing
             dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "BrokerName",
-                HeaderText = "Broker Name",
-                DataPropertyName = "BrokerName",
-                Width = 200
+                DataPropertyName = "BrokerID",
+                HeaderText = "ID",
+                Width = 60,
+                Visible = false
             });
 
             dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Phone",
-                HeaderText = "Phone",
-                DataPropertyName = "Phone",
-                Width = 150
+                DataPropertyName = "BrokerName",
+                HeaderText = "Broker Name",
+                Width = 300,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             });
+
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Phone",
+                HeaderText = "Phone",
+                Width = 150,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
+            });
+
+            // Enable double buffering for smooth scrolling
+            typeof(DataGridView).InvokeMember("DoubleBuffered", 
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, dgvBrokers, new object[] { true });
 
             // Event handlers
             dgvBrokers.SelectionChanged += dgvBrokers_SelectionChanged;
@@ -308,21 +398,110 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void BrokerMasterUserControl_KeyDown(object sender, KeyEventArgs e)
+        private void txtSearch_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
+            if (e.KeyCode == Keys.Enter)
             {
-                // In a UserControl, you typically don't close the control itself with Escape.
-                // You might raise an event for the parent form to handle or simply do nothing.
+                e.SuppressKeyPress = true; // Prevent the beep sound
                 e.Handled = true;
-                // If you want to signal the parent form to close, you'd raise an event:
-                // OnCloseRequested?.Invoke(this, EventArgs.Empty);
+
+                // If there are filtered brokers, select the first one
+                if (filteredBrokers.Count > 0)
+                {
+                    // Select the first row in the grid
+                    dgvBrokers.ClearSelection();
+                    dgvBrokers.Rows[0].Selected = true;
+
+                    // Populate the form with the selected broker
+                    PopulateForm(filteredBrokers[0]);
+
+                    // Move focus to the broker name field
+                    txtBrokerName.Focus();
+                }
             }
-            else if (e.Control && e.KeyCode == Keys.S)
+        }
+
+        private void Control_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle keyboard shortcuts for all controls
+            if (e.Control && e.KeyCode == Keys.S)
             {
                 // Handle Ctrl+S
                 e.Handled = true;
+                e.SuppressKeyPress = true;
                 btnSave.PerformClick();
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Handle Ctrl+N
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnNew.PerformClick();
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                // F2 to focus on broker name
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtBrokerName.Focus();
+            }
+            else if (e.KeyCode == Keys.F3)
+            {
+                // F3 to focus on search
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtSearch.Focus();
+            }
+            else if (e.KeyCode == Keys.F4)
+            {
+                // F4 to focus on grid
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                dgvBrokers.Focus();
+            }
+            else if (e.KeyCode == Keys.F8)
+            {
+                // F8 to delete selected broker
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnDelete.PerformClick();
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Clear search or clear form
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
+                }
+            }
+        }
+
+        private void BrokerMasterUserControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            // This method now only handles key events when the UserControl itself has focus
+            // Most keyboard shortcuts are handled by individual controls via Control_KeyDown
+            if (e.KeyCode == Keys.Escape)
+            {
+                // Clear search or clear form
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
+                }
+                e.Handled = true;
             }
         }
 

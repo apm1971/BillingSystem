@@ -35,76 +35,155 @@ namespace SaleBillSystem.NET.Forms
 
         private void ConfigureControls()
         {
-            // Set numeric format for TextBoxes
             // Set up Tab order
-            txtPartyName.TabIndex = 0;
-            txtAddress.TabIndex = 1;
-            txtPhone.TabIndex = 2;
-            btnSave.TabIndex = 9;
-            btnNew.TabIndex = 10;
-            btnDelete.TabIndex = 11;
-            // No btnClose equivalent in a UserControl; it's handled by the parent container
+            txtSearch.TabIndex = 0;
+            txtPartyName.TabIndex = 1;
+            txtAddress.TabIndex = 2;
+            txtPhone.TabIndex = 3;
+            cmbBroker.TabIndex = 4;
+            btnSave.TabIndex = 5;
+            btnNew.TabIndex = 6;
+            btnDelete.TabIndex = 7;
             
             // Set up text fields to use uppercase
             txtPartyName.CharacterCasing = CharacterCasing.Upper;
             txtAddress.CharacterCasing = CharacterCasing.Upper;
             txtPhone.CharacterCasing = CharacterCasing.Upper;
 
-            // Add KeyDown event handler for search textbox
+            // Add KeyDown event handlers for all input controls
             txtSearch.KeyDown += txtSearch_KeyDown;
+            txtPartyName.KeyDown += Control_KeyDown;
+            txtAddress.KeyDown += Control_KeyDown;
+            txtPhone.KeyDown += Control_KeyDown;
+            cmbBroker.KeyDown += Control_KeyDown;
+            dgvParties.KeyDown += Control_KeyDown;
+            
+            // Set up form controls
+            txtSearch.PlaceholderText = "Type to search parties...";
+            txtPartyName.PlaceholderText = "Enter party name";
+            txtAddress.PlaceholderText = "Enter address";
+            txtPhone.PlaceholderText = "Enter phone number";
+            
+            // Set up button styles with shortcuts
+            SetupButtonStyle(btnSave, System.Drawing.Color.FromArgb(0, 122, 204));
+            SetupButtonStyle(btnNew, System.Drawing.Color.FromArgb(40, 167, 69));
+            SetupButtonStyle(btnDelete, System.Drawing.Color.FromArgb(220, 53, 69));
+            
+            // Update button text to show shortcuts
+            btnSave.Text = "Save (Ctrl+S)";
+            btnNew.Text = "New (Ctrl+N)";
+            btnDelete.Text = "Delete (F8)";
+            
+            // Add tooltips for shortcuts
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(btnSave, "Save the current party (Ctrl+S)");
+            toolTip.SetToolTip(btnNew, "Create a new party (Ctrl+N)");
+            toolTip.SetToolTip(btnDelete, "Delete the selected party (F8)");
+            toolTip.SetToolTip(txtSearch, "Search parties by name, phone, address, or broker (F3)");
+            toolTip.SetToolTip(txtPartyName, "Enter party name (F2)");
+            
+            // Ensure keyboard events are captured from all controls
+            // Note: KeyPreview is not available for UserControl, but we handle key events directly
+        }
+
+        private void SetupButtonStyle(Button button, System.Drawing.Color baseColor)
+        {
+            button.BackColor = baseColor;
+            button.ForeColor = System.Drawing.Color.White;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            
+            // Add hover effects
+            button.MouseEnter += (s, e) => {
+                button.BackColor = System.Drawing.Color.FromArgb(
+                    Math.Min(255, baseColor.R + 20),
+                    Math.Min(255, baseColor.G + 20),
+                    Math.Min(255, baseColor.B + 20)
+                );
+            };
+            
+            button.MouseLeave += (s, e) => {
+                button.BackColor = baseColor;
+            };
         }
 
         private List<Party> filteredParties = new List<Party>();
 
         private void SetupDataGrid()
         {
-            // Configure data grid columns
+            // Configure data grid
             dgvParties.AutoGenerateColumns = false;
             dgvParties.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvParties.AllowUserToAddRows = false;
             dgvParties.AllowUserToDeleteRows = false;
             dgvParties.ReadOnly = true;
             dgvParties.MultiSelect = false;
-
-            // Set bold font with larger size for the entire grid
-            dgvParties.DefaultCellStyle.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
-            dgvParties.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold);
-
-            // Add columns to grid
-            if (dgvParties.Columns.Count == 0)
+            dgvParties.RowHeadersVisible = false;
+            dgvParties.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
             {
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "PartyID",
-                    HeaderText = "ID",
-                    Width = 50,
-                    Visible = false
-                });
+                BackColor = System.Drawing.Color.FromArgb(245, 245, 245)
+            };
 
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "PartyName",
-                    HeaderText = "Party Name",
-                    Width = 200
-                });
+            // Set modern font and styling
+            dgvParties.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular);
+            dgvParties.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            dgvParties.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 64, 64);
+            dgvParties.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            dgvParties.ColumnHeadersHeight = 35;
+            dgvParties.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "Phone",
-                    HeaderText = "Phone",
-                    Width = 100
-                });
-                dgvParties.Columns.Add(new DataGridViewTextBoxColumn
-                {
-                    DataPropertyName = "Address",
-                    HeaderText = "Address",
-                    Width = 100
-                });
+            // Set row height for better readability
+            dgvParties.RowTemplate.Height = 30;
 
-            }
+            // Clear existing columns
+            dgvParties.Columns.Clear();
 
-            // Adjust row height for better readability with the larger font
-            dgvParties.RowTemplate.Height = 25;
+            // Add columns with proper sizing
+            dgvParties.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "PartyID",
+                HeaderText = "ID",
+                Width = 60,
+                Visible = false
+            });
+
+            dgvParties.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "PartyName",
+                HeaderText = "Party Name",
+                Width = 250,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            });
+
+            dgvParties.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Phone",
+                HeaderText = "Phone",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
+            });
+
+            dgvParties.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Address",
+                HeaderText = "Address",
+                Width = 200,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
+            });
+
+            dgvParties.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "BrokerName",
+                HeaderText = "Broker",
+                Width = 150,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
+            });
+
+            // Enable double buffering for smooth scrolling
+            typeof(DataGridView).InvokeMember("DoubleBuffered", 
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, dgvParties, new object[] { true });
         }
 
         private void LoadParties()
@@ -112,6 +191,7 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 parties = PartyService.GetAllParties();
+                
                 dgvParties.DataSource = null;
                 dgvParties.DataSource = parties;
 
@@ -352,7 +432,9 @@ namespace SaleBillSystem.NET.Forms
             {
                 filteredParties = parties.FindAll(p =>
                     p.PartyName.ToLower().Contains(searchText) ||
-                    p.Phone.ToLower().Contains(searchText)
+                    p.Phone.ToLower().Contains(searchText) ||
+                    p.Address.ToLower().Contains(searchText) ||
+                    (p.BrokerName != null && p.BrokerName.ToLower().Contains(searchText))
                 );
 
                 dgvParties.DataSource = null;
@@ -381,6 +463,69 @@ namespace SaleBillSystem.NET.Forms
 
                     // Move focus to the party name field
                     txtPartyName.Focus();
+                }
+            }
+        }
+
+        private void Control_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle keyboard shortcuts for all controls
+            if (e.Control && e.KeyCode == Keys.S)
+            {
+                // Handle Ctrl+S
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnSave.PerformClick();
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Handle Ctrl+N
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnNew.PerformClick();
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                // F2 to focus on party name
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtPartyName.Focus();
+            }
+            else if (e.KeyCode == Keys.F3)
+            {
+                // F3 to focus on search
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtSearch.Focus();
+            }
+            else if (e.KeyCode == Keys.F4)
+            {
+                // F4 to focus on grid
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                dgvParties.Focus();
+            }
+            else if (e.KeyCode == Keys.F8)
+            {
+                // F8 to delete selected party
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnDelete.PerformClick();
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Clear search or clear form
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
                 }
             }
         }
@@ -423,20 +568,22 @@ namespace SaleBillSystem.NET.Forms
 
         private void PartyMasterUserControl_KeyDown(object sender, KeyEventArgs e)
         {
+            // This method now only handles key events when the UserControl itself has focus
+            // Most keyboard shortcuts are handled by individual controls via Control_KeyDown
             if (e.KeyCode == Keys.Escape)
             {
-                // In a UserControl, you typically don't close the control itself with Escape.
-                // You might raise an event for the parent form to handle or simply do nothing.
-                // For demonstration, we'll just suppress the key.
+                // Clear search or clear form
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
+                }
                 e.Handled = true;
-                // If you want to signal the parent form to close, you'd raise an event:
-                // OnCloseRequested?.Invoke(this, EventArgs.Empty);
-            }
-            else if (e.Control && e.KeyCode == Keys.S)
-            {
-                // Handle Ctrl+S
-                e.Handled = true;
-                btnSave.PerformClick();
             }
         }
 

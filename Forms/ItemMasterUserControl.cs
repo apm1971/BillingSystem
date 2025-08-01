@@ -35,6 +35,20 @@ namespace SaleBillSystem.NET.Forms
 
         private void ConfigureControls()
         {
+            // Set up Tab order
+            txtSearch.TabIndex = 0;
+            txtItemName.TabIndex = 1;
+            txtUnit.TabIndex = 2;
+            txtDefaultRate.TabIndex = 3;
+            txtCharges.TabIndex = 4;
+            btnSave.TabIndex = 5;
+            btnNew.TabIndex = 6;
+            btnDelete.TabIndex = 7;
+            
+            // Set up text fields to use uppercase
+            txtItemName.CharacterCasing = CharacterCasing.Upper;
+            txtUnit.CharacterCasing = CharacterCasing.Upper;
+
             // Configure text boxes
             txtItemName.MaxLength = 100;
             txtUnit.MaxLength = 20;
@@ -47,53 +61,137 @@ namespace SaleBillSystem.NET.Forms
 
             // Setup search functionality
             txtSearch.TextChanged += txtSearch_TextChanged;
+            
+            // Add KeyDown event handlers for all input controls
+            txtSearch.KeyDown += txtSearch_KeyDown;
+            txtItemName.KeyDown += Control_KeyDown;
+            txtUnit.KeyDown += Control_KeyDown;
+            txtDefaultRate.KeyDown += Control_KeyDown;
+            txtCharges.KeyDown += Control_KeyDown;
+            dgvItems.KeyDown += Control_KeyDown;
+            
+            // Set up form controls
+            txtSearch.PlaceholderText = "Type to search items...";
+            txtItemName.PlaceholderText = "Enter item name";
+            txtUnit.PlaceholderText = "Enter unit (e.g., KG, PCS)";
+            txtDefaultRate.PlaceholderText = "Enter default rate";
+            txtCharges.PlaceholderText = "Enter charges";
+            
+            // Set up button styles with shortcuts
+            SetupButtonStyle(btnSave, System.Drawing.Color.FromArgb(0, 122, 204));
+            SetupButtonStyle(btnNew, System.Drawing.Color.FromArgb(40, 167, 69));
+            SetupButtonStyle(btnDelete, System.Drawing.Color.FromArgb(220, 53, 69));
+            
+            // Update button text to show shortcuts
+            btnSave.Text = "Save (Ctrl+S)";
+            btnNew.Text = "New (Ctrl+N)";
+            btnDelete.Text = "Delete (F8)";
+            
+            // Add tooltips for shortcuts
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(btnSave, "Save the current item (Ctrl+S)");
+            toolTip.SetToolTip(btnNew, "Create a new item (Ctrl+N)");
+            toolTip.SetToolTip(btnDelete, "Delete the selected item (F8)");
+            toolTip.SetToolTip(txtSearch, "Search items by name (F3)");
+            toolTip.SetToolTip(txtItemName, "Enter item name (F2)");
+        }
+
+        private void SetupButtonStyle(Button button, System.Drawing.Color baseColor)
+        {
+            button.BackColor = baseColor;
+            button.ForeColor = System.Drawing.Color.White;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderSize = 0;
+            button.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            
+            // Add hover effects
+            button.MouseEnter += (s, e) => {
+                button.BackColor = System.Drawing.Color.FromArgb(
+                    Math.Min(255, baseColor.R + 20),
+                    Math.Min(255, baseColor.G + 20),
+                    Math.Min(255, baseColor.B + 20)
+                );
+            };
+            
+            button.MouseLeave += (s, e) => {
+                button.BackColor = baseColor;
+            };
         }
 
         private void SetupDataGrid()
         {
+            // Configure data grid
             dgvItems.AutoGenerateColumns = false;
             dgvItems.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvItems.MultiSelect = false;
-            dgvItems.ReadOnly = true;
             dgvItems.AllowUserToAddRows = false;
             dgvItems.AllowUserToDeleteRows = false;
+            dgvItems.ReadOnly = true;
+            dgvItems.MultiSelect = false;
+            dgvItems.RowHeadersVisible = false;
+            dgvItems.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = System.Drawing.Color.FromArgb(245, 245, 245)
+            };
 
-            // Configure columns
+            // Set modern font and styling
+            dgvItems.DefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular);
+            dgvItems.ColumnHeadersDefaultCellStyle.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            dgvItems.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.Color.FromArgb(64, 64, 64);
+            dgvItems.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.Color.White;
+            dgvItems.ColumnHeadersHeight = 35;
+            dgvItems.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+
+            // Set row height for better readability
+            dgvItems.RowTemplate.Height = 30;
+
+            // Clear existing columns
             dgvItems.Columns.Clear();
 
+            // Add columns with proper sizing
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ItemName",
-                HeaderText = "Item Name",
+                DataPropertyName = "ItemID",
+                HeaderText = "ID",
+                Width = 60,
+                Visible = false
+            });
+
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
                 DataPropertyName = "ItemName",
-                Width = 200
+                HeaderText = "Item Name",
+                Width = 250,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
             });
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "Unit",
-                HeaderText = "Unit",
                 DataPropertyName = "Unit",
-                Width = 80
+                HeaderText = "Unit",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
             });
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "DefaultRate",
-                HeaderText = "Default Rate",
                 DataPropertyName = "DefaultRate",
+                HeaderText = "Default Rate",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Charges",
+                HeaderText = "Charges",
                 Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
             });
 
-            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "Charges",
-                HeaderText = "Charges",
-                DataPropertyName = "Charges",
-                Width = 80,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
-            });
+            // Enable double buffering for smooth scrolling
+            typeof(DataGridView).InvokeMember("DoubleBuffered", 
+                System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, dgvItems, new object[] { true });
 
             // Event handlers
             dgvItems.SelectionChanged += dgvItems_SelectionChanged;
@@ -325,21 +423,110 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void ItemMasterUserControl_KeyDown(object sender, KeyEventArgs e)
+        private void txtSearch_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
+            if (e.KeyCode == Keys.Enter)
             {
-                // In a UserControl, you typically don't close the control itself with Escape.
-                // You might raise an event for the parent form to handle or simply do nothing.
+                e.SuppressKeyPress = true; // Prevent the beep sound
                 e.Handled = true;
-                // If you want to signal the parent form to close, you'd raise an event:
-                // OnCloseRequested?.Invoke(this, EventArgs.Empty);
+
+                // If there are filtered items, select the first one
+                if (filteredItems.Count > 0)
+                {
+                    // Select the first row in the grid
+                    dgvItems.ClearSelection();
+                    dgvItems.Rows[0].Selected = true;
+
+                    // Populate the form with the selected item
+                    PopulateForm(filteredItems[0]);
+
+                    // Move focus to the item name field
+                    txtItemName.Focus();
+                }
             }
-            else if (e.Control && e.KeyCode == Keys.S)
+        }
+
+        private void Control_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle keyboard shortcuts for all controls
+            if (e.Control && e.KeyCode == Keys.S)
             {
                 // Handle Ctrl+S
                 e.Handled = true;
+                e.SuppressKeyPress = true;
                 btnSave.PerformClick();
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                // Handle Ctrl+N
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnNew.PerformClick();
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                // F2 to focus on item name
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtItemName.Focus();
+            }
+            else if (e.KeyCode == Keys.F3)
+            {
+                // F3 to focus on search
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                txtSearch.Focus();
+            }
+            else if (e.KeyCode == Keys.F4)
+            {
+                // F4 to focus on grid
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                dgvItems.Focus();
+            }
+            else if (e.KeyCode == Keys.F8)
+            {
+                // F8 to delete selected item
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                btnDelete.PerformClick();
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                // Clear search or clear form
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
+                }
+            }
+        }
+
+        private void ItemMasterUserControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            // This method now only handles key events when the UserControl itself has focus
+            // Most keyboard shortcuts are handled by individual controls via Control_KeyDown
+            if (e.KeyCode == Keys.Escape)
+            {
+                // Clear search or clear form
+                if (txtSearch.Focused && !string.IsNullOrEmpty(txtSearch.Text))
+                {
+                    txtSearch.Clear();
+                    txtSearch.Focus();
+                }
+                else if (!txtSearch.Focused)
+                {
+                    ClearForm();
+                    txtSearch.Focus();
+                }
+                e.Handled = true;
             }
         }
 

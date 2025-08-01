@@ -1,6 +1,6 @@
 namespace SaleBillSystem.NET.Forms
 {
-    partial class PartyMasterUserControl  // Changed class name
+    partial class PartyMasterUserControl
     {
         /// <summary>
         /// Required designer variable.
@@ -20,7 +20,7 @@ namespace SaleBillSystem.NET.Forms
             base.Dispose(disposing);
         }
 
-        #region Component Designer generated code // Changed to Component Designer
+        #region Component Designer generated code
 
         /// <summary>
         /// Required method for Designer support - do not modify
@@ -28,303 +28,271 @@ namespace SaleBillSystem.NET.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.panelTop = new System.Windows.Forms.Panel();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.txtSearch = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
+            this.lblSearch = new System.Windows.Forms.Label();
             this.lblTotalParties = new System.Windows.Forms.Label();
+            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.dgvParties = new System.Windows.Forms.DataGridView();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.cmbBroker = new System.Windows.Forms.ComboBox();
+            this.lblBroker = new System.Windows.Forms.Label();
+            this.txtPhone = new System.Windows.Forms.TextBox();
+            this.lblPhone = new System.Windows.Forms.Label();
+            this.txtAddress = new System.Windows.Forms.TextBox();
+            this.lblAddress = new System.Windows.Forms.Label();
+            this.txtPartyName = new System.Windows.Forms.TextBox();
+            this.lblPartyName = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
-            // Removed btnClose
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnNew = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
-            this.panelForm = new System.Windows.Forms.Panel();
-            this.label9 = new System.Windows.Forms.Label();
-            this.label11 = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
-            this.cmbBroker = new System.Windows.Forms.ComboBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.txtPhone = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.txtAddress = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.txtPartyName = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.dgvParties = new System.Windows.Forms.DataGridView();
-            this.panelTop.SuspendLayout();
-            this.panel1.SuspendLayout();
-            this.panelForm.SuspendLayout();
+            this.groupBox1.SuspendLayout();
+            this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvParties)).BeginInit();
+            this.groupBox3.SuspendLayout();
+            this.panel1.SuspendLayout();
             this.SuspendLayout();
-            //
-            // panelTop
-            //
-            this.panelTop.Controls.Add(this.txtSearch);
-            this.panelTop.Controls.Add(this.label10);
-            this.panelTop.Controls.Add(this.lblTotalParties);
-            this.panelTop.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelTop.Location = new System.Drawing.Point(0, 0);
-            this.panelTop.Name = "panelTop";
-            this.panelTop.Size = new System.Drawing.Size(984, 40);
-            this.panelTop.TabIndex = 0;
-            //
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.txtSearch);
+            this.groupBox1.Controls.Add(this.lblSearch);
+            this.groupBox1.Controls.Add(this.lblTotalParties);
+            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.groupBox1.Location = new System.Drawing.Point(10, 10);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(1180, 80);
+            this.groupBox1.TabIndex = 0;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Search & Navigation";
+            // 
             // txtSearch
-            //
-            this.txtSearch.Location = new System.Drawing.Point(95, 9);
+            // 
+            this.txtSearch.Location = new System.Drawing.Point(100, 30);
             this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Size = new System.Drawing.Size(260, 23);
-            this.txtSearch.TabIndex = 2;
+            this.txtSearch.Size = new System.Drawing.Size(300, 20);
+            this.txtSearch.TabIndex = 0;
             this.txtSearch.TextChanged += new System.EventHandler(this.txtSearch_TextChanged);
-            //
-            // label10
-            //
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(12, 12);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(77, 15);
-            this.label10.TabIndex = 1;
-            this.label10.Text = "Search Party:";
-            //
+            this.txtSearch.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtSearch_KeyDown);
+            // 
+            // lblSearch
+            // 
+            this.lblSearch.AutoSize = true;
+            this.lblSearch.Location = new System.Drawing.Point(20, 33);
+            this.lblSearch.Name = "lblSearch";
+            this.lblSearch.Size = new System.Drawing.Size(74, 13);
+            this.lblSearch.TabIndex = 1;
+            this.lblSearch.Text = "Search Party:";
+            // 
             // lblTotalParties
-            //
+            // 
             this.lblTotalParties.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblTotalParties.AutoSize = true;
-            this.lblTotalParties.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblTotalParties.Location = new System.Drawing.Point(865, 13);
+            this.lblTotalParties.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblTotalParties.Location = new System.Drawing.Point(1050, 33);
             this.lblTotalParties.Name = "lblTotalParties";
-            this.lblTotalParties.Size = new System.Drawing.Size(81, 15);
-            this.lblTotalParties.TabIndex = 0;
-            this.lblTotalParties.Text = "Total Parties: ";
-            //
-            // panel1
-            //
-            this.panel1.Controls.Add(this.btnDelete);
-            this.panel1.Controls.Add(this.btnNew);
-            this.panel1.Controls.Add(this.btnSave);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel1.Location = new System.Drawing.Point(0, 511);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(984, 50);
-            this.panel1.TabIndex = 1;
-            //
-            // btnDelete
-            //
-            this.btnDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnDelete.Location = new System.Drawing.Point(212, 10);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(93, 28);
-            this.btnDelete.TabIndex = 2;
-            this.btnDelete.Text = "Delete";
-            this.btnDelete.UseVisualStyleBackColor = true;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
-            //
-            // btnNew
-            //
-            this.btnNew.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnNew.Location = new System.Drawing.Point(113, 10);
-            this.btnNew.Name = "btnNew";
-            this.btnNew.Size = new System.Drawing.Size(93, 28);
-            this.btnNew.TabIndex = 1;
-            this.btnNew.Text = "New";
-            this.btnNew.UseVisualStyleBackColor = true;
-            this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
-            //
-            // btnSave
-            //
-            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnSave.Location = new System.Drawing.Point(14, 10);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(93, 28);
-            this.btnSave.TabIndex = 0;
-            this.btnSave.Text = "Save";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
-            //
-            // panelForm
-            //
-            this.panelForm.Controls.Add(this.label9);
-            this.panelForm.Controls.Add(this.label11);
-            this.panelForm.Controls.Add(this.label8);
-            this.panelForm.Controls.Add(this.label6);
-            this.panelForm.Controls.Add(this.cmbBroker);
-            this.panelForm.Controls.Add(this.label7);
-            this.panelForm.Controls.Add(this.txtPhone);
-            this.panelForm.Controls.Add(this.label5);
-            this.panelForm.Controls.Add(this.label4);
-            this.panelForm.Controls.Add(this.txtAddress);
-            this.panelForm.Controls.Add(this.label3);
-            this.panelForm.Controls.Add(this.txtPartyName);
-            this.panelForm.Controls.Add(this.label2);
-            this.panelForm.Dock = System.Windows.Forms.DockStyle.Right;
-            this.panelForm.Location = new System.Drawing.Point(684, 40);
-            this.panelForm.Name = "panelForm";
-            this.panelForm.Size = new System.Drawing.Size(300, 471);
-            this.panelForm.TabIndex = 2;
-            // Removed label declarations that were incorrectly placed outside of InitializeComponent
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(16, 399);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(122, 15);
-            this.label9.TabIndex = 16;
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(16, 351);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(73, 15);
-            this.label11.TabIndex = 12;
-            // this.label11.Text = "Credit Days:";
-            //
-            // label8
-            //
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(16, 303);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(71, 15);
-            this.label8.TabIndex = 10;
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(16, 207);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(39, 15);
-            this.label6.TabIndex = 8;
-            this.label6.Text = "Email:";
-            //
-            // cmbBroker
-            //
-            this.cmbBroker.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbBroker.Location = new System.Drawing.Point(16, 273);
-            this.cmbBroker.Name = "cmbBroker";
-            this.cmbBroker.Size = new System.Drawing.Size(260, 23);
-            this.cmbBroker.TabIndex = 19;
-            //
-            // label7
-            //
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(16, 255);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(45, 15);
-            this.label7.TabIndex = 18;
-            this.label7.Text = "Broker:";
-            //
-            // txtPhone
-            //
-            this.txtPhone.Location = new System.Drawing.Point(16, 177);
-            this.txtPhone.Name = "txtPhone";
-            this.txtPhone.Size = new System.Drawing.Size(260, 23);
-            this.txtPhone.TabIndex = 7;
-            //
-            // label5
-            //
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(16, 159);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(44, 15);
-            this.label5.TabIndex = 6;
-            this.label5.Text = "Phone:";
-            //
-            // label4
-            //
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(16, 111);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(31, 15);
-            this.label4.TabIndex = 4;
-            // this.label4.Text = "City:";
-            //
-            // txtAddress
-            //
-            this.txtAddress.Location = new System.Drawing.Point(16, 60);
-            this.txtAddress.Multiline = true;
-            this.txtAddress.Name = "txtAddress";
-            this.txtAddress.Size = new System.Drawing.Size(260, 43);
-            this.txtAddress.TabIndex = 3;
-            //
-            // label3
-            //
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(16, 42);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(52, 15);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Address:";
-            //
-            // txtPartyName
-            //
-            this.txtPartyName.Location = new System.Drawing.Point(16, 16);
-            this.txtPartyName.Name = "txtPartyName";
-            this.txtPartyName.Size = new System.Drawing.Size(260, 23);
-            this.txtPartyName.TabIndex = 1;
-            //
-            // label2
-            //
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(16, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(74, 15);
-            this.label2.TabIndex = 0;
-            this.label2.Text = "Party Name:*";
-            //
+            this.lblTotalParties.Size = new System.Drawing.Size(100, 15);
+            this.lblTotalParties.TabIndex = 2;
+            this.lblTotalParties.Text = "Total Parties: 0";
+            // 
+            // groupBox2
+            // 
+            this.groupBox2.Controls.Add(this.dgvParties);
+            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.groupBox2.Location = new System.Drawing.Point(10, 90);
+            this.groupBox2.Name = "groupBox2";
+            this.groupBox2.Size = new System.Drawing.Size(880, 460);
+            this.groupBox2.TabIndex = 1;
+            this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Party List";
+            // 
             // dgvParties
-            //
+            // 
             this.dgvParties.AllowUserToAddRows = false;
             this.dgvParties.AllowUserToDeleteRows = false;
             this.dgvParties.BackgroundColor = System.Drawing.SystemColors.Window;
             this.dgvParties.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvParties.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvParties.Location = new System.Drawing.Point(0, 40);
+            this.dgvParties.Location = new System.Drawing.Point(3, 16);
             this.dgvParties.MultiSelect = false;
             this.dgvParties.Name = "dgvParties";
             this.dgvParties.ReadOnly = true;
             this.dgvParties.RowTemplate.Height = 25;
             this.dgvParties.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvParties.Size = new System.Drawing.Size(684, 471);
-            this.dgvParties.TabIndex = 3;
+            this.dgvParties.Size = new System.Drawing.Size(874, 441);
+            this.dgvParties.TabIndex = 0;
             this.dgvParties.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvParties_CellDoubleClick);
             this.dgvParties.SelectionChanged += new System.EventHandler(this.dgvParties_SelectionChanged);
-            //
+            // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.cmbBroker);
+            this.groupBox3.Controls.Add(this.lblBroker);
+            this.groupBox3.Controls.Add(this.txtPhone);
+            this.groupBox3.Controls.Add(this.lblPhone);
+            this.groupBox3.Controls.Add(this.txtAddress);
+            this.groupBox3.Controls.Add(this.lblAddress);
+            this.groupBox3.Controls.Add(this.txtPartyName);
+            this.groupBox3.Controls.Add(this.lblPartyName);
+            this.groupBox3.Dock = System.Windows.Forms.DockStyle.Right;
+            this.groupBox3.Location = new System.Drawing.Point(890, 90);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(300, 460);
+            this.groupBox3.TabIndex = 2;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Party Details";
+            // 
+            // cmbBroker
+            // 
+            this.cmbBroker.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbBroker.Location = new System.Drawing.Point(20, 200);
+            this.cmbBroker.Name = "cmbBroker";
+            this.cmbBroker.Size = new System.Drawing.Size(260, 21);
+            this.cmbBroker.TabIndex = 3;
+            // 
+            // lblBroker
+            // 
+            this.lblBroker.AutoSize = true;
+            this.lblBroker.Location = new System.Drawing.Point(20, 184);
+            this.lblBroker.Name = "lblBroker";
+            this.lblBroker.Size = new System.Drawing.Size(41, 13);
+            this.lblBroker.TabIndex = 6;
+            this.lblBroker.Text = "Broker:";
+            // 
+            // txtPhone
+            // 
+            this.txtPhone.Location = new System.Drawing.Point(20, 150);
+            this.txtPhone.Name = "txtPhone";
+            this.txtPhone.Size = new System.Drawing.Size(260, 20);
+            this.txtPhone.TabIndex = 2;
+            // 
+            // lblPhone
+            // 
+            this.lblPhone.AutoSize = true;
+            this.lblPhone.Location = new System.Drawing.Point(20, 134);
+            this.lblPhone.Name = "lblPhone";
+            this.lblPhone.Size = new System.Drawing.Size(41, 13);
+            this.lblPhone.TabIndex = 4;
+            this.lblPhone.Text = "Phone:";
+            // 
+            // txtAddress
+            // 
+            this.txtAddress.Location = new System.Drawing.Point(20, 90);
+            this.txtAddress.Multiline = true;
+            this.txtAddress.Name = "txtAddress";
+            this.txtAddress.Size = new System.Drawing.Size(260, 40);
+            this.txtAddress.TabIndex = 1;
+            // 
+            // lblAddress
+            // 
+            this.lblAddress.AutoSize = true;
+            this.lblAddress.Location = new System.Drawing.Point(20, 74);
+            this.lblAddress.Name = "lblAddress";
+            this.lblAddress.Size = new System.Drawing.Size(48, 13);
+            this.lblAddress.TabIndex = 2;
+            this.lblAddress.Text = "Address:";
+            // 
+            // txtPartyName
+            // 
+            this.txtPartyName.Location = new System.Drawing.Point(20, 30);
+            this.txtPartyName.Name = "txtPartyName";
+            this.txtPartyName.Size = new System.Drawing.Size(260, 20);
+            this.txtPartyName.TabIndex = 0;
+            // 
+            // lblPartyName
+            // 
+            this.lblPartyName.AutoSize = true;
+            this.lblPartyName.Location = new System.Drawing.Point(20, 14);
+            this.lblPartyName.Name = "lblPartyName";
+            this.lblPartyName.Size = new System.Drawing.Size(68, 13);
+            this.lblPartyName.TabIndex = 0;
+            this.lblPartyName.Text = "Party Name:*";
+            // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.btnDelete);
+            this.panel1.Controls.Add(this.btnNew);
+            this.panel1.Controls.Add(this.btnSave);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.panel1.Location = new System.Drawing.Point(10, 550);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(1180, 50);
+            this.panel1.TabIndex = 3;
+            // 
+            // btnDelete
+            // 
+            this.btnDelete.Location = new System.Drawing.Point(200, 12);
+            this.btnDelete.Name = "btnDelete";
+            this.btnDelete.Size = new System.Drawing.Size(90, 28);
+            this.btnDelete.TabIndex = 2;
+            this.btnDelete.Text = "Delete";
+            this.btnDelete.UseVisualStyleBackColor = true;
+            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            // 
+            // btnNew
+            // 
+            this.btnNew.Location = new System.Drawing.Point(104, 12);
+            this.btnNew.Name = "btnNew";
+            this.btnNew.Size = new System.Drawing.Size(90, 28);
+            this.btnNew.TabIndex = 1;
+            this.btnNew.Text = "New";
+            this.btnNew.UseVisualStyleBackColor = true;
+            this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
+            // 
+            // btnSave
+            // 
+            this.btnSave.Location = new System.Drawing.Point(8, 12);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(90, 28);
+            this.btnSave.TabIndex = 0;
+            this.btnSave.Text = "Save";
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            // 
             // PartyMasterUserControl
-            this.Controls.Add(this.dgvParties);
-            this.Controls.Add(this.panelForm);
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.groupBox3);
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.panel1);
-            this.Controls.Add(this.panelTop);
             this.Name = "PartyMasterUserControl";
-            this.Size = new System.Drawing.Size(984, 561);
+            this.Padding = new System.Windows.Forms.Padding(10);
+            this.Size = new System.Drawing.Size(1200, 610);
             this.Load += new System.EventHandler(this.PartyMasterUserControl_Load);
-            this.panelTop.ResumeLayout(false);
-            this.panelTop.PerformLayout();
-            this.panel1.ResumeLayout(false);
-            // No need for btnClose in panel1.ResumeLayout(false);
-            this.panelForm.ResumeLayout(false);
-            this.panelForm.PerformLayout();
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
+            this.groupBox2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvParties)).EndInit();
+            this.groupBox3.ResumeLayout(false);
+            this.groupBox3.PerformLayout();
+            this.panel1.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private Panel panelTop;
-        private Label lblTotalParties;
-        private Panel panel1;
-        // Removed private Button btnClose;
-        private Button btnDelete;
-        private Button btnNew;
-        private Button btnSave;
-        private Panel panelForm;
-        private Label label2;
-        private TextBox txtPartyName;
-        private TextBox txtAddress;
-        private Label label3;
-        private Label label4;
-        private TextBox txtPhone;
-        private Label label5;
-        private Label label6;
-        private Label label8;
-        private Label label11;
-        private Label label9;
-        private DataGridView dgvParties;
-        private TextBox txtSearch;
-        private Label label10;
-        private ComboBox cmbBroker;
-        private Label label7;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.Label lblSearch;
+        private System.Windows.Forms.Label lblTotalParties;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.DataGridView dgvParties;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.ComboBox cmbBroker;
+        private System.Windows.Forms.Label lblBroker;
+        private System.Windows.Forms.TextBox txtPhone;
+        private System.Windows.Forms.Label lblPhone;
+        private System.Windows.Forms.TextBox txtAddress;
+        private System.Windows.Forms.Label lblAddress;
+        private System.Windows.Forms.TextBox txtPartyName;
+        private System.Windows.Forms.Label lblPartyName;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Button btnDelete;
+        private System.Windows.Forms.Button btnNew;
+        private System.Windows.Forms.Button btnSave;
     }
 }

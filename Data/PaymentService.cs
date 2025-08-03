@@ -131,7 +131,7 @@ namespace SaleBillSystem.NET.Data
                         tl.BillID,
                         b.BillNo,
                         b.BillDate,
-                        b.TotalAmount as BillAmount,
+                        (b.OriginalAmount + b.AdditionalCharges) as BillAmount,
                         tl.DebitAmount,
                         tl.CreditAmount,
                         tl.TransactionDate,

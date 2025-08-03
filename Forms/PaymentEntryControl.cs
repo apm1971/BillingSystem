@@ -14,6 +14,7 @@ namespace SaleBillSystem.NET.Forms
         public event EventHandler? CloseRequested;
         
         private List<Party> _parties = new List<Party>();
+        private List<Broker> _brokers = new List<Broker>();
         private List<BillViewModel> _outstandingBills = new List<BillViewModel>();
 
         public PaymentEntryControl()
@@ -56,6 +57,7 @@ namespace SaleBillSystem.NET.Forms
             // Define Columns
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillID", HeaderText = "ID", Visible = false, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillNo", HeaderText = "Bill No.", Width = 120, ReadOnly = true });
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PartyName", HeaderText = "Party Name", Width = 150, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillDate", HeaderText = "Bill Date", DefaultCellStyle = new DataGridViewCellStyle { Format = "dd-MMM-yyyy" }, Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmount", HeaderText = "Total Amount", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 150, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BalanceDue", HeaderText = "Balance Due", Name="BalanceDue", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9.75F, FontStyle.Bold), ForeColor = Color.Red }, Width = 150, ReadOnly = true });
@@ -75,10 +77,15 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 _parties = PartyService.GetAllParties();
+                _brokers = BrokerService.GetAllBrokers();
 
                 cmbParty.DataSource = _parties;
                 cmbParty.DisplayMember = "PartyName";
                 cmbParty.ValueMember = "PartyID";
+                
+                cmbBroker.DataSource = _brokers;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
             }
             catch (Exception ex)
             {
@@ -89,6 +96,7 @@ namespace SaleBillSystem.NET.Forms
         private void SetupEventHandlers()
         {
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             btnCalculate.Click += BtnCalculate_Click;
             btnAutoAllocate.Click += BtnAutoAllocate_Click;
             btnSave.Click += BtnSave_Click;
@@ -102,6 +110,7 @@ namespace SaleBillSystem.NET.Forms
         private void ClearForm()
         {
             cmbParty.SelectedIndex = -1;
+            cmbBroker.SelectedIndex = -1;
             dgvOutstandingBills.DataSource = null;
             _outstandingBills = new List<BillViewModel>();
             
@@ -127,26 +136,52 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (cmbParty.SelectedValue is int partyId && partyId > 0)
+            LoadBillsBasedOnSelection();
+        }
+
+        private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            LoadBillsBasedOnSelection();
+        }
+
+        private void LoadBillsBasedOnSelection()
+        {
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
+
+            if (partyId.HasValue && partyId.Value > 0)
             {
-                LoadOutstandingBills(partyId);
+                LoadOutstandingBills(partyId.Value, brokerId);
+            }
+            else if (brokerId.HasValue && brokerId.Value > 0)
+            {
+                LoadOutstandingBillsByBroker(brokerId.Value);
             }
             else
             {
                 dgvOutstandingBills.DataSource = null;
+                _outstandingBills.Clear();
             }
         }
 
-        private void LoadOutstandingBills(int partyId)
+        private void LoadOutstandingBills(int partyId, int? brokerId = null)
         {
             try
             {
                 var bills = BillService.GetAllBillsForParty(partyId);
+                
+                // Filter by broker if specified
+                if (brokerId.HasValue && brokerId.Value > 0)
+                {
+                    bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
+                }
+                
                 _outstandingBills = bills
                     .Select(b => new BillViewModel
                     {
                         BillID = b.BillID,
                         BillNo = b.BillNo,
+                        PartyName = b.PartyName,
                         BillDate = b.BillDate,
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
@@ -163,6 +198,38 @@ namespace SaleBillSystem.NET.Forms
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading outstanding bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadOutstandingBillsByBroker(int brokerId)
+        {
+            try
+            {
+                var allBills = BillService.GetAllBills();
+                var bills = allBills.Where(b => b.BrokerID == brokerId).ToList();
+                
+                _outstandingBills = bills
+                    .Select(b => new BillViewModel
+                    {
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        PartyName = b.PartyName,
+                        BillDate = b.BillDate,
+                        OriginalAmount = b.OriginalAmount,
+                        AdditionalCharges = b.AdditionalCharges,
+                        BalanceDue = BillService.GetBillBalance(b.BillID),
+                        PaymentAllocation = 0
+                    })
+                    .Where(b => b.BalanceDue > 0.01m)
+                    .OrderBy(b => b.BillDate)
+                    .ToList();
+
+                dgvOutstandingBills.DataSource = _outstandingBills;
+                ResetGridStyles();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading outstanding bills by broker: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

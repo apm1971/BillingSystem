@@ -101,6 +101,7 @@ namespace SaleBillSystem.NET.Forms
             // Setup buttons and event handlers
             btnNewBill.Click += BtnNewBill_Click;
             btnEditBill.Click += BtnEditBill_Click;
+            btnViewDetails.Click += BtnViewDetails_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
             btnRefresh.Click += BtnRefresh_Click;
             
@@ -247,6 +248,7 @@ namespace SaleBillSystem.NET.Forms
         }
 
         private void BtnEditBill_Click(object sender, EventArgs e) => EditSelectedBill();
+        private void BtnViewDetails_Click(object sender, EventArgs e) => ViewSelectedBillDetails();
         private void BtnDeleteBill_Click(object sender, EventArgs e) => DeleteSelectedBill();
         private void BtnRefresh_Click(object sender, EventArgs e)
         {
@@ -295,6 +297,67 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
+        private void ViewSelectedBillDetails()
+        {
+            if (dgvBills.CurrentRow?.DataBoundItem is Bill selectedBill)
+            {
+                try
+                {
+                    // Get the bill details using BillService.GetBillDetails
+                    var billItems = BillService.GetBillDetails(selectedBill.BillID);
+                    
+                    // Build the details message
+                    var details = new System.Text.StringBuilder();
+                    details.AppendLine($"Bill No: {selectedBill.BillNo}");
+                    details.AppendLine($"Bill Date: {selectedBill.BillDate:dd/MM/yyyy}");
+                    details.AppendLine($"Party: {selectedBill.PartyName}");
+                    details.AppendLine($"Broker: {selectedBill.BrokerName}");
+                    details.AppendLine($"Status: {selectedBill.Status}");
+                    details.AppendLine();
+                    details.AppendLine("Items:");
+                    details.AppendLine("----------------------------------------");
+                    
+                    decimal totalItemAmount = 0;
+                    decimal totalItemCharges = 0;
+                    
+                    foreach (var item in billItems)
+                    {
+                        details.AppendLine($"• {item.ItemName}");
+                        details.AppendLine($"  Quantity: {item.Quantity} × Rate: ₹{item.Rate:N2} = ₹{item.Amount:N2}");
+                        if (item.Charges > 0)
+                        {
+                            details.AppendLine($"  Charges: ₹{item.Charges:N2}");
+                        }
+                        details.AppendLine($"  Total: ₹{item.TotalAmount:N2}");
+                        details.AppendLine();
+                        
+                        totalItemAmount += item.Amount;
+                        totalItemCharges += item.Charges;
+                    }
+                    
+                    details.AppendLine("----------------------------------------");
+                    details.AppendLine($"Item Total: ₹{totalItemAmount:N2}");
+                    details.AppendLine($"Item Charges: ₹{totalItemCharges:N2}");
+                    details.AppendLine($"Additional Charges: ₹{selectedBill.AdditionalCharges:N2}");
+                    details.AppendLine($"NET AMOUNT: ₹{selectedBill.TotalAmount:N2}");
+                    details.AppendLine($"Balance: ₹{selectedBill.Balance:N2}");
+                    
+                    if (!string.IsNullOrEmpty(selectedBill.Notes))
+                    {
+                        details.AppendLine();
+                        details.AppendLine($"Notes: {selectedBill.Notes}");
+                    }
+                    
+                    MessageBox.Show(details.ToString(), $"Bill Details - {selectedBill.BillNo}", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading bill details: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
         private void DeleteSelectedBill()
         {
             if (dgvBills.CurrentRow?.DataBoundItem is Bill selectedBill)
@@ -337,6 +400,11 @@ namespace SaleBillSystem.NET.Forms
             else if (e.KeyCode == Keys.Delete)
             {
                 DeleteSelectedBill();
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Enter)
+            {
+                ViewSelectedBillDetails();
                 e.Handled = true;
             }
         }

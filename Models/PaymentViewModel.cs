@@ -14,5 +14,7 @@ namespace SaleBillSystem.NET.Models
         public string Reference { get; set; }
         public int PartyID { get; set; }
         public string PartyName { get; set; }
+        public int? BrokerID { get; set; }
+        public string BrokerName { get; set; } = string.Empty;
     }
 }

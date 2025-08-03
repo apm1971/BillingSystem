@@ -31,6 +31,7 @@ namespace SaleBillSystem.NET.Forms
             this.panel1 = new System.Windows.Forms.Panel();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.btnDeleteBill = new System.Windows.Forms.Button();
+            this.btnViewDetails = new System.Windows.Forms.Button();
             this.btnEditBill = new System.Windows.Forms.Button();
             this.btnNewBill = new System.Windows.Forms.Button();
             this.txtSearch = new System.Windows.Forms.TextBox();
@@ -44,6 +45,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.panel1.Controls.Add(this.btnRefresh);
             this.panel1.Controls.Add(this.btnDeleteBill);
+            this.panel1.Controls.Add(this.btnViewDetails);
             this.panel1.Controls.Add(this.btnEditBill);
             this.panel1.Controls.Add(this.btnNewBill);
             this.panel1.Controls.Add(this.txtSearch);
@@ -90,12 +92,24 @@ namespace SaleBillSystem.NET.Forms
             this.btnEditBill.Text = "Edit";
             this.btnEditBill.UseVisualStyleBackColor = false;
             // 
+            // btnViewDetails
+            // 
+            this.btnViewDetails.BackColor = System.Drawing.Color.FromArgb(0, 150, 136);
+            this.btnViewDetails.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.btnViewDetails.ForeColor = System.Drawing.Color.White;
+            this.btnViewDetails.Location = new System.Drawing.Point(750, 15);
+            this.btnViewDetails.Name = "btnViewDetails";
+            this.btnViewDetails.Size = new System.Drawing.Size(100, 30);
+            this.btnViewDetails.TabIndex = 6;
+            this.btnViewDetails.Text = "View Details";
+            this.btnViewDetails.UseVisualStyleBackColor = false;
+            // 
             // btnNewBill
             // 
             this.btnNewBill.BackColor = System.Drawing.Color.FromArgb(0, 122, 204);
             this.btnNewBill.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.btnNewBill.ForeColor = System.Drawing.Color.White;
-            this.btnNewBill.Location = new System.Drawing.Point(750, 15);
+            this.btnNewBill.Location = new System.Drawing.Point(640, 15);
             this.btnNewBill.Name = "btnNewBill";
             this.btnNewBill.Size = new System.Drawing.Size(100, 30);
             this.btnNewBill.TabIndex = 2;
@@ -146,6 +160,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Button btnDeleteBill;
+        private System.Windows.Forms.Button btnViewDetails;
         private System.Windows.Forms.Button btnEditBill;
         private System.Windows.Forms.Button btnNewBill;
         private System.Windows.Forms.TextBox txtSearch;

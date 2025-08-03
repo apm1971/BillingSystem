@@ -43,7 +43,8 @@ namespace SaleBillSystem.NET.Forms
             dgvPayments.Columns.Clear();
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentID", HeaderText = "ID", Width = 80 });
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentDate", HeaderText = "Payment Date", DefaultCellStyle = new DataGridViewCellStyle { Format = "dd-MMM-yyyy" }, Width = 120 });
-            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PartyName", HeaderText = "Party Name", Width = 250 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PartyName", HeaderText = "Party Name", Width = 200 });
+            dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BrokerName", HeaderText = "Broker Name", Width = 150 });
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PaymentMethod", HeaderText = "Method", Width = 100 });
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Reference", HeaderText = "Reference", Width = 150 });
             dgvPayments.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmountPaid", HeaderText = "Amount Paid (₹)", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
@@ -91,6 +92,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 filteredList = _allPayments
                     .Where(p => p.PartyName.ToLower().Contains(searchText) ||
+                                p.BrokerName.ToLower().Contains(searchText) ||
                                 (p.Reference != null && p.Reference.ToLower().Contains(searchText)))
                     .ToList();
             }

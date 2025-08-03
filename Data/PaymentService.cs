@@ -19,12 +19,13 @@ namespace SaleBillSystem.NET.Data
             try
             {
                 string sql = @"
-                    INSERT INTO PaymentMaster (PartyID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID)
-                    VALUES (?, ?, ?, ?, ?, ?)";
+                    INSERT INTO PaymentMaster (PartyID, BrokerID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
 
                 var parameters = new OleDbParameter[]
                 {
                     new OleDbParameter("PartyID", payment.PartyID),
+                    new OleDbParameter("BrokerID", payment.BrokerID ?? (object)DBNull.Value),
                     new OleDbParameter("PaymentDate", payment.PaymentDate),
                     new OleDbParameter("TotalAmountPaid", payment.TotalAmountPaid),
                     new OleDbParameter("PaymentMethod", payment.PaymentMethod ?? (object)DBNull.Value),
@@ -58,41 +59,59 @@ namespace SaleBillSystem.NET.Data
 /// <summary>
 /// Gets a list of all payments with their associated party names for display.
 /// </summary>
-        public static List<PaymentViewModel> GetAllPaymentsForDisplay(int companyId)
+     public static List<PaymentViewModel> GetAllPaymentsForDisplay(int companyId)
+{
+    var payments = new List<PaymentViewModel>();
+    // Simple query without JOINs to avoid Access syntax issues
+    string sql = @"
+        SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID
+        FROM PaymentMaster
+        WHERE CompanyID = ?
+        ORDER BY PaymentDate DESC";
+    
+    var param = new OleDbParameter("CompanyID", companyId);
+    try
+    {
+        DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
+        foreach (DataRow row in dt.Rows)
         {
-            var payments = new List<PaymentViewModel>();
-            string sql = @"
-                SELECT pm.PaymentID, pm.PaymentDate, pm.TotalAmountPaid, pm.PaymentMethod, pm.Reference, pm.PartyID, p.PartyName
-                FROM PaymentMaster pm
-                LEFT JOIN PartyMaster p ON pm.PartyID = p.PartyID
-                WHERE pm.CompanyID = ?
-                ORDER BY pm.PaymentDate DESC";
-            
-            var param = new OleDbParameter("CompanyID", companyId);
+            // Get party name separately
 
-            try
+
+            int partyId = Convert.ToInt32(row["PartyID"]);
+            string partyName = PartyService.GetPartyByID(partyId)?.PartyName ?? string.Empty;
+            // You'll need to create a method to get party name by ID
+            // partyName = PartyService.GetPartyNameById(partyId);
+            
+            // For now, we'll leave it empty or you can add the party lookup
+            // Get broker name separately
+            string brokerName = string.Empty;
+            if (row["BrokerID"] != DBNull.Value)
             {
-                DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
-                foreach (DataRow row in dt.Rows)
-                {
-                    payments.Add(new PaymentViewModel
-                    {
-                        PaymentID = Convert.ToInt32(row["PaymentID"]),
-                        PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
-                        TotalAmountPaid = Convert.ToDecimal(row["TotalAmountPaid"]),
-                        PaymentMethod = row["PaymentMethod"].ToString(),
-                        Reference = row["Reference"].ToString(),
-                        PartyID = Convert.ToInt32(row["PartyID"]),
-                        PartyName = row["PartyName"].ToString()
-                    });
-                }
+                var broker = BrokerService.GetBrokerByID(Convert.ToInt32(row["BrokerID"]));
+                brokerName = broker?.BrokerName ?? string.Empty;
             }
-            catch (Exception ex)
+            
+            payments.Add(new PaymentViewModel
             {
-                MessageBox.Show($"Error loading payments: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            return payments;
+                PaymentID = Convert.ToInt32(row["PaymentID"]),
+                PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
+                TotalAmountPaid = Convert.ToDecimal(row["TotalAmountPaid"]),
+                PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
+                Reference = row["Reference"]?.ToString() ?? string.Empty,
+                PartyID = partyId,
+                PartyName = partyName, // You'll need to implement party lookup
+                BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
+                BrokerName = brokerName
+            });
         }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading payments: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    return payments;
+}
         /// <summary>
         /// Gets the payment trace showing which bills a payment was applied to
         /// </summary>

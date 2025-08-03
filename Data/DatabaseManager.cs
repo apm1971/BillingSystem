@@ -240,6 +240,7 @@ namespace SaleBillSystem.NET.Data
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
                         PaymentID COUNTER PRIMARY KEY,
                         PartyID INTEGER NOT NULL,
+                        BrokerID INTEGER,
                         PaymentDate DATETIME NOT NULL,
                         TotalAmountPaid CURRENCY NOT NULL,
                         PaymentMethod TEXT(50),
@@ -433,6 +434,10 @@ namespace SaleBillSystem.NET.Data
                         System.Diagnostics.Debug.WriteLine($"Error adding TotalAmount column: {ex.Message}");
                     }
                 }
+                
+                // Note: Fixed issue where OriginalAmount wasn't including item charges
+                // New bills will now correctly include item charges in OriginalAmount
+                // Existing bills may need manual correction if they have item charges
             }
             catch (Exception ex)
             {

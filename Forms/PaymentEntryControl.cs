@@ -58,6 +58,7 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillID", HeaderText = "ID", Visible = false, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillNo", HeaderText = "Bill No.", Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "PartyName", HeaderText = "Party Name", Width = 150, ReadOnly = true });
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BrokerName", HeaderText = "Broker Name", Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillDate", HeaderText = "Bill Date", DefaultCellStyle = new DataGridViewCellStyle { Format = "dd-MMM-yyyy" }, Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmount", HeaderText = "Total Amount", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 150, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BalanceDue", HeaderText = "Balance Due", Name="BalanceDue", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9.75F, FontStyle.Bold), ForeColor = Color.Red }, Width = 150, ReadOnly = true });
@@ -182,6 +183,7 @@ namespace SaleBillSystem.NET.Forms
                         BillID = b.BillID,
                         BillNo = b.BillNo,
                         PartyName = b.PartyName,
+                        BrokerName = b.BrokerID.HasValue ? BrokerService.GetBrokerByID(b.BrokerID.Value)?.BrokerName ?? string.Empty : string.Empty,
                         BillDate = b.BillDate,
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
@@ -214,6 +216,7 @@ namespace SaleBillSystem.NET.Forms
                         BillID = b.BillID,
                         BillNo = b.BillNo,
                         PartyName = b.PartyName,
+                        BrokerName = b.BrokerID.HasValue ? BrokerService.GetBrokerByID(b.BrokerID.Value)?.BrokerName ?? string.Empty : string.Empty,
                         BillDate = b.BillDate,
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
@@ -402,10 +405,27 @@ namespace SaleBillSystem.NET.Forms
                         partyId = firstBill.PartyID;
                     }
 
+                    // Determine the broker ID for the payment
+                    int? brokerId = null;
+                    if (cmbBroker.SelectedValue != null && (int)cmbBroker.SelectedValue > 0)
+                    {
+                        brokerId = (int)cmbBroker.SelectedValue;
+                    }
+                    else if (paymentsToSave.Any())
+                    {
+                        // Get broker ID from the first bill being paid
+                        var firstBill = BillService.GetBillByID(paymentsToSave.First().BillID);
+                        if (firstBill?.BrokerID.HasValue == true)
+                        {
+                            brokerId = firstBill.BrokerID.Value;
+                        }
+                    }
+
                     // Create a single master record for this payment event
                     var paymentMaster = new PaymentMaster
                     {
                         PartyID = partyId,
+                        BrokerID = brokerId,
                         PaymentDate = paymentDate,
                         TotalAmountPaid = totalPaymentAmount,
                         PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",

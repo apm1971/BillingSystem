@@ -718,6 +718,10 @@ private void MoveToNextCell()
             decimal totalItemCharges = _currentBill.BillItems.Sum(i => i.Charges);
             decimal.TryParse(txtAdditionalCharges.Text, out decimal oneTimeCharges);
 
+            // Update the current bill's OriginalAmount to include item charges
+            _currentBill.OriginalAmount = totalItemAmount + totalItemCharges;
+            _currentBill.AdditionalCharges = oneTimeCharges;
+
             decimal netAmount = totalItemAmount + totalItemCharges + oneTimeCharges;
 
             lblTotalAmount.Text = $"Item Total: ₹{totalItemAmount:N2}";
@@ -733,8 +737,7 @@ private void MoveToNextCell()
             {
                 _currentBill.BillNo = txtBillNo.Text;
                 _currentBill.BillDate = DateTime.ParseExact(txtBillDate.Text, "dd-MM-yyyy", null);
-                _currentBill.AdditionalCharges = decimal.Parse(txtAdditionalCharges.Text);
-                _currentBill.OriginalAmount = _currentBill.BillItems.Sum(i => i.Amount);
+                // OriginalAmount and AdditionalCharges are already updated by CalculateTotals()
                 _currentBill.CompanyID = 1; // Replace with Program.ActiveCompany.CompanyID
                 _currentBill.Status = "Unpaid"; // Set default status
                 

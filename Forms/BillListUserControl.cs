@@ -45,19 +45,6 @@ namespace SaleBillSystem.NET.Forms
                     decimal dueAmount = LedgerService.GetDueAmount(bill.BillID);
                     bill.Balance = dueAmount;
                     
-                    if (dueAmount <= 0)
-                    {
-                        bill.Status = "Paid";
-                    }
-                    else if (dueAmount >= bill.TotalAmount)
-                    {
-                        bill.Status = "Unpaid";
-                    }
-                    else
-                    {
-                        bill.Status = "Partial";
-                    }
-                    
                     // Look up broker name from broker ID
                     if (bill.BrokerID.HasValue && bill.BrokerID.Value > 0)
                     {
@@ -279,6 +266,17 @@ namespace SaleBillSystem.NET.Forms
         {
             if (dgvBills.CurrentRow?.DataBoundItem is Bill selectedBill)
             {
+                // Check if bill can be edited based on status
+                if (selectedBill.Status == "Paid" || selectedBill.Status == "Partial")
+                {
+                    MessageBox.Show(
+                        $"Cannot edit bill '{selectedBill.BillNo}' because it has a status of '{selectedBill.Status}'.\n\nOnly unpaid bills can be edited.",
+                        "Edit Not Allowed",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 try
                 {
                     var editBillControl = new SaleBillUserControl(selectedBill);

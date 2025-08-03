@@ -102,23 +102,29 @@ namespace SaleBillSystem.NET.Data
             
             try
             {
-                // First, get the payment details
-                string paymentSql = "SELECT PaymentDate, PaymentMethod, Reference FROM PaymentMaster WHERE PaymentID = ?";
-                var paymentParam = new OleDbParameter("PaymentID", paymentId);
-                DataTable paymentDt = DatabaseManager.ExecuteQuery(paymentSql, paymentParam);
+                // First, check if the payment exists
+                string checkPaymentSql = "SELECT COUNT(*) FROM PaymentMaster WHERE PaymentID = ?";
+                var checkParam = new OleDbParameter("PaymentID", paymentId);
+                int paymentCount = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkPaymentSql, checkParam));
                 
-                if (paymentDt.Rows.Count == 0)
+                if (paymentCount == 0)
                 {
                     MessageBox.Show($"Payment with ID {paymentId} not found.", "Payment Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return paymentTrace;
                 }
                 
-                var paymentRow = paymentDt.Rows[0];
-                DateTime paymentDate = Convert.ToDateTime(paymentRow["PaymentDate"]);
-                string paymentMethod = paymentRow["PaymentMethod"]?.ToString() ?? "";
-                string paymentReference = paymentRow["Reference"]?.ToString() ?? "";
+                // Check if there are any transactions for this payment
+                string checkTransactionsSql = "SELECT COUNT(*) FROM TransactionLedger WHERE PaymentID = ?";
+                var checkTransParam = new OleDbParameter("PaymentID", paymentId);
+                int transactionCount = Convert.ToInt32(DatabaseManager.ExecuteScalar(checkTransactionsSql, checkTransParam));
                 
-                // Now find transactions that match this payment
+                if (transactionCount == 0)
+                {
+                    MessageBox.Show($"No transactions found for payment ID {paymentId}. This payment may not have been properly linked to transactions.", "No Transactions Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return paymentTrace;
+                }
+                
+                // Direct lookup using PaymentID column in TransactionLedger
                 string sql = @"
                     SELECT 
                         tl.TransactionID,
@@ -134,15 +140,12 @@ namespace SaleBillSystem.NET.Data
                         tl.Reference
                     FROM TransactionLedger tl
                     LEFT JOIN BillMaster b ON tl.BillID = b.BillID
-                    WHERE tl.TransactionType = 'Payment' 
-                    AND tl.TransactionDate = ?
-                    AND tl.PaymentMethod = ?
+                    WHERE tl.PaymentID = ?
                     ORDER BY tl.TransactionDate, tl.TransactionID";
                 
-                var dateParam = new OleDbParameter("PaymentDate", paymentDate);
-                var methodParam = new OleDbParameter("PaymentMethod", paymentMethod);
+                var param = new OleDbParameter("PaymentID", paymentId);
 
-                DataTable dt = DatabaseManager.ExecuteQuery(sql, dateParam, methodParam);
+                DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
                 foreach (DataRow row in dt.Rows)
                 {
                     paymentTrace.Add(new PaymentTraceViewModel

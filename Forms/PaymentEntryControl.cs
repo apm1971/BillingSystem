@@ -362,9 +362,9 @@ namespace SaleBillSystem.NET.Forms
 
                         var paymentTx = new Transaction
                         {
-                            PaymentID = paymentId,
                             PartyID = fullBill.PartyID,
                             BillID = fullBill.BillID,
+                            PaymentID = paymentId,
                             TransactionDate = paymentDate,
                             TransactionType = "Payment",
                             Description = $"Payment against Bill No: {fullBill.BillNo}",
@@ -377,7 +377,12 @@ namespace SaleBillSystem.NET.Forms
                         LedgerService.AddTransaction(paymentTx, conn, dbTransaction);
                     }
                     
+                    // First commit the ledger transactions
                     dbTransaction.Commit();
+                    
+                    // Now update bill statuses in a new transaction
+                    UpdateBillStatuses(paymentsToSave);
+                    
                     MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     ClearForm();
                 }
@@ -392,6 +397,73 @@ namespace SaleBillSystem.NET.Forms
         private void BtnClear_Click(object? sender, EventArgs e)
         {
             ClearForm();
+        }
+
+        #endregion
+
+        #region Bill Status Update
+
+        /// <summary>
+        /// Updates the status of bills after payment transactions are saved
+        /// </summary>
+        private void UpdateBillStatuses(List<BillViewModel> paidBills)
+        {
+            try
+            {
+                using (var conn = DatabaseManager.GetConnection())
+                {
+                    conn.Open();
+                    var trans = conn.BeginTransaction();
+                    
+                    try
+                    {
+                        foreach (var billVm in paidBills)
+                        {
+                            // Calculate current balance after payment (now ledger transactions are committed)
+                            decimal dueAmount = LedgerService.GetDueAmount(billVm.BillID);
+                            
+                            // Determine new status based on balance
+                            string newStatus;
+                            if (dueAmount <= 0)
+                            {
+                                newStatus = "Paid";
+                            }
+                            else if (dueAmount >= billVm.TotalAmount)
+                            {
+                                newStatus = "Unpaid";
+                            }
+                            else
+                            {
+                                newStatus = "Partial";
+                            }
+                            
+                            // Update the bill status in the database
+                            string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
+                            var statusParam = new OleDbParameter("Status", newStatus);
+                            var billIdParam = new OleDbParameter("BillID", billVm.BillID);
+                            
+                            using (var cmd = new OleDbCommand(updateSql, conn, trans))
+                            {
+                                cmd.Parameters.Add(statusParam);
+                                cmd.Parameters.Add(billIdParam);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        
+                        trans.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't throw - we don't want to rollback the payment if status update fails
+                System.Diagnostics.Debug.WriteLine($"Error updating bill statuses: {ex.Message}");
+            }
         }
 
         #endregion

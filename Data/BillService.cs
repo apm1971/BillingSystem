@@ -337,7 +337,7 @@ namespace SaleBillSystem.NET.Data
 
         #region == Helper Methods ==
 
-        private static List<BillItem> GetBillDetails(int billId)
+        public static List<BillItem> GetBillDetails(int billId)
         {
             var items = new List<BillItem>();
             string sql = "SELECT * FROM BillDetails WHERE BillID = ?";

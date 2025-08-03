@@ -13,6 +13,7 @@ namespace SaleBillSystem.NET.Forms
         public MainForm()
         {
             InitializeComponent();
+            this.FormClosing += MainForm_FormClosing;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -152,6 +153,27 @@ namespace SaleBillSystem.NET.Forms
             mainMenuStrip.Items.Add(paymentsMenu);
             
             // Add Transactions, Reports, etc. menus here
+        }
+
+        #endregion
+
+        #region Form Closing Confirmation
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Show confirmation dialog
+            DialogResult result = MessageBox.Show(
+                "Are you sure you want to exit the Sale Bill System?\n\nAny unsaved data will be lost.",
+                "Confirm Exit",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2); // Default to "No"
+
+            // If user clicks "No", cancel the closing
+            if (result == DialogResult.No)
+            {
+                e.Cancel = true;
+            }
         }
 
         #endregion

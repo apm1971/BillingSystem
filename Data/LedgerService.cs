@@ -16,13 +16,14 @@ namespace SaleBillSystem.NET.Data
             {
                 string sql = @"
                     INSERT INTO TransactionLedger 
-                    (PartyID, BillID, TransactionDate, TransactionType, Description, DebitAmount, CreditAmount, PaymentMethod, Reference, UserID, CompanyID)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (PartyID, BillID, PaymentID, TransactionDate, TransactionType, Description, DebitAmount, CreditAmount, PaymentMethod, Reference, UserID, CompanyID)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 var parameters = new OleDbParameter[]
                 {
                     new OleDbParameter("PartyID", transaction.PartyID),
                     new OleDbParameter("BillID", transaction.BillID ?? (object)DBNull.Value),
+                    new OleDbParameter("PaymentID", transaction.PaymentID ?? (object)DBNull.Value),
                     new OleDbParameter("TransactionDate", transaction.TransactionDate),
                     new OleDbParameter("TransactionType", transaction.TransactionType),
                     new OleDbParameter("Description", transaction.Description ?? (object)DBNull.Value),

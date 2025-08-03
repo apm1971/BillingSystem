@@ -285,8 +285,25 @@ namespace SaleBillSystem.NET.Forms
 
             txtAdditionalCharges.Text = _currentBill.AdditionalCharges.ToString("N2");
 
+            // Ensure BillItems are loaded
+            if (_currentBill.BillItems == null)
+            {
+                _currentBill.BillItems = new List<BillItem>();
+            }
+            
+            // Load bill items from database if not already loaded
+            if (_currentBill.BillID > 0 && _currentBill.BillItems.Count == 0)
+            {
+                _currentBill.BillItems = BillService.GetBillDetails(_currentBill.BillID);
+            }
+
+            // Set DataGridView data source
             dgvItems.DataSource = null;
             dgvItems.DataSource = _currentBill.BillItems;
+            
+            // Refresh the grid to ensure items are displayed
+            dgvItems.Refresh();
+            
             CalculateTotals();
         }
 

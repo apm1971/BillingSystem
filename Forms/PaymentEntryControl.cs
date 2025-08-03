@@ -383,10 +383,29 @@ namespace SaleBillSystem.NET.Forms
                 var dbTransaction = conn.BeginTransaction();
                 try
                 {
+                    // Determine the party ID for the payment master record
+                    int partyId;
+                    if (cmbParty.SelectedValue != null && (int)cmbParty.SelectedValue > 0)
+                    {
+                        // Party is directly selected
+                        partyId = (int)cmbParty.SelectedValue;
+                    }
+                    else
+                    {
+                        // Only broker is selected, get party from the first bill being paid
+                        var firstBill = BillService.GetBillByID(paymentsToSave.First().BillID);
+                        if (firstBill == null)
+                        {
+                            MessageBox.Show("Unable to determine party for payment. Please select a party.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        partyId = firstBill.PartyID;
+                    }
+
                     // Create a single master record for this payment event
                     var paymentMaster = new PaymentMaster
                     {
-                        PartyID = (int)cmbParty.SelectedValue,
+                        PartyID = partyId,
                         PaymentDate = paymentDate,
                         TotalAmountPaid = totalPaymentAmount,
                         PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
@@ -589,11 +608,16 @@ namespace SaleBillSystem.NET.Forms
             paymentAmount = 0;
             paymentDate = DateTime.MinValue;
 
-            if (cmbParty.SelectedValue == null || (int)cmbParty.SelectedValue <= 0)
+            // Check if either party or broker is selected
+            bool partySelected = cmbParty.SelectedValue != null && (int)cmbParty.SelectedValue > 0;
+            bool brokerSelected = cmbBroker.SelectedValue != null && (int)cmbBroker.SelectedValue > 0;
+
+            if (!partySelected && !brokerSelected)
             {
-                MessageBox.Show("Please select a party.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please select either a party or a broker.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
+
             if (!decimal.TryParse(txtPaymentAmount.Text, out paymentAmount) || paymentAmount < 0)
             {
                 MessageBox.Show("Payment amount is invalid.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);

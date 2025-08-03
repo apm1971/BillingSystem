@@ -181,7 +181,10 @@ namespace SaleBillSystem.NET.Data
                 {
                     var param = new OleDbParameter("PaymentID", paymentId);
 
-                    // First, delete all ledger entries associated with this payment
+                    // First, get the bills that were affected by this payment before deleting transactions
+                    var affectedBills = GetBillsAffectedByPayment(paymentId, conn, transaction);
+
+                    // Delete all ledger entries associated with this payment
                     using (var cmd = new OleDbCommand("DELETE FROM TransactionLedger WHERE PaymentID = ?", conn, transaction))
                     {
                         cmd.Parameters.Add(param);
@@ -196,7 +199,12 @@ namespace SaleBillSystem.NET.Data
                         cmd.ExecuteNonQuery();
                     }
 
+                    // Commit the deletion transaction
                     transaction.Commit();
+                    
+                    // Now update bill statuses in a new transaction
+                    UpdateBillStatusesAfterDeletion(affectedBills);
+                    
                     return true;
                 }
                 catch (Exception ex)
@@ -205,6 +213,107 @@ namespace SaleBillSystem.NET.Data
                     MessageBox.Show($"Error deleting payment: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return false;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets the list of bills that were affected by a specific payment
+        /// </summary>
+        private static List<int> GetBillsAffectedByPayment(int paymentId, OleDbConnection conn, OleDbTransaction transaction)
+        {
+            var affectedBills = new List<int>();
+            string sql = "SELECT DISTINCT BillID FROM TransactionLedger WHERE PaymentID = ? AND BillID IS NOT NULL";
+            var param = new OleDbParameter("PaymentID", paymentId);
+
+            using (var cmd = new OleDbCommand(sql, conn, transaction))
+            {
+                cmd.Parameters.Add(param);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        affectedBills.Add(Convert.ToInt32(reader["BillID"]));
+                    }
+                }
+            }
+            return affectedBills;
+        }
+
+        /// <summary>
+        /// Updates the status of bills after payment deletion using the same logic as payment entry save
+        /// </summary>
+        private static void UpdateBillStatusesAfterDeletion(List<int> affectedBillIds)
+        {
+            try
+            {
+                using (var conn = DatabaseManager.GetConnection())
+                {
+                    conn.Open();
+                    var trans = conn.BeginTransaction();
+                    
+                    try
+                    {
+                        foreach (var billId in affectedBillIds)
+                        {
+                            // Get the bill details to calculate total amount
+                            string billSql = "SELECT (OriginalAmount + AdditionalCharges) as TotalAmount FROM BillMaster WHERE BillID = ?";
+                            var billParam = new OleDbParameter("BillID", billId);
+                            decimal totalAmount = 0;
+                            
+                            using (var cmd = new OleDbCommand(billSql, conn, trans))
+                            {
+                                cmd.Parameters.Add(billParam);
+                                var result = cmd.ExecuteScalar();
+                                if (result != null && result != DBNull.Value)
+                                {
+                                    totalAmount = Convert.ToDecimal(result);
+                                }
+                            }
+
+                            // Calculate current balance after payment deletion (ledger transactions are now deleted)
+                            decimal dueAmount = LedgerService.GetDueAmount(billId);
+                            
+                            // Determine new status based on balance using the same logic as payment entry save
+                            string newStatus;
+                            if (dueAmount <= 0)
+                            {
+                                newStatus = "Paid";
+                            }
+                            else if (dueAmount >= totalAmount)
+                            {
+                                newStatus = "Unpaid";
+                            }
+                            else
+                            {
+                                newStatus = "Partial";
+                            }
+                            
+                            // Update the bill status in the database
+                            string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
+                            var statusParam = new OleDbParameter("Status", newStatus);
+                            var billIdParam = new OleDbParameter("BillID", billId);
+                            
+                            using (var cmd = new OleDbCommand(updateSql, conn, trans))
+                            {
+                                cmd.Parameters.Add(statusParam);
+                                cmd.Parameters.Add(billIdParam);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                        
+                        trans.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't throw - we don't want to rollback the payment deletion if status update fails
+                System.Diagnostics.Debug.WriteLine($"Error updating bill statuses after payment deletion: {ex.Message}");
             }
         }
     }

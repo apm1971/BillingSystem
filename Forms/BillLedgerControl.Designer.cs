@@ -23,6 +23,8 @@ namespace SaleBillSystem.NET.Forms
             this.pnlTop = new System.Windows.Forms.Panel();
             this.cmbParty = new System.Windows.Forms.ComboBox();
             this.lblParty = new System.Windows.Forms.Label();
+            this.cmbBroker = new System.Windows.Forms.ComboBox();
+            this.lblBroker = new System.Windows.Forms.Label();
             this.gbLedger = new System.Windows.Forms.GroupBox();
             this.dgvLedger = new System.Windows.Forms.DataGridView();
             this.pnlButtons = new System.Windows.Forms.Panel();
@@ -84,6 +86,8 @@ namespace SaleBillSystem.NET.Forms
             // 
             // pnlTop
             // 
+            this.pnlTop.Controls.Add(this.cmbBroker);
+            this.pnlTop.Controls.Add(this.lblBroker);
             this.pnlTop.Controls.Add(this.cmbParty);
             this.pnlTop.Controls.Add(this.lblParty);
             this.pnlTop.Dock = System.Windows.Forms.DockStyle.Top;
@@ -99,7 +103,7 @@ namespace SaleBillSystem.NET.Forms
             this.cmbParty.FormattingEnabled = true;
             this.cmbParty.Location = new System.Drawing.Point(88, 9);
             this.cmbParty.Name = "cmbParty";
-            this.cmbParty.Size = new System.Drawing.Size(300, 21);
+            this.cmbParty.Size = new System.Drawing.Size(250, 21);
             this.cmbParty.TabIndex = 0;
             // 
             // lblParty
@@ -110,6 +114,25 @@ namespace SaleBillSystem.NET.Forms
             this.lblParty.Size = new System.Drawing.Size(79, 13);
             this.lblParty.TabIndex = 0;
             this.lblParty.Text = "Select a Party:";
+            // 
+            // cmbBroker
+            // 
+            this.cmbBroker.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.cmbBroker.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cmbBroker.FormattingEnabled = true;
+            this.cmbBroker.Location = new System.Drawing.Point(450, 9);
+            this.cmbBroker.Name = "cmbBroker";
+            this.cmbBroker.Size = new System.Drawing.Size(250, 21);
+            this.cmbBroker.TabIndex = 1;
+            // 
+            // lblBroker
+            // 
+            this.lblBroker.AutoSize = true;
+            this.lblBroker.Location = new System.Drawing.Point(365, 12);
+            this.lblBroker.Name = "lblBroker";
+            this.lblBroker.Size = new System.Drawing.Size(79, 13);
+            this.lblBroker.TabIndex = 0;
+            this.lblBroker.Text = "Select a Broker:";
             // 
             // gbLedger
             // 
@@ -187,6 +210,8 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Panel pnlTop;
         private System.Windows.Forms.ComboBox cmbParty;
         private System.Windows.Forms.Label lblParty;
+        private System.Windows.Forms.ComboBox cmbBroker;
+        private System.Windows.Forms.Label lblBroker;
         private System.Windows.Forms.GroupBox gbLedger;
         private System.Windows.Forms.DataGridView dgvLedger;
         private System.Windows.Forms.Panel pnlButtons;

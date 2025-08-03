@@ -16,6 +16,7 @@ namespace SaleBillSystem.NET.Forms
         public event EventHandler? CloseRequested;
         
         private List<Party> _parties = new List<Party>();
+        private List<Broker> _brokers = new List<Broker>();
         private List<Bill> _billsForParty = new List<Bill>();
         private Bill? _selectedBill;
         private List<TransactionViewModel> _currentLedgerEntries = new List<TransactionViewModel>();
@@ -81,19 +82,26 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 _parties = PartyService.GetAllParties();
+                _brokers = BrokerService.GetAllBrokers();
+
                 cmbParty.DataSource = _parties;
                 cmbParty.DisplayMember = "PartyName";
                 cmbParty.ValueMember = "PartyID";
+                
+                cmbBroker.DataSource = _brokers;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading parties: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error loading initial data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void SetupEventHandlers()
         {
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             dgvBills.SelectionChanged += DgvBills_SelectionChanged;
             dgvBills.KeyDown += DgvBills_KeyDown;
             btnPrint.Click += BtnPrint_Click; // Event for the new Print button
@@ -102,6 +110,7 @@ namespace SaleBillSystem.NET.Forms
         private void ClearForm()
         {
             cmbParty.SelectedIndex = -1;
+            cmbBroker.SelectedIndex = -1;
             dgvBills.DataSource = null;
             dgvLedger.DataSource = null;
             gbLedger.Text = "Transaction History";
@@ -114,9 +123,26 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            if (cmbParty.SelectedValue is int partyId && partyId > 0)
+            LoadBillsBasedOnSelection();
+        }
+
+        private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            LoadBillsBasedOnSelection();
+        }
+
+        private void LoadBillsBasedOnSelection()
+        {
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
+
+            if (partyId.HasValue && partyId.Value > 0)
             {
-                LoadBillsForParty(partyId);
+                LoadBillsForParty(partyId.Value, brokerId);
+            }
+            else if (brokerId.HasValue && brokerId.Value > 0)
+            {
+                LoadBillsByBroker(brokerId.Value);
             }
             else
             {
@@ -125,16 +151,38 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void LoadBillsForParty(int partyId)
+        private void LoadBillsForParty(int partyId, int? brokerId = null)
         {
             try
             {
-                _billsForParty = BillService.GetAllBillsForParty(partyId);
+                var bills = BillService.GetAllBillsForParty(partyId);
+                
+                // Filter by broker if specified
+                if (brokerId.HasValue && brokerId.Value > 0)
+                {
+                    bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
+                }
+                
+                _billsForParty = bills;
                 dgvBills.DataSource = _billsForParty;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadBillsByBroker(int brokerId)
+        {
+            try
+            {
+                var allBills = BillService.GetAllBills();
+                _billsForParty = allBills.Where(b => b.BrokerID == brokerId).ToList();
+                dgvBills.DataSource = _billsForParty;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading bills by broker: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

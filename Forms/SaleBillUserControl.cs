@@ -735,7 +735,7 @@ private void MoveToNextCell()
                 _currentBill.BillDate = DateTime.ParseExact(txtBillDate.Text, "dd-MM-yyyy", null);
                 _currentBill.AdditionalCharges = decimal.Parse(txtAdditionalCharges.Text);
                 _currentBill.OriginalAmount = _currentBill.BillItems.Sum(i => i.Amount);
-                _currentBill.CompanyID = 0; // Replace with Program.ActiveCompany.CompanyID
+                _currentBill.CompanyID = 1; // Replace with Program.ActiveCompany.CompanyID
                 _currentBill.Status = "Unpaid"; // Set default status
                 
                 if (BillService.SaveBill(_currentBill, out int billId))

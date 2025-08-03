@@ -115,35 +115,42 @@ namespace SaleBillSystem.NET.Forms
             var brokerMasterItem = new ToolStripMenuItem("&Broker Master");
             brokerMasterItem.Click += (s, e) => { ShowControl(new BrokerMasterUserControl()); };
             
-            // Bills Menu
+            mastersMenu.DropDownItems.Add(partyMasterItem);
+            mastersMenu.DropDownItems.Add(itemMasterItem);
+            mastersMenu.DropDownItems.Add(brokerMasterItem);
+            
+            // === BILLS MENU ===
             var billsMenu = new ToolStripMenuItem("&Bills");
             
             var newBillItem = new ToolStripMenuItem("&New Bill");
             newBillItem.Click += (s, e) => { ShowControl(new SaleBillUserControl()); };
 
-            var paymentEntryItem = new ToolStripMenuItem("&Payment Entry");
-            paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
             var billledgerItem = new ToolStripMenuItem("&Bill Ledger");
             billledgerItem.Click += (s, e) => { ShowControl(new BillLedgerControl()); };
             var billListItem = new ToolStripMenuItem("&Bill List");
             billListItem.Click += (s, e) => { ShowControl(new BillListUserControl()); };
+            
+            billsMenu.DropDownItems.Add(newBillItem);
+            billsMenu.DropDownItems.Add(billledgerItem);
+            billsMenu.DropDownItems.Add(billListItem);
+            
+            // === PAYMENTS MENU ===
+            var paymentsMenu = new ToolStripMenuItem("&Payments");
+            
+            var paymentEntryItem = new ToolStripMenuItem("&Payment Entry");
+            paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
+            
             var paymentListItem = new ToolStripMenuItem("&Payment List");
             paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };  
             
-            billsMenu.DropDownItems.Add(newBillItem);
-            billsMenu.DropDownItems.Add(paymentEntryItem);
-            billsMenu.DropDownItems.Add(billledgerItem);
-            billsMenu.DropDownItems.Add(billListItem);
-            billsMenu.DropDownItems.Add(paymentListItem);
-            
-            mastersMenu.DropDownItems.Add(partyMasterItem);
-            mastersMenu.DropDownItems.Add(itemMasterItem);
-            mastersMenu.DropDownItems.Add(brokerMasterItem);
-            
-            mainMenuStrip.Items.Add(billsMenu);
+            paymentsMenu.DropDownItems.Add(paymentEntryItem);
+            paymentsMenu.DropDownItems.Add(paymentListItem);
 
-            // Add all top-level menus to the main menu strip
+            // Add all top-level menus to the main menu strip in the correct order
             mainMenuStrip.Items.Add(mastersMenu);
+            mainMenuStrip.Items.Add(billsMenu);
+            mainMenuStrip.Items.Add(paymentsMenu);
+            
             // Add Transactions, Reports, etc. menus here
         }
 

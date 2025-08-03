@@ -20,7 +20,7 @@ namespace SaleBillSystem.NET.Forms
         private List<Broker> _allBrokers = new List<Broker>();
         private bool _isEditMode;
         
-        private Control? _searchTarget;
+
 
         public SaleBillUserControl(Bill? bill = null)
         {
@@ -65,6 +65,10 @@ namespace SaleBillSystem.NET.Forms
     // Populate the Item ComboBox
     PopulateItemComboBox();
     
+    // Setup Party and Broker ComboBoxes
+    SetupPartyComboBox();
+    SetupBrokerComboBox();
+    
     if (_isEditMode)
     {
         LoadBillData();
@@ -85,7 +89,7 @@ namespace SaleBillSystem.NET.Forms
             // Define Columns
             dgvItems.Columns.Clear();
             
-            // Item column as ComboBox
+            // Item column as ComboBox with auto-complete
             var itemColumn = new DataGridViewComboBoxColumn 
             { 
                 Name = "ItemName", 
@@ -114,44 +118,117 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-private void SetupEventHandlers()
-{
-    // Party and Broker search
-    txtPartyName.TextChanged += (s, e) => {
-        if (txtPartyName.Focused)
+        private void SetupPartyComboBox()
         {
-            ShowSearchPanel(txtPartyName, _allParties.Select(p => p.PartyName).ToList());
+            cmbParty.DataSource = _allParties;
+            cmbParty.DisplayMember = "PartyName";
+            cmbParty.ValueMember = "PartyID";
+            cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
         }
-    };
-    
-    txtBrokerName.TextChanged += (s, e) => {
-        if (txtBrokerName.Focused)
-        {
-            ShowSearchPanel(txtBrokerName, _allBrokers.Select(b => b.BrokerName).ToList());
-        }
-    };
-    
-    txtPartyName.KeyDown += SearchTextBox_KeyDown;
-    txtBrokerName.KeyDown += SearchTextBox_KeyDown;
-    
-    txtPartyName.Leave += (s, e) => HideSearchPanel();
-    txtBrokerName.Leave += (s, e) => HideSearchPanel();
-    
-    // Setup search list box events ONLY ONCE
-    SetupSearchListBoxEvents();
 
-    // DataGridView events
-    dgvItems.CellEndEdit += (s, e) => CalculateRowTotal(e.RowIndex);
-    dgvItems.UserDeletedRow += (s, e) => CalculateTotals();
-    dgvItems.KeyDown += DgvItems_KeyDown;
-    
-    // Add event for ComboBox selection
-    dgvItems.CellValueChanged += DgvItems_CellValueChanged;
-    
-    txtAdditionalCharges.TextChanged += (s, e) => CalculateTotals();
-    btnSave.Click += BtnSave_Click;
-    btnCancel.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
-}
+        private void SetupBrokerComboBox()
+        {
+            cmbBroker.DataSource = _allBrokers;
+            cmbBroker.DisplayMember = "BrokerName";
+            cmbBroker.ValueMember = "BrokerID";
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+        }
+
+        private void SetupEventHandlers()
+        {
+            // TextBox keyboard events
+            txtBillDate.KeyDown += TxtBillDate_KeyDown;
+            
+            // ComboBox keyboard events
+            cmbParty.KeyDown += CmbParty_KeyDown;
+            cmbBroker.KeyDown += CmbBroker_KeyDown;
+            
+            // DataGridView events
+            dgvItems.CellEndEdit += (s, e) => CalculateRowTotal(e.RowIndex);
+            dgvItems.UserDeletedRow += (s, e) => CalculateTotals();
+            dgvItems.KeyDown += DgvItems_KeyDown;
+            dgvItems.EditingControlShowing += DgvItems_EditingControlShowing;
+            
+            // Add event for ComboBox selection
+            dgvItems.CellValueChanged += DgvItems_CellValueChanged;
+            
+            txtAdditionalCharges.TextChanged += (s, e) => CalculateTotals();
+            btnSave.Click += BtnSave_Click;
+            btnCancel.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
+            
+            // Setup tooltips
+            SetupTooltips();
+        }
+
+        private void TxtBillDate_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                cmbParty.Focus();
+            }
+        }
+
+        private void DgvItems_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            // Configure auto-complete for item ComboBox
+            if (e.Control is ComboBox comboBox && dgvItems.CurrentCell?.OwningColumn?.Name == "ItemName")
+            {
+                comboBox.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+                comboBox.AutoCompleteSource = AutoCompleteSource.ListItems;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDown;
+                
+                // Add keyboard event for the ComboBox
+                comboBox.KeyDown -= ComboBox_KeyDown; // Remove previous handler to avoid duplicates
+                comboBox.KeyDown += ComboBox_KeyDown;
+            }
+        }
+
+        private void ComboBox_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (sender is ComboBox comboBox)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    dgvItems.EndEdit();
+                    
+                    // Move to next cell
+                    var currentCell = dgvItems.CurrentCell;
+                    if (currentCell != null)
+                    {
+                        int nextCol = currentCell.ColumnIndex + 1;
+                        while (nextCol < dgvItems.Columns.Count && dgvItems.Columns[nextCol].ReadOnly)
+                        {
+                            nextCol++;
+                        }
+                        
+                        if (nextCol < dgvItems.Columns.Count)
+                        {
+                            this.BeginInvoke((Action)(() => {
+                                dgvItems.CurrentCell = dgvItems.Rows[currentCell.RowIndex].Cells[nextCol];
+                                dgvItems.BeginEdit(true);
+                            }));
+                        }
+                    }
+                }
+                else if (e.KeyCode == Keys.Down && !comboBox.DroppedDown)
+                {
+                    // Open dropdown on first Down arrow
+                    comboBox.DroppedDown = true;
+                    e.SuppressKeyPress = true;
+                }
+            }
+        }
+
+        private void SetupTooltips()
+        {
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(txtBillDate, "Enter bill date in dd-mm-yyyy format (F1)");
+            toolTip.SetToolTip(cmbParty, "Type to search or use dropdown to select party (F2)");
+            toolTip.SetToolTip(cmbBroker, "Type to search or use dropdown to select broker");
+            toolTip.SetToolTip(dgvItems, "Items: Type to search or use dropdown to select items. Press Enter to move to next field.");
+        }
 
 
         #endregion
@@ -163,8 +240,8 @@ private void SetupEventHandlers()
     _currentBill = new Bill();
     txtBillNo.Text = BillService.GenerateNewBillNumber();
     txtBillDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
-    txtPartyName.Clear();
-    txtBrokerName.Clear();
+    cmbParty.SelectedIndex = -1;
+    cmbBroker.SelectedIndex = -1;
     lblPartyDetails.Text = "Party details will appear here";
     txtAdditionalCharges.Text = "0.00";
     
@@ -178,7 +255,7 @@ private void SetupEventHandlers()
     AddNewGridRow(); 
     
     CalculateTotals();
-    txtPartyName.Focus();
+    txtBillDate.Focus();
 }
 
         private void LoadBillData()
@@ -186,14 +263,26 @@ private void SetupEventHandlers()
             txtBillNo.Text = _currentBill.BillNo;
             txtBillDate.Text = _currentBill.BillDate.ToString("dd-MM-yyyy");
             
-            var party = _allParties.FirstOrDefault(p => p.PartyID == _currentBill.PartyID);
-            if (party != null)
+            // Set party ComboBox
+            if (_currentBill.PartyID > 0)
             {
-                txtPartyName.Text = party.PartyName;
-                lblPartyDetails.Text = $"Address: {party.Address}\nPhone: {party.Phone}";
+                cmbParty.SelectedValue = _currentBill.PartyID;
+            }
+            else
+            {
+                cmbParty.SelectedIndex = -1;
             }
 
-            txtBrokerName.Text = _currentBill.BrokerName;
+            // Set broker ComboBox
+            if (_currentBill.BrokerID > 0)
+            {
+                cmbBroker.SelectedValue = _currentBill.BrokerID;
+            }
+            else
+            {
+                cmbBroker.SelectedIndex = -1;
+            }
+
             txtAdditionalCharges.Text = _currentBill.AdditionalCharges.ToString("N2");
 
             dgvItems.DataSource = null;
@@ -203,267 +292,97 @@ private void SetupEventHandlers()
 
         #endregion
 
-        #region Search Panel Logic
+        #region ComboBox Event Handlers
 
-        private void ShowSearchPanel(TextBox target, List<string> dataSource)
-{
-    System.Diagnostics.Debug.WriteLine($"ShowSearchPanel called for target: {target.Name}, ActiveControl: {this.ActiveControl?.Name}");
-    
-    if (this.ActiveControl != target) 
-    {
-        System.Diagnostics.Debug.WriteLine("ShowSearchPanel: ActiveControl != target, returning");
-        return;
-    }
-
-    _searchTarget = target;
-    var filteredData = dataSource
-        .Where(s => s.ToLower().Contains(target.Text.ToLower()))
-        .ToList();
-
-    System.Diagnostics.Debug.WriteLine($"ShowSearchPanel: Filtered data count: {filteredData.Count}");
-
-    if (filteredData.Any() && !string.IsNullOrWhiteSpace(target.Text))
-    {
-        searchListBox.DataSource = filteredData;
-        
-        // Better positioning logic
-        Point searchPosition;
-        
-        // Check if it's a party/broker textbox (they are direct children of groupBox1)
-        if (target == txtPartyName || target == txtBrokerName)
+        private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            // For party/broker textboxes - use their actual position
-            var parentControl = target.Parent; // This should be groupBox1
-            var targetLocationInForm = parentControl.PointToScreen(target.Location);
-            var locationInThisControl = this.PointToClient(targetLocationInForm);
-            searchPosition = new Point(locationInThisControl.X, locationInThisControl.Y + target.Height);
-        }
-        else if (target.Parent == dgvItems || target.GetType().Name.Contains("DataGridView"))
-        {
-            // For grid cell textbox - get the actual cell position
-            var currentCell = dgvItems.CurrentCell;
-            if (currentCell != null)
+            if (cmbParty.SelectedValue is int partyId && partyId > 0)
             {
-                var cellRect = dgvItems.GetCellDisplayRectangle(currentCell.ColumnIndex, currentCell.RowIndex, false);
-                var gridLocationInForm = dgvItems.PointToScreen(cellRect.Location);
-                var locationInThisControl = this.PointToClient(gridLocationInForm);
-                searchPosition = new Point(locationInThisControl.X, locationInThisControl.Y + cellRect.Height);
-            }
-            else
-            {
-                // Fallback position
-                searchPosition = new Point(dgvItems.Left + 50, dgvItems.Top + 100);
-            }
-        }
-        else
-        {
-            // Fallback for any other textbox
-            searchPosition = new Point(target.Left, target.Bottom);
-        }
-        
-        searchListBox.Location = searchPosition;
-        searchListBox.Width = Math.Max(250, target.Width);
-        searchListBox.Height = Math.Min(120, filteredData.Count * 16 + 10);
-        searchListBox.Visible = true;
-        searchListBox.BringToFront();
-        
-        // Auto-select first item for better UX
-        if (searchListBox.Items.Count > 0)
-        {
-            searchListBox.SelectedIndex = 0;
-        }
-        
-        // Ensure the searchListBox can receive focus
-        searchListBox.TabStop = true;
-        
-        System.Diagnostics.Debug.WriteLine($"ShowSearchPanel: Search panel made visible at {searchPosition}, Items: {searchListBox.Items.Count}");
-    }
-    else
-    {
-        searchListBox.Visible = false;
-        System.Diagnostics.Debug.WriteLine("ShowSearchPanel: No filtered data, hiding search panel");
-    }
-}
-
-private void HideSearchPanel()
-{
-    // Use a small delay to allow for selection before hiding
-    var timer = new System.Windows.Forms.Timer();
-    timer.Interval = 150; // Increased delay slightly
-    timer.Tick += (s, e) =>
-    {
-        timer.Stop();
-        if (!searchListBox.Focused && !searchListBox.ClientRectangle.Contains(searchListBox.PointToClient(Cursor.Position)))
-        {
-            searchListBox.Visible = false;
-        }
-    };
-    timer.Start();
-}
-
-private void SelectFromSearchPanel()
-{
-    try
-    {
-        System.Diagnostics.Debug.WriteLine("=== SelectFromSearchPanel called ===");
-        
-        if (searchListBox.SelectedItem == null)
-        {
-            System.Diagnostics.Debug.WriteLine("ERROR: No item selected in search panel");
-            return;
-        }
-        
-        string selectedValue = searchListBox.SelectedItem.ToString();
-        System.Diagnostics.Debug.WriteLine($"Selected value: '{selectedValue}'");
-        System.Diagnostics.Debug.WriteLine($"Search target type: {_searchTarget?.GetType().Name ?? "null"}");
-
-        if (_searchTarget == txtPartyName)
-        {
-            System.Diagnostics.Debug.WriteLine("Processing party selection");
-            var party = _allParties.FirstOrDefault(p => p.PartyName == selectedValue);
-            if (party != null)
-            {
-                _currentBill.PartyID = party.PartyID;
-                txtPartyName.Text = party.PartyName;
-                lblPartyDetails.Text = $"Address: {party.Address}\nPhone: {party.Phone}";
-                
-                if (party.BrokerID.HasValue)
+                var selectedParty = _allParties.FirstOrDefault(p => p.PartyID == partyId);
+                if (selectedParty != null)
                 {
-                    var broker = _allBrokers.FirstOrDefault(b => b.BrokerID == party.BrokerID.Value);
-                    if (broker != null)
-                    {
-                        _currentBill.BrokerID = broker.BrokerID;
-                        txtBrokerName.Text = broker.BrokerName;
-                    }
-                }
-                System.Diagnostics.Debug.WriteLine($"Party selected successfully: {party.PartyName}");
-            }
-            searchListBox.Visible = false;
-            txtBrokerName.Focus();
-        }
-        else if (_searchTarget == txtBrokerName)
-        {
-            System.Diagnostics.Debug.WriteLine("Processing broker selection");
-            var broker = _allBrokers.FirstOrDefault(b => b.BrokerName == selectedValue);
-            if (broker != null)
-            {
-                _currentBill.BrokerID = broker.BrokerID;
-                txtBrokerName.Text = broker.BrokerName;
-                System.Diagnostics.Debug.WriteLine($"Broker selected successfully: {broker.BrokerName}");
-            }
-            searchListBox.Visible = false;
-            dgvItems.Focus();
-            if (dgvItems.Rows.Count > 0)
-            {
-                dgvItems.CurrentCell = dgvItems.Rows[0].Cells["ItemName"];
-                dgvItems.BeginEdit(true);
-            }
-        }
-        else if (_searchTarget is TextBox gridTextBox)
-        {
-            System.Diagnostics.Debug.WriteLine("Processing GRID ITEM selection");
-            
-            var item = _allItems.FirstOrDefault(i => i.ItemName == selectedValue);
-            if (item != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"Item found: {item.ItemName}, ID: {item.ItemID}");
-                
-                var row = dgvItems.CurrentRow;
-                if (row != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Current row index: {row.Index}");
+                    _currentBill.PartyID = partyId;
+                    lblPartyDetails.Text = $"Address: {selectedParty.Address}\nPhone: {selectedParty.Phone}";
                     
-                    var billItem = row.DataBoundItem as BillItem;
-                    if (billItem != null)
+                    // Auto-select broker if party has one
+                    if (selectedParty.BrokerID.HasValue)
                     {
-                        System.Diagnostics.Debug.WriteLine("Updating BillItem properties");
-                        billItem.ItemID = item.ItemID;
-                        billItem.ItemName = item.ItemName;
-                        billItem.Rate = item.DefaultRate;
-                        billItem.Charges = item.Charges;
-                        billItem.Quantity = 1;
-                        
-                        System.Diagnostics.Debug.WriteLine($"BillItem updated: ItemName={billItem.ItemName}, Rate={billItem.Rate}");
-                        
-                        // Force refresh the display
-                        if (dgvItems.DataSource is BindingSource bs)
-                        {
-                            System.Diagnostics.Debug.WriteLine("Refreshing BindingSource");
-                            bs.ResetBindings(false);
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Refreshing DataGridView");
-                            dgvItems.Refresh();
-                        }
-                        
-                        CalculateRowTotal(row.Index);
-                        
-                        searchListBox.Visible = false;
-                        
-                        // Move to quantity column
-                        this.BeginInvoke((Action)(() => {
-                            try
-                            {
-                                System.Diagnostics.Debug.WriteLine("Moving to Quantity column");
-                                if (row.Index < dgvItems.Rows.Count && dgvItems.Columns.Contains("Quantity"))
-                                {
-                                    dgvItems.CurrentCell = dgvItems.Rows[row.Index].Cells["Quantity"];
-                                    dgvItems.BeginEdit(true);
-                                    System.Diagnostics.Debug.WriteLine("Successfully moved to Quantity column");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Error moving to quantity: {ex.Message}");
-                            }
-                        }));
-                        
-                        System.Diagnostics.Debug.WriteLine("Grid item selection completed successfully");
+                        cmbBroker.SelectedValue = selectedParty.BrokerID.Value;
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("ERROR: Row DataBoundItem is not BillItem");
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("ERROR: No current row selected");
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"ERROR: Item not found: {selectedValue}");
+                _currentBill.PartyID = 0;
+                lblPartyDetails.Text = "Party details will appear here";
             }
         }
-        else
+
+        private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"ERROR: Unknown search target: {_searchTarget?.GetType().Name ?? "null"}");
+            if (cmbBroker.SelectedValue is int brokerId && brokerId > 0)
+            {
+                _currentBill.BrokerID = brokerId;
+            }
+            else
+            {
+                _currentBill.BrokerID = 0;
+            }
         }
-        
-        System.Diagnostics.Debug.WriteLine("=== SelectFromSearchPanel completed ===");
-    }
-    catch (Exception ex)
-    {
-        System.Diagnostics.Debug.WriteLine($"EXCEPTION in SelectFromSearchPanel: {ex.Message}");
-        System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-        MessageBox.Show($"Error selecting item: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
-}
 
         #endregion
 
         #region Keyboard & Grid Navigation
 
+        private void CmbParty_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                cmbBroker.Focus();
+            }
+            else if (e.KeyCode == Keys.Down && cmbParty.DroppedDown)
+            {
+                // Allow normal dropdown navigation
+                return;
+            }
+            else if (e.KeyCode == Keys.Down && !cmbParty.DroppedDown)
+            {
+                // Open dropdown on first Down arrow
+                cmbParty.DroppedDown = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void CmbBroker_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                dgvItems.Focus();
+                if (dgvItems.Rows.Count > 0)
+                {
+                    dgvItems.CurrentCell = dgvItems.Rows[0].Cells["ItemName"];
+                    dgvItems.BeginEdit(true);
+                }
+            }
+            else if (e.KeyCode == Keys.Down && cmbBroker.DroppedDown)
+            {
+                // Allow normal dropdown navigation
+                return;
+            }
+            else if (e.KeyCode == Keys.Down && !cmbBroker.DroppedDown)
+            {
+                // Open dropdown on first Down arrow
+                cmbBroker.DroppedDown = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
 {
     if (keyData == Keys.Escape)
     {
-        if (searchListBox.Visible)
-        {
-            searchListBox.Visible = false;
-            return true;
-        }
         CloseRequested?.Invoke(this, EventArgs.Empty);
         return true;
     }
@@ -472,7 +391,8 @@ private void SelectFromSearchPanel()
         BtnSave_Click(this, EventArgs.Empty);
         return true;
     }
-    if (keyData == Keys.F2) { txtPartyName.Focus(); return true; }
+    if (keyData == Keys.F1) { txtBillDate.Focus(); return true; }
+    if (keyData == Keys.F2) { cmbParty.Focus(); return true; }
     if (keyData == Keys.F3) { 
         dgvItems.Focus(); 
         if (dgvItems.Rows.Count > 0)
@@ -495,107 +415,7 @@ private void SelectFromSearchPanel()
     return base.ProcessCmdKey(ref msg, keyData);
 }
 
-       private void SearchTextBox_KeyDown(object? sender, KeyEventArgs e)
-{
-    if (e.KeyCode == Keys.Down && searchListBox.Visible)
-    {
-        if (searchListBox.Items.Count > 0)
-        {
-            searchListBox.Focus();
-            searchListBox.SelectedIndex = Math.Max(0, searchListBox.SelectedIndex);
-        }
-        e.SuppressKeyPress = true;
-    }
-    else if (e.KeyCode == Keys.Enter)
-    {
-        if (searchListBox.Visible && searchListBox.SelectedItem != null)
-        {
-            SelectFromSearchPanel();
-        }
-        else
-        {
-            // Move to next control
-            if (sender == txtPartyName)
-            {
-                txtBrokerName.Focus();
-            }
-            else if (sender == txtBrokerName)
-            {
-                dgvItems.Focus();
-                if (dgvItems.Rows.Count > 0)
-                {
-                    dgvItems.CurrentCell = dgvItems.Rows[0].Cells["ItemName"];
-                    dgvItems.BeginEdit(true);
-                }
-            }
-        }
-        e.SuppressKeyPress = true;
-    }
-    else if (e.KeyCode == Keys.Escape)
-    {
-        searchListBox.Visible = false;
-        e.SuppressKeyPress = true;
-    }
-}
-        
-   private void SearchListBox_KeyDown(object? sender, KeyEventArgs e)
-{
-    System.Diagnostics.Debug.WriteLine($"SearchListBox KeyDown: {e.KeyCode}, SelectedIndex: {searchListBox.SelectedIndex}, ItemsCount: {searchListBox.Items.Count}");
-    
-    // Handle Enter key
-    if (e.KeyCode == Keys.Enter)
-    {
-        System.Diagnostics.Debug.WriteLine("SearchListBox: Enter pressed");
-        e.Handled = true;
-        e.SuppressKeyPress = true;
-        
-        // Ensure we have a selection
-        if (searchListBox.SelectedIndex < 0 && searchListBox.Items.Count > 0)
-        {
-            searchListBox.SelectedIndex = 0;
-            System.Diagnostics.Debug.WriteLine("SearchListBox: Auto-selected first item");
-        }
-        
-        // Select the item
-        if (searchListBox.SelectedItem != null)
-        {
-            System.Diagnostics.Debug.WriteLine($"SearchListBox: Selecting item: {searchListBox.SelectedItem}");
-            SelectFromSearchPanel();
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine("SearchListBox: No selected item found");
-        }
-    }
-    // Handle Escape key
-    else if (e.KeyCode == Keys.Escape)
-    {
-        System.Diagnostics.Debug.WriteLine("SearchListBox: Escape pressed");
-        e.SuppressKeyPress = true;
-        searchListBox.Visible = false;
-        if (_searchTarget != null)
-        {
-            _searchTarget.Focus();
-        }
-    }
-    // Handle Up/Down navigation (let them work normally)
-    else if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
-    {
-        System.Diagnostics.Debug.WriteLine($"SearchListBox: Navigation key {e.KeyCode}");
-        // Don't suppress these keys - let them work normally
-    }
-}
-private void SearchListBox_MouseEnter(object? sender, EventArgs e)
-{
-    // Ensure the listbox can receive keyboard input
-    if (searchListBox.Visible && searchListBox.Items.Count > 0)
-    {
-        if (searchListBox.SelectedIndex < 0)
-        {
-            searchListBox.SelectedIndex = 0;
-        }
-    }
-}
+
 
 // protected override bool ProcessDialogKey(Keys keyData)
 // {
@@ -678,129 +498,6 @@ private void DeleteCurrentRow()
     }
 }
 
-private void SetupSearchListBoxEvents()
-{
-    // Clear any existing events first
-    searchListBox.KeyDown -= SearchListBox_KeyDown;
-    searchListBox.PreviewKeyDown -= SearchListBox_PreviewKeyDown;
-    searchListBox.MouseDoubleClick -= SearchListBox_DoubleClick;
-    searchListBox.MouseEnter -= SearchListBox_MouseEnter;
-    
-    // Add events
-    searchListBox.KeyDown += SearchListBox_KeyDown;
-    searchListBox.PreviewKeyDown += SearchListBox_PreviewKeyDown;
-    searchListBox.MouseDoubleClick += SearchListBox_DoubleClick;
-    searchListBox.MouseEnter += SearchListBox_MouseEnter;
-    
-    searchListBox.MouseClick += (s, e) => {
-        System.Diagnostics.Debug.WriteLine("SearchListBox clicked");
-        if (searchListBox.SelectedItem != null)
-        {
-            SelectFromSearchPanel();
-        }
-    };
-    
-    // Important settings
-    searchListBox.TabStop = true;
-    searchListBox.SelectionMode = SelectionMode.One;
-    searchListBox.IntegralHeight = false; // Allow partial height
-}
-        
-        private void SearchListBox_DoubleClick(object? sender, EventArgs e)
-        {
-            SelectFromSearchPanel();
-        }
-
-        private void DgvItems_EditingControlShowing(object? sender, DataGridViewEditingControlShowingEventArgs e)
-{
-    // No longer needed since we're using ComboBox for ItemName column
-    // The ComboBox will handle its own events
-}
-
-private void GridItemTextBox_Leave(object? sender, EventArgs e)
-{
-    HideSearchPanel();
-}
-
-        private void GridItemTextBox_TextChanged(object? sender, EventArgs e)
-{
-    System.Diagnostics.Debug.WriteLine($"GridItemTextBox_TextChanged called, sender: {sender?.GetType().Name}");
-    if (sender is TextBox tb)
-    {
-        System.Diagnostics.Debug.WriteLine($"GridItemTextBox_TextChanged: Text = '{tb.Text}', Calling ShowSearchPanel");
-        ShowSearchPanel(tb, _allItems.Select(i => i.ItemName).ToList());
-    }
-}
-
-        private void GridItemTextBox_KeyDown(object? sender, KeyEventArgs e)
-{
-    System.Diagnostics.Debug.WriteLine($"GridTextBox KeyDown: {e.KeyCode}, SearchVisible: {searchListBox.Visible}, ItemsCount: {searchListBox.Items.Count}");
-    
-    // Handle Down arrow key
-    if (e.KeyCode == Keys.Down)
-    {
-        if (searchListBox.Visible && searchListBox.Items.Count > 0)
-        {
-            System.Diagnostics.Debug.WriteLine("Down arrow: Moving focus to searchListBox");
-            e.SuppressKeyPress = true;
-            
-            // Immediately focus the searchListBox
-            searchListBox.Focus();
-            if (searchListBox.SelectedIndex < 0)
-            {
-                searchListBox.SelectedIndex = 0;
-            }
-            return;
-        }
-    }
-    
-    // Handle Enter key
-    if (e.KeyCode == Keys.Enter)
-    {
-        System.Diagnostics.Debug.WriteLine("Enter pressed in GridTextBox");
-        e.SuppressKeyPress = true;
-        
-        if (searchListBox.Visible && searchListBox.Items.Count > 0)
-        {
-            System.Diagnostics.Debug.WriteLine("Enter: Search panel visible, selecting item");
-            
-            // Ensure we have a selection
-            if (searchListBox.SelectedIndex < 0)
-            {
-                searchListBox.SelectedIndex = 0;
-            }
-            
-            if (searchListBox.SelectedItem != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"Enter: Selecting item: {searchListBox.SelectedItem}");
-                
-                // End current edit mode
-                if (dgvItems.IsCurrentCellInEditMode)
-                {
-                    dgvItems.EndEdit();
-                }
-                
-                // Select the item
-                SelectFromSearchPanel();
-                return;
-            }
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine("Enter: No search panel or no items, moving to next cell");
-            MoveToNextCell();
-        }
-    }
-    
-    // Handle Escape key
-    if (e.KeyCode == Keys.Escape)
-    {
-        System.Diagnostics.Debug.WriteLine("Escape pressed in GridTextBox");
-        e.SuppressKeyPress = true;
-        searchListBox.Visible = false;
-    }
-}
-
         private void DgvItems_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
         {
             // Handle item selection from ComboBox
@@ -870,15 +567,7 @@ private void MoveToNextCell()
 }
 
 
-private void SearchListBox_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
-{
-    System.Diagnostics.Debug.WriteLine($"SearchListBox PreviewKeyDown: {e.KeyCode}");
-    if (e.KeyCode == Keys.Enter)
-    {
-        e.IsInputKey = true; // Make sure Enter is treated as input
-        System.Diagnostics.Debug.WriteLine("Enter marked as input key");
-    }
-}
+
 
 
      private void DgvItems_KeyDown(object? sender, KeyEventArgs e)
@@ -1060,7 +749,7 @@ private void SearchListBox_PreviewKeyDown(object sender, PreviewKeyDownEventArgs
             if (_currentBill.PartyID == 0)
             {
                 MessageBox.Show("Please select a party.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtPartyName.Focus();
+                cmbParty.Focus();
                 return false;
             }
             if (!_currentBill.BillItems.Any(i => i.ItemID > 0))

@@ -54,6 +54,7 @@ namespace SaleBillSystem.NET.Forms
             txtSearch.TextChanged += TxtSearch_TextChanged;
             btnNewPayment.Click += BtnNewPayment_Click;
             btnDelete.Click += BtnDelete_Click;
+            btnViewTrace.Click += BtnViewTrace_Click;
             btnRefresh.Click += BtnRefresh_Click;
             dgvPayments.CellDoubleClick += DgvPayments_CellDoubleClick;
             this.KeyDown += PaymentListControl_KeyDown;
@@ -140,8 +141,48 @@ namespace SaleBillSystem.NET.Forms
 
         private void DgvPayments_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
         {
-            // Future feature: Open a detailed view of the selected payment voucher.
-            MessageBox.Show("Viewing payment voucher details can be implemented here.", "View Details", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (dgvPayments.SelectedRows.Count == 0) return;
+
+            var selectedPayment = dgvPayments.SelectedRows[0].DataBoundItem as PaymentViewModel;
+            if (selectedPayment == null) return;
+
+            ShowPaymentTrace(selectedPayment);
+        }
+
+        private void ShowPaymentTrace(PaymentViewModel payment)
+        {
+            try
+            {
+                var paymentTrace = PaymentService.GetPaymentTrace(payment.PaymentID);
+                
+                if (!paymentTrace.Any())
+                {
+                    MessageBox.Show($"No transaction details found for Payment ID {payment.PaymentID}.", "No Details", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Create and show the payment trace form
+                var traceForm = new PaymentTraceForm(payment, paymentTrace);
+                traceForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading payment trace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnViewTrace_Click(object? sender, EventArgs e)
+        {
+            if (dgvPayments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a payment to view its trace.", "No Selection", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var selectedPayment = dgvPayments.SelectedRows[0].DataBoundItem as PaymentViewModel;
+            if (selectedPayment == null) return;
+
+            ShowPaymentTrace(selectedPayment);
         }
 
         private void PaymentListControl_KeyDown(object? sender, KeyEventArgs e)
@@ -149,6 +190,10 @@ namespace SaleBillSystem.NET.Forms
             if (e.KeyCode == Keys.Escape)
             {
                 CloseRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else if (e.KeyCode == Keys.F2)
+            {
+                BtnViewTrace_Click(sender, e);
             }
             else if (e.KeyCode == Keys.F5)
             {

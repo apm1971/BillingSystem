@@ -18,8 +18,8 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.txtBrokerName = new System.Windows.Forms.TextBox();
-            this.txtPartyName = new System.Windows.Forms.TextBox();
+            this.cmbBroker = new System.Windows.Forms.ComboBox();
+            this.cmbParty = new System.Windows.Forms.ComboBox();
             this.lblPartyDetails = new System.Windows.Forms.Label();
             this.lblBroker = new System.Windows.Forms.Label();
             this.lblParty = new System.Windows.Forms.Label();
@@ -38,7 +38,7 @@ namespace SaleBillSystem.NET.Forms
             this.panel1 = new System.Windows.Forms.Panel();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
-            this.searchListBox = new System.Windows.Forms.ListBox();
+
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvItems)).BeginInit();
@@ -48,8 +48,8 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.txtBrokerName);
-            this.groupBox1.Controls.Add(this.txtPartyName);
+            this.groupBox1.Controls.Add(this.cmbBroker);
+            this.groupBox1.Controls.Add(this.cmbParty);
             this.groupBox1.Controls.Add(this.lblPartyDetails);
             this.groupBox1.Controls.Add(this.lblBroker);
             this.groupBox1.Controls.Add(this.lblParty);
@@ -65,19 +65,25 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Bill Details";
             // 
-            // txtBrokerName
+            // cmbBroker
             // 
-            this.txtBrokerName.Location = new System.Drawing.Point(100, 109);
-            this.txtBrokerName.Name = "txtBrokerName";
-            this.txtBrokerName.Size = new System.Drawing.Size(250, 20);
-            this.txtBrokerName.TabIndex = 3;
+            this.cmbBroker.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.cmbBroker.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cmbBroker.FormattingEnabled = true;
+            this.cmbBroker.Location = new System.Drawing.Point(100, 109);
+            this.cmbBroker.Name = "cmbBroker";
+            this.cmbBroker.Size = new System.Drawing.Size(250, 21);
+            this.cmbBroker.TabIndex = 3;
             // 
-            // txtPartyName
+            // cmbParty
             // 
-            this.txtPartyName.Location = new System.Drawing.Point(100, 80);
-            this.txtPartyName.Name = "txtPartyName";
-            this.txtPartyName.Size = new System.Drawing.Size(250, 20);
-            this.txtPartyName.TabIndex = 2;
+            this.cmbParty.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.cmbParty.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cmbParty.FormattingEnabled = true;
+            this.cmbParty.Location = new System.Drawing.Point(100, 80);
+            this.cmbParty.Name = "cmbParty";
+            this.cmbParty.Size = new System.Drawing.Size(250, 21);
+            this.cmbParty.TabIndex = 2;
             // 
             // lblPartyDetails
             // 
@@ -112,6 +118,7 @@ namespace SaleBillSystem.NET.Forms
             this.txtBillDate.Name = "txtBillDate";
             this.txtBillDate.Size = new System.Drawing.Size(120, 20);
             this.txtBillDate.TabIndex = 1;
+            this.txtBillDate.PlaceholderText = "dd-mm-yyyy";
             // 
             // lblBillDate
             // 
@@ -258,18 +265,11 @@ namespace SaleBillSystem.NET.Forms
             this.btnSave.Text = "Save (Ctrl+S)";
             this.btnSave.UseVisualStyleBackColor = true;
             // 
-            // searchListBox
-            // 
-            this.searchListBox.FormattingEnabled = true;
-            this.searchListBox.Location = new System.Drawing.Point(100, 100);
-            this.searchListBox.Name = "searchListBox";
-            this.searchListBox.Size = new System.Drawing.Size(250, 121);
-            this.searchListBox.TabIndex = 4;
-            this.searchListBox.Visible = false;
+
             // 
             // SaleBillUserControl
             // 
-            this.Controls.Add(this.searchListBox);
+
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.panel1);
@@ -309,8 +309,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.TextBox txtPartyName;
-        private System.Windows.Forms.TextBox txtBrokerName;
-        private System.Windows.Forms.ListBox searchListBox;
+        private System.Windows.Forms.ComboBox cmbParty;
+        private System.Windows.Forms.ComboBox cmbBroker;
     }
 }

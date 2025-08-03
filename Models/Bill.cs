@@ -27,6 +27,12 @@ namespace SaleBillSystem.NET.Models
         public string Notes { get; set; }
         public int CompanyID { get; set; }
         public decimal TotalAmount => OriginalAmount + AdditionalCharges;
+        
+        /// <summary>
+        /// Current balance for this bill (calculated from ledger transactions)
+        /// </summary>
+        public decimal Balance { get; set; }
+        
         /// <summary>
         /// A list of all line items included in this bill.
         /// </summary>

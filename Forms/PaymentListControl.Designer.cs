@@ -20,6 +20,7 @@ namespace SaleBillSystem.NET.Forms
             this.pnlTop = new System.Windows.Forms.Panel();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.btnDelete = new System.Windows.Forms.Button();
+            this.btnViewTrace = new System.Windows.Forms.Button();
             this.btnNewPayment = new System.Windows.Forms.Button();
             this.txtSearch = new System.Windows.Forms.TextBox();
             this.lblSearch = new System.Windows.Forms.Label();
@@ -32,6 +33,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.pnlTop.Controls.Add(this.btnRefresh);
             this.pnlTop.Controls.Add(this.btnDelete);
+            this.pnlTop.Controls.Add(this.btnViewTrace);
             this.pnlTop.Controls.Add(this.btnNewPayment);
             this.pnlTop.Controls.Add(this.txtSearch);
             this.pnlTop.Controls.Add(this.lblSearch);
@@ -61,11 +63,21 @@ namespace SaleBillSystem.NET.Forms
             this.btnDelete.Text = "Delete (Del)";
             this.btnDelete.UseVisualStyleBackColor = true;
             // 
+            // btnViewTrace
+            // 
+            this.btnViewTrace.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnViewTrace.Location = new System.Drawing.Point(649, 10);
+            this.btnViewTrace.Name = "btnViewTrace";
+            this.btnViewTrace.Size = new System.Drawing.Size(100, 30);
+            this.btnViewTrace.TabIndex = 2;
+            this.btnViewTrace.Text = "View Trace (F2)";
+            this.btnViewTrace.UseVisualStyleBackColor = true;
+            // 
             // btnNewPayment
             // 
             this.btnNewPayment.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnNewPayment.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnNewPayment.Location = new System.Drawing.Point(649, 10);
+            this.btnNewPayment.Location = new System.Drawing.Point(543, 10);
             this.btnNewPayment.Name = "btnNewPayment";
             this.btnNewPayment.Size = new System.Drawing.Size(100, 30);
             this.btnNewPayment.TabIndex = 2;
@@ -123,6 +135,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Button btnNewPayment;
         private System.Windows.Forms.Button btnDelete;
+        private System.Windows.Forms.Button btnViewTrace;
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.DataGridView dgvPayments;
     }

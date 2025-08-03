@@ -93,6 +93,81 @@ namespace SaleBillSystem.NET.Data
             }
             return payments;
         }
+        /// <summary>
+        /// Gets the payment trace showing which bills a payment was applied to
+        /// </summary>
+        public static List<PaymentTraceViewModel> GetPaymentTrace(int paymentId)
+        {
+            var paymentTrace = new List<PaymentTraceViewModel>();
+            
+            try
+            {
+                // First, get the payment details
+                string paymentSql = "SELECT PaymentDate, PaymentMethod, Reference FROM PaymentMaster WHERE PaymentID = ?";
+                var paymentParam = new OleDbParameter("PaymentID", paymentId);
+                DataTable paymentDt = DatabaseManager.ExecuteQuery(paymentSql, paymentParam);
+                
+                if (paymentDt.Rows.Count == 0)
+                {
+                    MessageBox.Show($"Payment with ID {paymentId} not found.", "Payment Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return paymentTrace;
+                }
+                
+                var paymentRow = paymentDt.Rows[0];
+                DateTime paymentDate = Convert.ToDateTime(paymentRow["PaymentDate"]);
+                string paymentMethod = paymentRow["PaymentMethod"]?.ToString() ?? "";
+                string paymentReference = paymentRow["Reference"]?.ToString() ?? "";
+                
+                // Now find transactions that match this payment
+                string sql = @"
+                    SELECT 
+                        tl.TransactionID,
+                        tl.BillID,
+                        b.BillNo,
+                        b.BillDate,
+                        b.TotalAmount as BillAmount,
+                        tl.DebitAmount,
+                        tl.CreditAmount,
+                        tl.TransactionDate,
+                        tl.Description,
+                        tl.PaymentMethod,
+                        tl.Reference
+                    FROM TransactionLedger tl
+                    LEFT JOIN BillMaster b ON tl.BillID = b.BillID
+                    WHERE tl.TransactionType = 'Payment' 
+                    AND tl.TransactionDate = ?
+                    AND tl.PaymentMethod = ?
+                    ORDER BY tl.TransactionDate, tl.TransactionID";
+                
+                var dateParam = new OleDbParameter("PaymentDate", paymentDate);
+                var methodParam = new OleDbParameter("PaymentMethod", paymentMethod);
+
+                DataTable dt = DatabaseManager.ExecuteQuery(sql, dateParam, methodParam);
+                foreach (DataRow row in dt.Rows)
+                {
+                    paymentTrace.Add(new PaymentTraceViewModel
+                    {
+                        TransactionID = Convert.ToInt32(row["TransactionID"]),
+                        BillID = row["BillID"] != DBNull.Value ? Convert.ToInt32(row["BillID"]) : (int?)null,
+                        BillNo = row["BillNo"]?.ToString() ?? "N/A",
+                        BillDate = row["BillDate"] != DBNull.Value ? Convert.ToDateTime(row["BillDate"]) : (DateTime?)null,
+                        BillAmount = row["BillAmount"] != DBNull.Value ? Convert.ToDecimal(row["BillAmount"]) : 0,
+                        DebitAmount = Convert.ToDecimal(row["DebitAmount"]),
+                        CreditAmount = Convert.ToDecimal(row["CreditAmount"]),
+                        TransactionDate = Convert.ToDateTime(row["TransactionDate"]),
+                        Description = row["Description"]?.ToString() ?? "",
+                        PaymentMethod = row["PaymentMethod"]?.ToString() ?? "",
+                        Reference = row["Reference"]?.ToString() ?? ""
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading payment trace: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return paymentTrace;
+        }
+
         public static bool DeletePayment(int paymentId)
         {
             using (var conn = DatabaseManager.GetConnection())

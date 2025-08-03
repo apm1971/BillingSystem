@@ -13,6 +13,7 @@ namespace SaleBillSystem.NET.Forms
     {
         private List<Bill> _allBills;
         private List<Party> _parties;
+        private List<Broker> _brokers;
         private DataGridViewColumn _sortedColumn;
         private SortOrder _sortOrder = SortOrder.None;
 
@@ -35,11 +36,14 @@ namespace SaleBillSystem.NET.Forms
                 // Load all bills with their related party information
                 _allBills = BillService.GetAllBills();
                 _parties = PartyService.GetAllParties();
+                _brokers = BrokerService.GetAllBrokers();
                 
-                // Update status for each bill based on due amount
+                // Update status for each bill based on due amount and populate broker names from broker ID
                 foreach (var bill in _allBills)
                 {
+                    // Calculate balance from transaction ledger
                     decimal dueAmount = LedgerService.GetDueAmount(bill.BillID);
+                    bill.Balance = dueAmount;
                     
                     if (dueAmount <= 0)
                     {
@@ -52,6 +56,17 @@ namespace SaleBillSystem.NET.Forms
                     else
                     {
                         bill.Status = "Partial";
+                    }
+                    
+                    // Look up broker name from broker ID
+                    if (bill.BrokerID.HasValue && bill.BrokerID.Value > 0)
+                    {
+                        var broker = _brokers.FirstOrDefault(b => b.BrokerID == bill.BrokerID.Value);
+                        bill.BrokerName = broker?.BrokerName ?? "Unknown Broker";
+                    }
+                    else
+                    {
+                        bill.BrokerName = "No Broker";
                     }
                 }
             }
@@ -90,20 +105,27 @@ namespace SaleBillSystem.NET.Forms
                 new DataGridViewTextBoxColumn { Name = "BrokerName", HeaderText = "Broker", DataPropertyName = "BrokerName", Width = 150 },
                 new DataGridViewTextBoxColumn { Name = "OriginalAmount", HeaderText = "Amount", DataPropertyName = "OriginalAmount", Width = 100, DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight } },
                 new DataGridViewTextBoxColumn { Name = "AdditionalCharges", HeaderText = "Charges", DataPropertyName = "AdditionalCharges", Width = 100, DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight } },
+                new DataGridViewTextBoxColumn { Name = "Balance", HeaderText = "Balance", DataPropertyName = "Balance", Width = 120, DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold) } },
                 new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", DataPropertyName = "Status", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill }
             });
+
+
 
             // Setup buttons and event handlers
             btnNewBill.Click += BtnNewBill_Click;
             btnEditBill.Click += BtnEditBill_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
             btnRefresh.Click += BtnRefresh_Click;
+            
             txtSearch.TextChanged += TxtSearch_TextChanged;
             dgvBills.CellDoubleClick += DgvBills_CellDoubleClick;
             this.KeyDown += BillListUserControl_KeyDown;
             
             // --- NEW: Add event handler for column header click for sorting ---
             dgvBills.ColumnHeaderMouseClick += DgvBills_ColumnHeaderMouseClick;
+            
+            // Add custom cell formatting for balance styling
+            dgvBills.CellFormatting += DgvBills_CellFormatting;
 
             RefreshGrid();
         }
@@ -111,6 +133,35 @@ namespace SaleBillSystem.NET.Forms
         private void RefreshGrid()
         {
             TxtSearch_TextChanged(null, EventArgs.Empty); // Apply current search filter
+        }
+
+        private void DgvBills_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            // Handle balance column styling
+            if (e.ColumnIndex == dgvBills.Columns["Balance"].Index && e.Value != null)
+            {
+                if (decimal.TryParse(e.Value.ToString(), out decimal balance))
+                {
+                    if (balance > 0)
+                    {
+                        // Red color for unpaid amounts
+                        e.CellStyle.ForeColor = Color.Red;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    }
+                    else if (balance == 0)
+                    {
+                        // Green color for paid amounts
+                        e.CellStyle.ForeColor = Color.Green;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    }
+                    else
+                    {
+                        // Blue color for overpaid amounts (credit)
+                        e.CellStyle.ForeColor = Color.Blue;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                    }
+                }
+            }
         }
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
@@ -174,6 +225,9 @@ namespace SaleBillSystem.NET.Forms
                     break;
                 case "OriginalAmount":
                     _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.OriginalAmount).ToList() : _allBills.OrderByDescending(b => b.OriginalAmount).ToList();
+                    break;
+                case "Balance":
+                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.Balance).ToList() : _allBills.OrderByDescending(b => b.Balance).ToList();
                     break;
             }
 

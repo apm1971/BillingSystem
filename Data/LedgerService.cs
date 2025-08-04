@@ -79,28 +79,30 @@ namespace SaleBillSystem.NET.Data
         /// <returns>A tuple containing the calculated interest, discount, and the final payable amount.</returns>
         public static (decimal interest, decimal discount, decimal finalAmountDue) CalculateFinalSettlement(
             Bill bill,
-            int creditDays, 
+            int interestDays, 
             decimal interestRate, 
+            int discountDays,
             decimal discountRate,
             DateTime paymentDate) // Added paymentDate for accuracy
         {
             var transactions = GetTransactionsForBill(bill.BillID);
-            DateTime effectiveDueDate = bill.BillDate.AddDays(creditDays);
+            DateTime effectiveDueDate = bill.BillDate.AddDays(interestDays);
             decimal currentBalance = BillService.GetBillBalance(bill.BillID);
             decimal earnedDiscount = 0;
             decimal accruedInterest = 0;
 
             // 1. Calculate Discount
             decimal totalAmountEligibleForDiscount = 0;
-            // Find past payments made on time
+            DateTime discountDueDate = bill.BillDate.AddDays(discountDays);
+            // Find past payments made on time for discount
             decimal pastEarlyPayments = transactions
-                .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date <= effectiveDueDate.Date)
+                .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date <= discountDueDate.Date)
                 .Sum(t => t.CreditAmount);
             
             totalAmountEligibleForDiscount += pastEarlyPayments;
 
             // **THE FIX**: If the final payment itself is being made on time, the remaining balance is also eligible for a discount.
-            if (paymentDate.Date <= effectiveDueDate.Date)
+            if (paymentDate.Date <= discountDueDate.Date)
             {
                 totalAmountEligibleForDiscount += currentBalance;
             }
@@ -161,6 +163,11 @@ namespace SaleBillSystem.NET.Data
                 UserID = row["UserID"] == DBNull.Value ? (int?)null : Convert.ToInt32(row["UserID"]),
                 CompanyID = Convert.ToInt32(row["CompanyID"])
             };
+        }
+
+        public static decimal CalculateBrokerage(Bill bill, decimal brokerageRate)
+        {
+            return bill.TotalAmount * (brokerageRate / 100m);
         }
 
         public static decimal GetDueAmount(int billId)

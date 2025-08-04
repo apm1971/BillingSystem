@@ -115,18 +115,25 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.DataSource = null;
             _outstandingBills = new List<BillViewModel>();
             
-            txtCreditDays.Text = SettingsService.GetDefaultCreditDays().ToString();
+            // Set default values from settings
+            txtInterestDays.Text = SettingsService.GetDefaultInterestDays().ToString();
+            txtDiscountDays.Text = SettingsService.GetDefaultDiscountDays().ToString();
             txtDiscountRate.Text = SettingsService.GetDefaultDiscountRate().ToString("F2");
             txtInterestRate.Text = SettingsService.GetDefaultInterestRate().ToString("F2");
+            txtBrokerageRate.Text = SettingsService.GetDefaultBrokerageRate().ToString("F2");
             
             lblDiscountValue.Text = "Earned Discount: ₹0.00";
             lblInterestValue.Text = "Accrued Interest: ₹0.00";
+            lblBrokerageValue.Text = "Brokerage: ₹0.00";
             lblFinalAmount.Text = "Final Amount Due: ₹0.00";
 
             txtPaymentAmount.Text = "0.00";
             txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
             cmbPaymentMethod.SelectedIndex = 0;
             txtReference.Clear();
+            
+            // Make all fields editable by default
+            SetFieldsEditable(true);
             
             cmbParty.Focus();
         }
@@ -138,11 +145,13 @@ namespace SaleBillSystem.NET.Forms
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
             LoadBillsBasedOnSelection();
+            UpdateFieldsBasedOnSelection();
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
             LoadBillsBasedOnSelection();
+            UpdateFieldsBasedOnSelection();
         }
 
         private void LoadBillsBasedOnSelection()
@@ -163,6 +172,56 @@ namespace SaleBillSystem.NET.Forms
                 dgvOutstandingBills.DataSource = null;
                 _outstandingBills.Clear();
             }
+        }
+
+        private void UpdateFieldsBasedOnSelection()
+        {
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
+
+            if (partyId.HasValue && partyId.Value > 0 && (!brokerId.HasValue || brokerId.Value == 0))
+            {
+                // Only party selected - use settings defaults and make editable
+                txtInterestDays.Text = SettingsService.GetDefaultInterestDays().ToString();
+                txtDiscountDays.Text = SettingsService.GetDefaultDiscountDays().ToString();
+                txtDiscountRate.Text = SettingsService.GetDefaultDiscountRate().ToString("F2");
+                txtInterestRate.Text = SettingsService.GetDefaultInterestRate().ToString("F2");
+                txtBrokerageRate.Text = SettingsService.GetDefaultBrokerageRate().ToString("F2");
+                SetFieldsEditable(true);
+            }
+            else if (brokerId.HasValue && brokerId.Value > 0)
+            {
+                // Broker selected - load broker data and make editable
+                var broker = BrokerService.GetBrokerByID(brokerId.Value);
+                if (broker != null)
+                {
+                    txtInterestDays.Text = broker.InterestDays.ToString();
+                    txtDiscountDays.Text = broker.DiscountDays.ToString();
+                    txtDiscountRate.Text = broker.DiscountRate.ToString("F2");
+                    txtInterestRate.Text = broker.InterestRate.ToString("F2");
+                    txtBrokerageRate.Text = broker.BrokerageRate.ToString("F2");
+                    SetFieldsEditable(true);
+                }
+            }
+            else
+            {
+                // Nothing selected - use defaults and make editable
+                txtInterestDays.Text = SettingsService.GetDefaultInterestDays().ToString();
+                txtDiscountDays.Text = SettingsService.GetDefaultDiscountDays().ToString();
+                txtDiscountRate.Text = SettingsService.GetDefaultDiscountRate().ToString("F2");
+                txtInterestRate.Text = SettingsService.GetDefaultInterestRate().ToString("F2");
+                txtBrokerageRate.Text = SettingsService.GetDefaultBrokerageRate().ToString("F2");
+                SetFieldsEditable(true);
+            }
+        }
+
+        private void SetFieldsEditable(bool editable)
+        {
+            txtInterestDays.ReadOnly = !editable;
+            txtDiscountDays.ReadOnly = !editable;
+            txtDiscountRate.ReadOnly = !editable;
+            txtInterestRate.ReadOnly = !editable;
+            txtBrokerageRate.ReadOnly = !editable;
         }
 
         private void LoadOutstandingBills(int partyId, int? brokerId = null)
@@ -242,7 +301,7 @@ namespace SaleBillSystem.NET.Forms
 
         private void BtnCalculate_Click(object? sender, EventArgs e)
         {
-            if (!ValidateTerms(out int creditDays, out decimal discountRate, out decimal interestRate)) return;
+            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
             if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
             {
                  MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -251,6 +310,7 @@ namespace SaleBillSystem.NET.Forms
 
             decimal totalDiscount = 0;
             decimal totalInterest = 0;
+            decimal totalBrokerage = 0;
             decimal totalAmountDue = 0;
 
             var billsToProcess = GetSelectedBillsFromGrid();
@@ -268,13 +328,16 @@ namespace SaleBillSystem.NET.Forms
                 var fullBill = BillService.GetBillByID(billVm.BillID);
                 if (fullBill == null) continue;
 
-                var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, creditDays, interestRate, discountRate, paymentDate);
+                var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
+                var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
                 totalInterest += interest;
                 totalDiscount += discount;
                 totalAmountDue += finalAmount;
-
+                finalAmount -= brokerageAmount;
+                // Set the payment allocation to the calculated final amount
                 billVm.PaymentAllocation = finalAmount;
                 
+                // Highlight the row
                 foreach(DataGridViewRow row in dgvOutstandingBills.Rows)
                 {
                     if((row.DataBoundItem as BillViewModel)?.BillID == billVm.BillID)
@@ -284,20 +347,28 @@ namespace SaleBillSystem.NET.Forms
                     }
                 }
             }
+
+            // Calculate brokerage on total bill amount
+            decimal totalBillAmount = billsToProcess.Sum(b => b.BalanceDue);
+            totalBrokerage = totalBillAmount * (brokerageRate / 100m);
+            totalAmountDue -= totalBrokerage;
             
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
 
             dgvOutstandingBills.Refresh();
-            UpdateTotalPaymentFromGrid();
+            
+            // Update payment amount to include brokerage
+            txtPaymentAmount.Text = totalAmountDue.ToString("F2");
 
             lblDiscountValue.Text = $"Earned Discount: ₹{totalDiscount:N2}";
             lblInterestValue.Text = $"Accrued Interest: ₹{totalInterest:N2}";
+            lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
             lblFinalAmount.Text = $"Final Amount Due: ₹{totalAmountDue:N2}";
         }
 
         private void BtnAutoAllocate_Click(object? sender, EventArgs e)
         {
-            if (!ValidateTerms(out int creditDays, out decimal discountRate, out decimal interestRate)) return;
+            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
             if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
             {
                  MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -320,7 +391,13 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
             ResetGridStyles();
 
+            // Calculate brokerage on total bill amount
+            // decimal totalBillAmount = billsToProcess.Sum(b => b.BalanceDue);
+            // decimal totalBrokerage = totalBillAmount * (brokerageRate / 100m);
+            
+            // Subtract brokerage from payment amount for allocation
             decimal remainingAmount = paymentAmount;
+            
             foreach (var billVm in billsToProcess.OrderBy(b => b.BillDate)) // Ensure FIFO on selected bills
             {
                 if (remainingAmount <= 0)
@@ -333,8 +410,9 @@ namespace SaleBillSystem.NET.Forms
                 if (fullBill == null) continue;
 
                 // Calculate the true amount needed to settle this bill
-                var (_, _, settlementAmount) = LedgerService.CalculateFinalSettlement(fullBill, creditDays, interestRate, discountRate, paymentDate);
-
+                var (_, _, settlementAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
+                var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
+                settlementAmount-= brokerageAmount;
                 decimal amountToAllocate = Math.Min(remainingAmount, settlementAmount);
                 billVm.PaymentAllocation = amountToAllocate;
                 remainingAmount -= amountToAllocate;
@@ -343,6 +421,9 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
             dgvOutstandingBills.Refresh();
             UpdateTotalPaymentFromGrid();
+            
+            // Update summary to show brokerage
+            // lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
         }
 
         private void DgvOutstandingBills_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
@@ -371,7 +452,7 @@ namespace SaleBillSystem.NET.Forms
         private void BtnSave_Click(object? sender, EventArgs e)
         {
             if (!ValidatePayment(out decimal totalPaymentAmount, out DateTime paymentDate)) return;
-            if (!ValidateTerms(out int creditDays, out decimal discountRate, out decimal interestRate)) return;
+            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
 
             var paymentsToSave = _outstandingBills.Where(b => b.PaymentAllocation > 0).ToList();
             if (!paymentsToSave.Any())
@@ -421,6 +502,8 @@ namespace SaleBillSystem.NET.Forms
                         }
                     }
 
+
+
                     // Create a single master record for this payment event
                     var paymentMaster = new PaymentMaster
                     {
@@ -440,8 +523,9 @@ namespace SaleBillSystem.NET.Forms
                         var fullBill = BillService.GetBillByID(billVm.BillID);
                         if (fullBill == null) continue;
                         
-                        var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, creditDays, interestRate, discountRate, paymentDate);
-                        bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount);
+                        var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
+                        var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
+                        bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount-brokerageAmount);
 
                         if (isFinalSettlement)
                         {
@@ -463,6 +547,14 @@ namespace SaleBillSystem.NET.Forms
                                     CreditAmount = discount, UserID = 1, CompanyID = 1
                                 };
                                 LedgerService.AddTransaction(discountTx, conn, dbTransaction);
+                            }
+                            if(brokerageAmount > 0){
+                                var brokerageTx = new Transaction {
+                                    PaymentID = paymentId, PartyID = fullBill.PartyID, BillID = fullBill.BillID, TransactionDate = paymentDate,
+                                    TransactionType = "Brokerage", Description = $"Brokerage on Bill No: {fullBill.BillNo}",
+                                    CreditAmount = brokerageAmount, UserID = 1, CompanyID = 1
+                                };
+                                LedgerService.AddTransaction(brokerageTx, conn, dbTransaction);
                             }
                         }
 
@@ -490,6 +582,10 @@ namespace SaleBillSystem.NET.Forms
                     UpdateBillStatuses(paymentsToSave);
                     
                     MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Show payment trace with print option
+                    ShowPaymentTraceAfterSave(paymentId);
+                    
                     ClearForm();
                 }
                 catch (Exception ex)
@@ -608,14 +704,18 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private bool ValidateTerms(out int creditDays, out decimal discountRate, out decimal interestRate)
+        private bool ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)
         {
-            creditDays = 0;
+            interestDays = 0;
+            discountDays = 0;
             discountRate = 0;
             interestRate = 0;
-            bool valid = int.TryParse(txtCreditDays.Text, out creditDays) &&
+            brokerageRate = 0;
+            bool valid = int.TryParse(txtInterestDays.Text, out interestDays) &&
+                         int.TryParse(txtDiscountDays.Text, out discountDays) &&
                          decimal.TryParse(txtDiscountRate.Text, out discountRate) &&
-                         decimal.TryParse(txtInterestRate.Text, out interestRate);
+                         decimal.TryParse(txtInterestRate.Text, out interestRate) &&
+                         decimal.TryParse(txtBrokerageRate.Text, out brokerageRate);
             if (!valid)
             {
                 MessageBox.Show("Please enter valid numeric values for all reconciliation terms.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -650,6 +750,52 @@ namespace SaleBillSystem.NET.Forms
                 return false;
             }
             return true;
+        }
+
+        #endregion
+
+        #region Payment Trace After Save
+
+        private void ShowPaymentTraceAfterSave(int paymentId)
+        {
+            try
+            {
+                // Get the payment details
+                var payment = PaymentService.GetPaymentById(paymentId);
+                if (payment == null)
+                {
+                    MessageBox.Show("Could not retrieve payment details for printing.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Get the payment trace
+                var paymentTrace = PaymentService.GetPaymentTrace(paymentId);
+                if (!paymentTrace.Any())
+                {
+                    MessageBox.Show("No transaction details found for printing.", "No Details", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Ask user if they want to print
+                var result = MessageBox.Show(
+                    "Payment saved successfully! Would you like to print the payment slip?",
+                    "Print Payment Slip",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    // Create and show the payment trace form
+                    var traceForm = new PaymentTraceForm(payment, paymentTrace);
+                    // Auto-print the payment slip
+                    traceForm.AutoPrint();
+                    traceForm.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error showing payment trace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         #endregion

@@ -99,6 +99,28 @@ namespace SaleBillSystem.NET.Data
             return SetSetting("DefaultCreditDays", days.ToString(), "Default credit days to show on payment screen");
         }
 
+        public static int GetDefaultInterestDays()
+        {
+            string value = GetSetting("DefaultInterestDays", "30");
+            return int.TryParse(value, out int days) ? days : 30;
+        }
+
+        public static bool SetDefaultInterestDays(int days)
+        {
+            return SetSetting("DefaultInterestDays", days.ToString(), "Default interest days to show on payment screen");
+        }
+
+        public static int GetDefaultDiscountDays()
+        {
+            string value = GetSetting("DefaultDiscountDays", "10");
+            return int.TryParse(value, out int days) ? days : 10;
+        }
+
+        public static bool SetDefaultDiscountDays(int days)
+        {
+            return SetSetting("DefaultDiscountDays", days.ToString(), "Default discount days to show on payment screen");
+        }
+
         public static decimal GetDefaultInterestRate()
         {
             string value = GetSetting("DefaultInterestRate", "18.0");
@@ -119,6 +141,17 @@ namespace SaleBillSystem.NET.Data
         public static bool SetDefaultDiscountRate(decimal rate)
         {
             return SetSetting("DefaultDiscountRate", rate.ToString("F2"), "Default discount rate (%) for early payments to show on payment screen");
+        }
+
+        public static decimal GetDefaultBrokerageRate()
+        {
+            string value = GetSetting("DefaultBrokerageRate", "0.0");
+            return decimal.TryParse(value, out decimal rate) ? rate : 0.0m;
+        }
+
+        public static bool SetDefaultBrokerageRate(decimal rate)
+        {
+            return SetSetting("DefaultBrokerageRate", rate.ToString("F2"), "Default brokerage rate (%) to show on payment screen");
         }
 
         #endregion

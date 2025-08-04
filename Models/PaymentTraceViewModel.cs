@@ -15,9 +15,27 @@ namespace SaleBillSystem.NET.Models
         public string Description { get; set; } = string.Empty;
         public string PaymentMethod { get; set; } = string.Empty;
         public string Reference { get; set; } = string.Empty;
+        public string TransactionType { get; set; } = string.Empty;
         
         // Calculated properties
-        public decimal AppliedAmount => CreditAmount > 0 ? CreditAmount : DebitAmount;
-        public string TransactionType => CreditAmount > 0 ? "Payment" : "Bill";
+        public decimal AppliedAmount
+        {
+            get
+            {
+                switch (TransactionType)
+                {
+                    case "Payment":
+                        return CreditAmount;
+                    case "Interest":
+                        return DebitAmount;
+                    case "Discount":
+                        return -CreditAmount; // Negative for discount
+                    case "Brokerage":
+                        return -CreditAmount; // Negative for brokerage (similar to discount)
+                    default:
+                        return CreditAmount > 0 ? CreditAmount : DebitAmount;
+                }
+            }
+        }
     }
 } 

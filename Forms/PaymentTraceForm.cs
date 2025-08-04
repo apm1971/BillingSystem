@@ -143,6 +143,12 @@ namespace SaleBillSystem.NET.Forms
             // Additional setup if needed
         }
 
+        public void AutoPrint()
+        {
+            // Automatically trigger print when form opens
+            BtnPrint_Click(this, EventArgs.Empty);
+        }
+
         #region Printing and Exporting
 
         private void BtnPrint_Click(object? sender, EventArgs e)
@@ -232,6 +238,10 @@ namespace SaleBillSystem.NET.Forms
                 {
                     appliedAmount = -entry.CreditAmount; // Negative for discount
                 }
+                else if (entry.TransactionType == "Brokerage")
+                {
+                    appliedAmount = -entry.CreditAmount; // Negative for brokerage (similar to discount)
+                }
                 
                 string amountClass = appliedAmount > 0 ? "positive-amount" : "";
                 sb.AppendLine($"<td class='text-right {amountClass}'>{appliedAmount:N2}</td>");
@@ -244,11 +254,12 @@ namespace SaleBillSystem.NET.Forms
             var totalApplied = paymentTrace.Where(t => t.TransactionType == "Payment").Sum(t => t.CreditAmount);
             var totalInterest = paymentTrace.Where(t => t.TransactionType == "Interest").Sum(t => t.DebitAmount);
             var totalDiscount = paymentTrace.Where(t => t.TransactionType == "Discount").Sum(t => t.CreditAmount);
+            var totalBrokerage = paymentTrace.Where(t => t.TransactionType == "Brokerage").Sum(t => t.CreditAmount);
 
             sb.AppendLine("<tr class='total-row'>");
             sb.AppendLine("<td colspan='4'><strong>Summary</strong></td>");
             sb.AppendLine($"<td class='text-right'><strong>Payments: ₹{totalApplied:N2}</strong></td>");
-            sb.AppendLine("<td colspan='2'><strong>Interest: ₹" + totalInterest.ToString("N2") + " | Discount: ₹" + totalDiscount.ToString("N2") + "</strong></td>");
+            sb.AppendLine("<td colspan='2'><strong>Interest: ₹" + totalInterest.ToString("N2") + " | Discount: ₹" + totalDiscount.ToString("N2") + " | Brokerage: ₹" + totalBrokerage.ToString("N2") + "</strong></td>");
             sb.AppendLine("</tr>");
 
             sb.AppendLine("</table>");

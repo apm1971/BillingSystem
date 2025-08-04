@@ -185,7 +185,12 @@ namespace SaleBillSystem.NET.Data
                         BrokerID COUNTER PRIMARY KEY,
                         BrokerName TEXT(255) NOT NULL,
                         Phone TEXT(50),
-                        CompanyID INTEGER
+                        CompanyID INTEGER,
+                        InterestDays INTEGER,
+                        InterestRate DECIMAL(10, 2),
+                        DiscountDays INTEGER,
+                        DiscountRate DECIMAL(10, 2),
+                        BrokerageRate DECIMAL(10, 2)
                     )");
 
                     // Create PartyMaster table
@@ -272,9 +277,11 @@ namespace SaleBillSystem.NET.Data
                     )");
 
                     // Insert default settings
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultCreditDays', '30', 'Default credit days to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultInterestDays', '30', 'Default interest days to show on payment screen')");
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultInterestRate', '18.0', 'Default annual interest rate (%) to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultDiscountDays', '10.0', 'Default discount days for early payments to show on payment screen')");
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultDiscountRate', '1.0', 'Default discount rate (%) for early payments to show on payment screen')");
+                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultBrokerageRate', '0.0', 'Default brokerage rate (%) for early payments to show on payment screen')");
                     ExecuteNonQuery(conn, @"INSERT INTO UserMaster (Username, PasswordHash, DisplayName, IsAdmin) VALUES ('admin', 'admin', 'Admin', 1)");
                     ExecuteNonQuery(conn, @"INSERT INTO CompanyMaster (CompanyName, Address, Phone) VALUES ('Your Company Name', 'Your Company Address', 'Your Company Phone')");
                 }

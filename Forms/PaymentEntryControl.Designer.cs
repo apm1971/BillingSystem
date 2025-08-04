@@ -31,12 +31,17 @@ namespace SaleBillSystem.NET.Forms
             this.label3 = new System.Windows.Forms.Label();
             this.txtDiscountRate = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.txtCreditDays = new System.Windows.Forms.TextBox();
+            this.txtInterestDays = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.txtDiscountDays = new System.Windows.Forms.TextBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.txtBrokerageRate = new System.Windows.Forms.TextBox();
+            this.label7 = new System.Windows.Forms.Label();
             this.gbSummary = new System.Windows.Forms.GroupBox();
             this.lblFinalAmount = new System.Windows.Forms.Label();
             this.lblInterestValue = new System.Windows.Forms.Label();
             this.lblDiscountValue = new System.Windows.Forms.Label();
+            this.lblBrokerageValue = new System.Windows.Forms.Label();
             this.gbPayment = new System.Windows.Forms.GroupBox();
             this.btnAutoAllocate = new System.Windows.Forms.Button();
             this.txtReference = new System.Windows.Forms.TextBox();
@@ -125,16 +130,20 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.gbReconciliation.Controls.Add(this.btnCalculate);
             this.gbReconciliation.Controls.Add(this.chkApplyToAll);
+            this.gbReconciliation.Controls.Add(this.txtBrokerageRate);
+            this.gbReconciliation.Controls.Add(this.label7);
             this.gbReconciliation.Controls.Add(this.txtInterestRate);
             this.gbReconciliation.Controls.Add(this.label3);
             this.gbReconciliation.Controls.Add(this.txtDiscountRate);
             this.gbReconciliation.Controls.Add(this.label2);
-            this.gbReconciliation.Controls.Add(this.txtCreditDays);
+            this.gbReconciliation.Controls.Add(this.txtInterestDays);
             this.gbReconciliation.Controls.Add(this.label1);
+            this.gbReconciliation.Controls.Add(this.txtDiscountDays);
+            this.gbReconciliation.Controls.Add(this.label8);
             this.gbReconciliation.Dock = System.Windows.Forms.DockStyle.Top;
             this.gbReconciliation.Location = new System.Drawing.Point(10, 230);
             this.gbReconciliation.Name = "gbReconciliation";
-            this.gbReconciliation.Size = new System.Drawing.Size(964, 80);
+            this.gbReconciliation.Size = new System.Drawing.Size(964, 100);
             this.gbReconciliation.TabIndex = 2;
             this.gbReconciliation.TabStop = false;
             this.gbReconciliation.Text = "Reconciliation Console";
@@ -162,7 +171,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtInterestRate
             // 
-            this.txtInterestRate.Location = new System.Drawing.Point(300, 33);
+            this.txtInterestRate.Location = new System.Drawing.Point(300, 60);
             this.txtInterestRate.Name = "txtInterestRate";
             this.txtInterestRate.Size = new System.Drawing.Size(80, 20);
             this.txtInterestRate.TabIndex = 2;
@@ -170,7 +179,7 @@ namespace SaleBillSystem.NET.Forms
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(215, 36);
+            this.label3.Location = new System.Drawing.Point(215, 63);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(82, 13);
             this.label3.TabIndex = 4;
@@ -192,29 +201,62 @@ namespace SaleBillSystem.NET.Forms
             this.label2.TabIndex = 2;
             this.label2.Text = "Discount Rate(%):";
             // 
-            // txtCreditDays
+            // txtBrokerageRate
             // 
-            this.txtCreditDays.Location = new System.Drawing.Point(120, 26);
-            this.txtCreditDays.Name = "txtCreditDays";
-            this.txtCreditDays.Size = new System.Drawing.Size(80, 20);
-            this.txtCreditDays.TabIndex = 0;
+            this.txtBrokerageRate.Location = new System.Drawing.Point(120, 72);
+            this.txtBrokerageRate.Name = "txtBrokerageRate";
+            this.txtBrokerageRate.Size = new System.Drawing.Size(80, 20);
+            this.txtBrokerageRate.TabIndex = 3;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(15, 75);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(90, 13);
+            this.label7.TabIndex = 6;
+            this.label7.Text = "Brokerage Rate(%):";
+            // 
+            // txtInterestDays
+            // 
+            this.txtInterestDays.Location = new System.Drawing.Point(120, 26);
+            this.txtInterestDays.Name = "txtInterestDays";
+            this.txtInterestDays.Size = new System.Drawing.Size(80, 20);
+            this.txtInterestDays.TabIndex = 0;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(15, 29);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(64, 13);
+            this.label1.Size = new System.Drawing.Size(70, 13);
             this.label1.TabIndex = 0;
-            this.label1.Text = "Credit Days:";
+            this.label1.Text = "Interest Days:";
+            // 
+            // txtDiscountDays
+            // 
+            this.txtDiscountDays.Location = new System.Drawing.Point(300, 26);
+            this.txtDiscountDays.Name = "txtDiscountDays";
+            this.txtDiscountDays.Size = new System.Drawing.Size(80, 20);
+            this.txtDiscountDays.TabIndex = 1;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(215, 29);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(79, 13);
+            this.label8.TabIndex = 7;
+            this.label8.Text = "Discount Days:";
             // 
             // gbSummary
             // 
             this.gbSummary.Controls.Add(this.lblFinalAmount);
             this.gbSummary.Controls.Add(this.lblInterestValue);
             this.gbSummary.Controls.Add(this.lblDiscountValue);
+            this.gbSummary.Controls.Add(this.lblBrokerageValue);
             this.gbSummary.Dock = System.Windows.Forms.DockStyle.Top;
-            this.gbSummary.Location = new System.Drawing.Point(10, 310);
+            this.gbSummary.Location = new System.Drawing.Point(10, 330);
             this.gbSummary.Name = "gbSummary";
             this.gbSummary.Size = new System.Drawing.Size(964, 60);
             this.gbSummary.TabIndex = 3;
@@ -226,7 +268,7 @@ namespace SaleBillSystem.NET.Forms
             this.lblFinalAmount.AutoSize = true;
             this.lblFinalAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblFinalAmount.ForeColor = System.Drawing.Color.ForestGreen;
-            this.lblFinalAmount.Location = new System.Drawing.Point(416, 25);
+            this.lblFinalAmount.Location = new System.Drawing.Point(430, 25);
             this.lblFinalAmount.Name = "lblFinalAmount";
             this.lblFinalAmount.Size = new System.Drawing.Size(183, 20);
             this.lblFinalAmount.TabIndex = 2;
@@ -236,7 +278,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.lblInterestValue.AutoSize = true;
             this.lblInterestValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblInterestValue.Location = new System.Drawing.Point(214, 28);
+            this.lblInterestValue.Location = new System.Drawing.Point(290, 28);
             this.lblInterestValue.Name = "lblInterestValue";
             this.lblInterestValue.Size = new System.Drawing.Size(130, 16);
             this.lblInterestValue.TabIndex = 1;
@@ -252,6 +294,16 @@ namespace SaleBillSystem.NET.Forms
             this.lblDiscountValue.TabIndex = 0;
             this.lblDiscountValue.Text = "Earned Discount: ₹0.00";
             // 
+            // lblBrokerageValue
+            // 
+            this.lblBrokerageValue.AutoSize = true;
+            this.lblBrokerageValue.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblBrokerageValue.Location = new System.Drawing.Point(150, 28);
+            this.lblBrokerageValue.Name = "lblBrokerageValue";
+            this.lblBrokerageValue.Size = new System.Drawing.Size(130, 16);
+            this.lblBrokerageValue.TabIndex = 3;
+            this.lblBrokerageValue.Text = "Brokerage: ₹0.00";
+            // 
             // gbPayment
             // 
             this.gbPayment.Controls.Add(this.btnAutoAllocate);
@@ -264,7 +316,7 @@ namespace SaleBillSystem.NET.Forms
             this.gbPayment.Controls.Add(this.txtPaymentAmount);
             this.gbPayment.Controls.Add(this.label4);
             this.gbPayment.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gbPayment.Location = new System.Drawing.Point(10, 370);
+            this.gbPayment.Location = new System.Drawing.Point(10, 390);
             this.gbPayment.Name = "gbPayment";
             this.gbPayment.Size = new System.Drawing.Size(964, 131);
             this.gbPayment.TabIndex = 4;
@@ -461,5 +513,11 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtPaymentDate;
         private System.Windows.Forms.Button btnAutoAllocate;
         private System.Windows.Forms.Button btnClear;
+        private System.Windows.Forms.TextBox txtBrokerageRate;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Label lblBrokerageValue;
+        private System.Windows.Forms.TextBox txtInterestDays;
+        private System.Windows.Forms.TextBox txtDiscountDays;
+        private System.Windows.Forms.Label label8;
     }
 }

@@ -23,15 +23,7 @@ namespace SaleBillSystem.NET.Data
             
             foreach (DataRow row in dt.Rows)
             {
-                Broker broker = new Broker
-                {
-                    BrokerID = Convert.ToInt32(row["BrokerID"]),
-                    BrokerName = row["BrokerName"].ToString(),
-                    Phone = row["Phone"].ToString(),
-                    CompanyID = Convert.ToInt32(row["CompanyID"])
-                };
-                
-                brokers.Add(broker);
+                brokers.Add(MapRowToBroker(row));
             }
             
             return brokers;
@@ -53,17 +45,7 @@ namespace SaleBillSystem.NET.Data
             
             if (dt.Rows.Count > 0)
             {
-                DataRow row = dt.Rows[0];
-                
-                Broker broker = new Broker
-                {
-                    BrokerID = Convert.ToInt32(row["BrokerID"]),
-                    BrokerName = row["BrokerName"].ToString(),
-                    Phone = row["Phone"].ToString(),
-                    CompanyID = Convert.ToInt32(row["CompanyID"])
-                };
-                
-                return broker;
+                return MapRowToBroker(dt.Rows[0]);
             }
             
             return null;
@@ -99,13 +81,18 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"INSERT INTO BrokerMaster (BrokerName, Phone, CompanyID) 
-                         VALUES (?, ?, ?)";
+            string sql = @"INSERT INTO BrokerMaster (BrokerName, Phone, CompanyID, InterestDays, InterestRate, DiscountDays, DiscountRate, BrokerageRate) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             OleDbParameter[] parameters = {
                 new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
                 new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
-                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
+                new OleDbParameter("InterestDays", OleDbType.Integer) { Value = broker.InterestDays },
+                new OleDbParameter("InterestRate", OleDbType.Decimal) { Value = broker.InterestRate },
+                new OleDbParameter("DiscountDays", OleDbType.Integer) { Value = broker.DiscountDays },
+                new OleDbParameter("DiscountRate", OleDbType.Decimal) { Value = broker.DiscountRate },
+                new OleDbParameter("BrokerageRate", OleDbType.Decimal) { Value = broker.BrokerageRate }
             };
             
             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
@@ -122,12 +109,17 @@ namespace SaleBillSystem.NET.Data
                 int companyID = Program.ActiveCompany?.CompanyID ?? 0;
                 
                 string sql = @"UPDATE BrokerMaster SET 
-                             BrokerName = ?, Phone = ? 
+                             BrokerName = ?, Phone = ?, InterestDays = ?, InterestRate = ?, DiscountDays = ?, DiscountRate = ?, BrokerageRate = ? 
                              WHERE BrokerID = ? AND CompanyID = ?";
                 
                 OleDbParameter[] parameters = {
                     new OleDbParameter("BrokerName", OleDbType.VarChar) { Value = broker.BrokerName },
                     new OleDbParameter("Phone", OleDbType.VarChar) { Value = broker.Phone },
+                    new OleDbParameter("InterestDays", OleDbType.Integer) { Value = broker.InterestDays },
+                    new OleDbParameter("InterestRate", OleDbType.Decimal) { Value = broker.InterestRate },
+                    new OleDbParameter("DiscountDays", OleDbType.Integer) { Value = broker.DiscountDays },
+                    new OleDbParameter("DiscountRate", OleDbType.Decimal) { Value = broker.DiscountRate },
+                    new OleDbParameter("BrokerageRate", OleDbType.Decimal) { Value = broker.BrokerageRate },
                     new OleDbParameter("BrokerID", OleDbType.Integer) { Value = broker.BrokerID },
                     new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
                 };
@@ -217,7 +209,12 @@ namespace SaleBillSystem.NET.Data
                 BrokerID = Convert.ToInt32(row["BrokerID"]),
                 BrokerName = row["BrokerName"].ToString(),
                 Phone = row["Phone"].ToString(),
-                CompanyID = row["CompanyID"] != DBNull.Value ? Convert.ToInt32(row["CompanyID"]) : 0
+                CompanyID = row["CompanyID"] != DBNull.Value ? Convert.ToInt32(row["CompanyID"]) : 0,
+                InterestDays = row["InterestDays"] != DBNull.Value ? Convert.ToInt32(row["InterestDays"]) : 0,
+                InterestRate = row["InterestRate"] != DBNull.Value ? Convert.ToDecimal(row["InterestRate"]) : 0,
+                DiscountDays = row["DiscountDays"] != DBNull.Value ? Convert.ToInt32(row["DiscountDays"]) : 0,
+                DiscountRate = row["DiscountRate"] != DBNull.Value ? Convert.ToDecimal(row["DiscountRate"]) : 0,
+                BrokerageRate = row["BrokerageRate"] != DBNull.Value ? Convert.ToDecimal(row["BrokerageRate"]) : 0
             };
         }
     }

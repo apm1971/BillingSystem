@@ -34,6 +34,16 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.dgvBrokers = new System.Windows.Forms.DataGridView();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.txtBrokerageRate = new System.Windows.Forms.TextBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.txtDiscountRate = new System.Windows.Forms.TextBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.txtDiscountDays = new System.Windows.Forms.TextBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.txtInterestRate = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.txtInterestDays = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.txtPhone = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.txtBrokerName = new System.Windows.Forms.TextBox();
@@ -105,6 +115,16 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.txtBrokerageRate);
+            this.groupBox3.Controls.Add(this.label9);
+            this.groupBox3.Controls.Add(this.txtDiscountRate);
+            this.groupBox3.Controls.Add(this.label8);
+            this.groupBox3.Controls.Add(this.txtDiscountDays);
+            this.groupBox3.Controls.Add(this.label7);
+            this.groupBox3.Controls.Add(this.txtInterestRate);
+            this.groupBox3.Controls.Add(this.label6);
+            this.groupBox3.Controls.Add(this.txtInterestDays);
+            this.groupBox3.Controls.Add(this.label5);
             this.groupBox3.Controls.Add(this.txtPhone);
             this.groupBox3.Controls.Add(this.label4);
             this.groupBox3.Controls.Add(this.txtBrokerName);
@@ -124,6 +144,96 @@ namespace SaleBillSystem.NET.Forms
             this.txtPhone.Name = "txtPhone";
             this.txtPhone.Size = new System.Drawing.Size(250, 23);
             this.txtPhone.TabIndex = 5;
+            // 
+            // txtInterestDays
+            // 
+            this.txtInterestDays.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtInterestDays.Location = new System.Drawing.Point(150, 150);
+            this.txtInterestDays.Name = "txtInterestDays";
+            this.txtInterestDays.Size = new System.Drawing.Size(100, 23);
+            this.txtInterestDays.TabIndex = 7;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label5.Location = new System.Drawing.Point(20, 153);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(95, 17);
+            this.label5.TabIndex = 6;
+            this.label5.Text = "Interest Days:";
+            // 
+            // txtInterestRate
+            // 
+            this.txtInterestRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtInterestRate.Location = new System.Drawing.Point(150, 185);
+            this.txtInterestRate.Name = "txtInterestRate";
+            this.txtInterestRate.Size = new System.Drawing.Size(100, 23);
+            this.txtInterestRate.TabIndex = 9;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label6.Location = new System.Drawing.Point(20, 188);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(98, 17);
+            this.label6.TabIndex = 8;
+            this.label6.Text = "Interest Rate:";
+            // 
+            // txtDiscountDays
+            // 
+            this.txtDiscountDays.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtDiscountDays.Location = new System.Drawing.Point(150, 220);
+            this.txtDiscountDays.Name = "txtDiscountDays";
+            this.txtDiscountDays.Size = new System.Drawing.Size(100, 23);
+            this.txtDiscountDays.TabIndex = 11;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label7.Location = new System.Drawing.Point(20, 223);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(103, 17);
+            this.label7.TabIndex = 10;
+            this.label7.Text = "Discount Days:";
+            // 
+            // txtDiscountRate
+            // 
+            this.txtDiscountRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtDiscountRate.Location = new System.Drawing.Point(150, 255);
+            this.txtDiscountRate.Name = "txtDiscountRate";
+            this.txtDiscountRate.Size = new System.Drawing.Size(100, 23);
+            this.txtDiscountRate.TabIndex = 13;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label8.Location = new System.Drawing.Point(20, 258);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(106, 17);
+            this.label8.TabIndex = 12;
+            this.label8.Text = "Discount Rate:";
+            // 
+            // txtBrokerageRate
+            // 
+            this.txtBrokerageRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.txtBrokerageRate.Location = new System.Drawing.Point(150, 290);
+            this.txtBrokerageRate.Name = "txtBrokerageRate";
+            this.txtBrokerageRate.Size = new System.Drawing.Size(100, 23);
+            this.txtBrokerageRate.TabIndex = 15;
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label9.Location = new System.Drawing.Point(20, 293);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(108, 17);
+            this.label9.TabIndex = 14;
+            this.label9.Text = "Brokerage Rate:";
             // 
             // label4
             // 
@@ -247,6 +357,16 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.DataGridView dgvBrokers;
         private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.TextBox txtBrokerageRate;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox txtDiscountRate;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.TextBox txtDiscountDays;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.TextBox txtInterestRate;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.TextBox txtInterestDays;
+        private System.Windows.Forms.Label label5;
         private System.Windows.Forms.TextBox txtPhone;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox txtBrokerName;

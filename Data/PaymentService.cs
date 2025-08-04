@@ -112,6 +112,55 @@ namespace SaleBillSystem.NET.Data
     }
     return payments;
 }
+
+public static PaymentViewModel? GetPaymentById(int paymentId)
+{
+    try
+    {
+        string sql = @"
+            SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID
+            FROM PaymentMaster
+            WHERE PaymentID = ?";
+        
+        var param = new OleDbParameter("PaymentID", paymentId);
+        DataTable dt = DatabaseManager.ExecuteQuery(sql, param);
+        
+        if (dt.Rows.Count > 0)
+        {
+            var row = dt.Rows[0];
+            
+            // Get party name separately
+            int partyId = Convert.ToInt32(row["PartyID"]);
+            string partyName = PartyService.GetPartyByID(partyId)?.PartyName ?? string.Empty;
+            
+            // Get broker name separately
+            string brokerName = string.Empty;
+            if (row["BrokerID"] != DBNull.Value)
+            {
+                var broker = BrokerService.GetBrokerByID(Convert.ToInt32(row["BrokerID"]));
+                brokerName = broker?.BrokerName ?? string.Empty;
+            }
+            
+            return new PaymentViewModel
+            {
+                PaymentID = Convert.ToInt32(row["PaymentID"]),
+                PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
+                TotalAmountPaid = Convert.ToDecimal(row["TotalAmountPaid"]),
+                PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
+                Reference = row["Reference"]?.ToString() ?? string.Empty,
+                PartyID = partyId,
+                PartyName = partyName,
+                BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
+                BrokerName = brokerName
+            };
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading payment: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    return null;
+}
         /// <summary>
         /// Gets the payment trace showing which bills a payment was applied to
         /// </summary>
@@ -156,7 +205,8 @@ namespace SaleBillSystem.NET.Data
                         tl.TransactionDate,
                         tl.Description,
                         tl.PaymentMethod,
-                        tl.Reference
+                        tl.Reference,
+                        tl.TransactionType
                     FROM TransactionLedger tl
                     LEFT JOIN BillMaster b ON tl.BillID = b.BillID
                     WHERE tl.PaymentID = ?
@@ -179,7 +229,8 @@ namespace SaleBillSystem.NET.Data
                         TransactionDate = Convert.ToDateTime(row["TransactionDate"]),
                         Description = row["Description"]?.ToString() ?? "",
                         PaymentMethod = row["PaymentMethod"]?.ToString() ?? "",
-                        Reference = row["Reference"]?.ToString() ?? ""
+                        Reference = row["Reference"]?.ToString() ?? "",
+                        TransactionType = row["TransactionType"]?.ToString() ?? ""
                     });
                 }
             }

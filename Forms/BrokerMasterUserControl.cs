@@ -39,9 +39,14 @@ namespace SaleBillSystem.NET.Forms
             txtSearch.TabIndex = 0;
             txtBrokerName.TabIndex = 1;
             txtPhone.TabIndex = 2;
-            btnSave.TabIndex = 3;
-            btnNew.TabIndex = 4;
-            btnDelete.TabIndex = 5;
+            txtInterestDays.TabIndex = 3;
+            txtInterestRate.TabIndex = 4;
+            txtDiscountDays.TabIndex = 5;
+            txtDiscountRate.TabIndex = 6;
+            txtBrokerageRate.TabIndex = 7;
+            btnSave.TabIndex = 8;
+            btnNew.TabIndex = 9;
+            btnDelete.TabIndex = 10;
             
             // Set up text fields to use uppercase
             txtBrokerName.CharacterCasing = CharacterCasing.Upper;
@@ -50,6 +55,11 @@ namespace SaleBillSystem.NET.Forms
             // Configure text boxes
             txtBrokerName.MaxLength = 100;
             txtPhone.MaxLength = 20;
+            txtInterestDays.MaxLength = 10;
+            txtInterestRate.MaxLength = 10;
+            txtDiscountDays.MaxLength = 10;
+            txtDiscountRate.MaxLength = 10;
+            txtBrokerageRate.MaxLength = 10;
 
             // Setup search functionality
             txtSearch.TextChanged += txtSearch_TextChanged;
@@ -58,12 +68,22 @@ namespace SaleBillSystem.NET.Forms
             txtSearch.KeyDown += txtSearch_KeyDown;
             txtBrokerName.KeyDown += Control_KeyDown;
             txtPhone.KeyDown += Control_KeyDown;
+            txtInterestDays.KeyDown += Control_KeyDown;
+            txtInterestRate.KeyDown += Control_KeyDown;
+            txtDiscountDays.KeyDown += Control_KeyDown;
+            txtDiscountRate.KeyDown += Control_KeyDown;
+            txtBrokerageRate.KeyDown += Control_KeyDown;
             dgvBrokers.KeyDown += Control_KeyDown;
             
             // Set up form controls
             txtSearch.PlaceholderText = "Type to search brokers...";
             txtBrokerName.PlaceholderText = "Enter broker name";
             txtPhone.PlaceholderText = "Enter phone number";
+            txtInterestDays.PlaceholderText = "30";
+            txtInterestRate.PlaceholderText = "18.0";
+            txtDiscountDays.PlaceholderText = "10";
+            txtDiscountRate.PlaceholderText = "1.0";
+            txtBrokerageRate.PlaceholderText = "0.0";
             
             // Set up button styles with shortcuts
             SetupButtonStyle(btnSave, System.Drawing.Color.FromArgb(0, 122, 204));
@@ -82,6 +102,11 @@ namespace SaleBillSystem.NET.Forms
             toolTip.SetToolTip(btnDelete, "Delete the selected broker (F8)");
             toolTip.SetToolTip(txtSearch, "Search brokers by name or phone (F3)");
             toolTip.SetToolTip(txtBrokerName, "Enter broker name (F2)");
+            toolTip.SetToolTip(txtInterestDays, "Number of days after which interest applies");
+            toolTip.SetToolTip(txtInterestRate, "Annual interest rate percentage");
+            toolTip.SetToolTip(txtDiscountDays, "Number of days for early payment discount");
+            toolTip.SetToolTip(txtDiscountRate, "Discount rate percentage for early payment");
+            toolTip.SetToolTip(txtBrokerageRate, "Brokerage rate percentage");
         }
 
         private void SetupButtonStyle(Button button, System.Drawing.Color baseColor)
@@ -160,6 +185,46 @@ namespace SaleBillSystem.NET.Forms
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
             });
 
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "InterestDays",
+                HeaderText = "Int. Days",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            });
+
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "InterestRate",
+                HeaderText = "Int. Rate %",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "F2" }
+            });
+
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "DiscountDays",
+                HeaderText = "Disc. Days",
+                Width = 80,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
+            });
+
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "DiscountRate",
+                HeaderText = "Disc. Rate %",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "F2" }
+            });
+
+            dgvBrokers.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "BrokerageRate",
+                HeaderText = "Brokerage %",
+                Width = 100,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight, Format = "F2" }
+            });
+
             // Enable double buffering for smooth scrolling
             typeof(DataGridView).InvokeMember("DoubleBuffered", 
                 System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
@@ -194,6 +259,11 @@ namespace SaleBillSystem.NET.Forms
 
             txtBrokerName.Text = string.Empty;
             txtPhone.Text = string.Empty;
+            txtInterestDays.Text = string.Empty;
+            txtInterestRate.Text = string.Empty;
+            txtDiscountDays.Text = string.Empty;
+            txtDiscountRate.Text = string.Empty;
+            txtBrokerageRate.Text = string.Empty;
 
             txtBrokerName.Focus();
             btnDelete.Enabled = false;
@@ -206,6 +276,11 @@ namespace SaleBillSystem.NET.Forms
 
             txtBrokerName.Text = broker.BrokerName;
             txtPhone.Text = broker.Phone;
+            txtInterestDays.Text = broker.InterestDays.ToString();
+            txtInterestRate.Text = broker.InterestRate.ToString("F2");
+            txtDiscountDays.Text = broker.DiscountDays.ToString();
+            txtDiscountRate.Text = broker.DiscountRate.ToString("F2");
+            txtBrokerageRate.Text = broker.BrokerageRate.ToString("F2");
 
             btnDelete.Enabled = true;
         }
@@ -217,7 +292,12 @@ namespace SaleBillSystem.NET.Forms
                 BrokerID = currentBroker.BrokerID,
                 BrokerName = txtBrokerName.Text.Trim().ToUpper(),
                 Phone = txtPhone.Text.Trim().ToUpper(),
-                CompanyID = Program.ActiveCompany?.CompanyID ?? 1
+                CompanyID = Program.ActiveCompany?.CompanyID ?? 1,
+                InterestDays = int.TryParse(txtInterestDays.Text, out int interestDays) ? interestDays : 0,
+                InterestRate = decimal.TryParse(txtInterestRate.Text, out decimal interestRate) ? interestRate : 0,
+                DiscountDays = int.TryParse(txtDiscountDays.Text, out int discountDays) ? discountDays : 0,
+                DiscountRate = decimal.TryParse(txtDiscountRate.Text, out decimal discountRate) ? discountRate : 0,
+                BrokerageRate = decimal.TryParse(txtBrokerageRate.Text, out decimal brokerageRate) ? brokerageRate : 0
             };
 
             return broker;

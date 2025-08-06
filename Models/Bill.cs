@@ -23,6 +23,17 @@ namespace SaleBillSystem.NET.Models
         
         public decimal OriginalAmount { get; set; }
         public decimal AdditionalCharges { get; set; }
+        
+        /// <summary>
+        /// Cheque amount from Firm1
+        /// </summary>
+        public decimal ChequeAmountFirm1 { get; set; }
+        
+        /// <summary>
+        /// Cheque amount from Firm2
+        /// </summary>
+        public decimal ChequeAmountFirm2 { get; set; }
+        
         public string Status { get; set; }
         public string Notes { get; set; }
         public int CompanyID { get; set; }

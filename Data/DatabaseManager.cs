@@ -223,6 +223,8 @@ namespace SaleBillSystem.NET.Data
                         BrokerName TEXT(255),
                         OriginalAmount CURRENCY,
                         AdditionalCharges CURRENCY DEFAULT 0,
+                        ChequeAmountFirm1 CURRENCY DEFAULT 0,
+                        ChequeAmountFirm2 CURRENCY DEFAULT 0,
                         Status TEXT(20) DEFAULT 'Unpaid',
                         Notes MEMO,
                         CompanyID INTEGER
@@ -577,6 +579,8 @@ namespace SaleBillSystem.NET.Data
                         TotalAmount CURRENCY,
                         TotalCharges CURRENCY,
                         NetAmount CURRENCY,
+                        ChequeAmountFirm1 CURRENCY DEFAULT 0,
+                        ChequeAmountFirm2 CURRENCY DEFAULT 0,
                         Notes MEMO,
                         CompanyID INTEGER
                     )");

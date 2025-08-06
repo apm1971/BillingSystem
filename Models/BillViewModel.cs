@@ -15,6 +15,16 @@ namespace SaleBillSystem.NET.Models
         public decimal BalanceDue { get; set; }
 
         // Add this new property
-        public decimal PaymentAllocation { get; set; } 
+        public decimal PaymentAllocation { get; set; }
+        
+        /// <summary>
+        /// Cheque amount from Firm1
+        /// </summary>
+        public decimal ChequeAmountFirm1 { get; set; }
+        
+        /// <summary>
+        /// Cheque amount from Firm2
+        /// </summary>
+        public decimal ChequeAmountFirm2 { get; set; }
     }
 }

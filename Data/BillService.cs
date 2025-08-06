@@ -30,8 +30,8 @@ namespace SaleBillSystem.NET.Data
                     if (bill.BillID == 0) // Create new bill
                     {
                         string insertSql = @"
-                            INSERT INTO BillMaster (BillNo, BillDate, PartyID, BrokerID, BrokerName, OriginalAmount, AdditionalCharges, Status, Notes, CompanyID) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            INSERT INTO BillMaster (BillNo, BillDate, PartyID, BrokerID, BrokerName, OriginalAmount, AdditionalCharges, ChequeAmountFirm1, ChequeAmountFirm2, Status, Notes, CompanyID) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         
                         var parameters = new OleDbParameter[]
                         {
@@ -42,6 +42,8 @@ namespace SaleBillSystem.NET.Data
                             new OleDbParameter("BrokerName", bill.BrokerName ?? (object)DBNull.Value),
                             new OleDbParameter("OriginalAmount", bill.OriginalAmount),
                             new OleDbParameter("AdditionalCharges", bill.AdditionalCharges),
+                            new OleDbParameter("ChequeAmountFirm1", bill.ChequeAmountFirm1),
+                            new OleDbParameter("ChequeAmountFirm2", bill.ChequeAmountFirm2),
                             new OleDbParameter("Status", bill.Status),
                             new OleDbParameter("Notes", bill.Notes ?? (object)DBNull.Value),
                             new OleDbParameter("CompanyID", bill.CompanyID)
@@ -55,7 +57,8 @@ namespace SaleBillSystem.NET.Data
                     {
                         string updateSql = @"
                             UPDATE BillMaster SET BillNo = ?, BillDate = ?, PartyID = ?, BrokerID = ?, BrokerName = ?, 
-                            OriginalAmount = ?, AdditionalCharges = ?, Status = ?, Notes = ?
+                            OriginalAmount = ?, AdditionalCharges = ?, ChequeAmountFirm1 = ?, ChequeAmountFirm2 = ?, 
+                            Status = ?, Notes = ?
                             WHERE BillID = ?";
                         
                         var parameters = new OleDbParameter[]
@@ -67,6 +70,8 @@ namespace SaleBillSystem.NET.Data
                             new OleDbParameter("BrokerName", bill.BrokerName ?? (object)DBNull.Value),
                             new OleDbParameter("OriginalAmount", bill.OriginalAmount),
                             new OleDbParameter("AdditionalCharges", bill.AdditionalCharges),
+                            new OleDbParameter("ChequeAmountFirm1", bill.ChequeAmountFirm1),
+                            new OleDbParameter("ChequeAmountFirm2", bill.ChequeAmountFirm2),
                             new OleDbParameter("Status", bill.Status),
                             new OleDbParameter("Notes", bill.Notes ?? (object)DBNull.Value),
                             new OleDbParameter("BillID", bill.BillID)
@@ -405,6 +410,8 @@ namespace SaleBillSystem.NET.Data
                 BrokerName = row["BrokerName"].ToString(),
                 OriginalAmount = Convert.ToDecimal(row["OriginalAmount"]),
                 AdditionalCharges = Convert.ToDecimal(row["AdditionalCharges"]),
+                ChequeAmountFirm1 = row["ChequeAmountFirm1"] == DBNull.Value ? 0m : Convert.ToDecimal(row["ChequeAmountFirm1"]),
+                ChequeAmountFirm2 = row["ChequeAmountFirm2"] == DBNull.Value ? 0m : Convert.ToDecimal(row["ChequeAmountFirm2"]),
                 Status = row["Status"].ToString(),
                 Notes = row["Notes"].ToString(),
                 CompanyID = Convert.ToInt32(row["CompanyID"])

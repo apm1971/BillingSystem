@@ -244,6 +244,8 @@ namespace SaleBillSystem.NET.Forms
     cmbBroker.SelectedIndex = -1;
     lblPartyDetails.Text = "Party details will appear here";
     txtAdditionalCharges.Text = "0.00";
+    txtChequeAmountFirm1.Text = "0.00";
+    txtChequeAmountFirm2.Text = "0.00";
     
     // Initialize with empty list and use BindingSource
     _currentBill.BillItems = new List<BillItem>();
@@ -284,6 +286,8 @@ namespace SaleBillSystem.NET.Forms
             }
 
             txtAdditionalCharges.Text = _currentBill.AdditionalCharges.ToString("N2");
+            txtChequeAmountFirm1.Text = _currentBill.ChequeAmountFirm1.ToString("N2");
+            txtChequeAmountFirm2.Text = _currentBill.ChequeAmountFirm2.ToString("N2");
 
             // Ensure BillItems are loaded
             if (_currentBill.BillItems == null)
@@ -740,6 +744,12 @@ private void MoveToNextCell()
                 // OriginalAmount and AdditionalCharges are already updated by CalculateTotals()
                 _currentBill.CompanyID = 1; // Replace with Program.ActiveCompany.CompanyID
                 _currentBill.Status = "Unpaid"; // Set default status
+                
+                // Save cheque amount values
+                decimal.TryParse(txtChequeAmountFirm1.Text, out decimal chequeAmountFirm1);
+                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal chequeAmountFirm2);
+                _currentBill.ChequeAmountFirm1 = chequeAmountFirm1;
+                _currentBill.ChequeAmountFirm2 = chequeAmountFirm2;
                 
                 if (BillService.SaveBill(_currentBill, out int billId))
                 {

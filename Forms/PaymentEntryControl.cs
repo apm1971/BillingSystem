@@ -71,6 +71,26 @@ namespace SaleBillSystem.NET.Forms
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
                 ReadOnly = false 
             });
+            
+            // Add Cheque Amount Firm1 column
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { 
+                DataPropertyName = "ChequeAmountFirm1", 
+                HeaderText = "Cheque Amt Firm1", 
+                Name = "ChequeAmountFirm1", 
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightCyan },
+                Width = 120,
+                ReadOnly = true 
+            });
+            
+            // Add Cheque Amount Firm2 column
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { 
+                DataPropertyName = "ChequeAmountFirm2", 
+                HeaderText = "Cheque Amt Firm2", 
+                Name = "ChequeAmountFirm2", 
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightCyan },
+                Width = 120,
+                ReadOnly = true 
+            });
         }
 
         private void LoadInitialData()
@@ -247,7 +267,9 @@ namespace SaleBillSystem.NET.Forms
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
                         BalanceDue = BillService.GetBillBalance(b.BillID),
-                        PaymentAllocation = 0
+                        PaymentAllocation = 0,
+                        ChequeAmountFirm1 = b.ChequeAmountFirm1,
+                        ChequeAmountFirm2 = b.ChequeAmountFirm2
                     })
                     .Where(b => b.BalanceDue > 0.01m)
                     .OrderBy(b => b.BillDate)
@@ -280,7 +302,9 @@ namespace SaleBillSystem.NET.Forms
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
                         BalanceDue = BillService.GetBillBalance(b.BillID),
-                        PaymentAllocation = 0
+                        PaymentAllocation = 0,
+                        ChequeAmountFirm1 = b.ChequeAmountFirm1,
+                        ChequeAmountFirm2 = b.ChequeAmountFirm2
                     })
                     .Where(b => b.BalanceDue > 0.01m)
                     .OrderBy(b => b.BillDate)
@@ -322,7 +346,6 @@ namespace SaleBillSystem.NET.Forms
             
             dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
             ResetGridStyles();
-
             foreach (var billVm in billsToProcess)
             {
                 var fullBill = BillService.GetBillByID(billVm.BillID);
@@ -330,6 +353,7 @@ namespace SaleBillSystem.NET.Forms
 
                 var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
                 var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
+                totalBrokerage += brokerageAmount;
                 totalInterest += interest;
                 totalDiscount += discount;
                 totalAmountDue += finalAmount;
@@ -349,8 +373,6 @@ namespace SaleBillSystem.NET.Forms
             }
 
             // Calculate brokerage on total bill amount
-            decimal totalBillAmount = billsToProcess.Sum(b => b.BalanceDue);
-            totalBrokerage = totalBillAmount * (brokerageRate / 100m);
             totalAmountDue -= totalBrokerage;
             
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;

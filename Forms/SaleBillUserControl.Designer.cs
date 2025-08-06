@@ -30,6 +30,10 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.dgvItems = new System.Windows.Forms.DataGridView();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.txtChequeAmountFirm2 = new System.Windows.Forms.TextBox();
+            this.lblChequeAmountFirm2 = new System.Windows.Forms.Label();
+            this.txtChequeAmountFirm1 = new System.Windows.Forms.TextBox();
+            this.lblChequeAmountFirm1 = new System.Windows.Forms.Label();
             this.txtAdditionalCharges = new System.Windows.Forms.TextBox();
             this.lblAdditionalCharges = new System.Windows.Forms.Label();
             this.lblNetAmount = new System.Windows.Forms.Label();
@@ -169,6 +173,10 @@ namespace SaleBillSystem.NET.Forms
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.txtChequeAmountFirm2);
+            this.groupBox3.Controls.Add(this.lblChequeAmountFirm2);
+            this.groupBox3.Controls.Add(this.txtChequeAmountFirm1);
+            this.groupBox3.Controls.Add(this.lblChequeAmountFirm1);
             this.groupBox3.Controls.Add(this.txtAdditionalCharges);
             this.groupBox3.Controls.Add(this.lblAdditionalCharges);
             this.groupBox3.Controls.Add(this.lblNetAmount);
@@ -177,15 +185,51 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox3.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.groupBox3.Location = new System.Drawing.Point(10, 491);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(1180, 70);
+            this.groupBox3.Size = new System.Drawing.Size(1180, 90);
             this.groupBox3.TabIndex = 2;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "Totals";
             // 
+            // txtChequeAmountFirm1
+            // 
+            this.txtChequeAmountFirm1.Location = new System.Drawing.Point(150, 53);
+            this.txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
+            this.txtChequeAmountFirm1.Size = new System.Drawing.Size(100, 20);
+            this.txtChequeAmountFirm1.TabIndex = 5;
+            this.txtChequeAmountFirm1.Text = "0.00";
+            // 
+            // lblChequeAmountFirm1
+            // 
+            this.lblChequeAmountFirm1.AutoSize = true;
+            this.lblChequeAmountFirm1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.lblChequeAmountFirm1.Location = new System.Drawing.Point(20, 53);
+            this.lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
+            this.lblChequeAmountFirm1.Size = new System.Drawing.Size(128, 16);
+            this.lblChequeAmountFirm1.TabIndex = 4;
+            this.lblChequeAmountFirm1.Text = "Cheque Amt Firm1:";
+            // 
+            // txtChequeAmountFirm2
+            // 
+            this.txtChequeAmountFirm2.Location = new System.Drawing.Point(380, 53);
+            this.txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
+            this.txtChequeAmountFirm2.Size = new System.Drawing.Size(100, 20);
+            this.txtChequeAmountFirm2.TabIndex = 7;
+            this.txtChequeAmountFirm2.Text = "0.00";
+            // 
+            // lblChequeAmountFirm2
+            // 
+            this.lblChequeAmountFirm2.AutoSize = true;
+            this.lblChequeAmountFirm2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.lblChequeAmountFirm2.Location = new System.Drawing.Point(250, 53);
+            this.lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
+            this.lblChequeAmountFirm2.Size = new System.Drawing.Size(128, 16);
+            this.lblChequeAmountFirm2.TabIndex = 6;
+            this.lblChequeAmountFirm2.Text = "Cheque Amt Firm2:";
+            // 
             // txtAdditionalCharges
             // 
             this.txtAdditionalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.txtAdditionalCharges.Location = new System.Drawing.Point(550, 30);
+            this.txtAdditionalCharges.Location = new System.Drawing.Point(650, 53);
             this.txtAdditionalCharges.Name = "txtAdditionalCharges";
             this.txtAdditionalCharges.Size = new System.Drawing.Size(120, 22);
             this.txtAdditionalCharges.TabIndex = 0;
@@ -196,7 +240,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.lblAdditionalCharges.AutoSize = true;
             this.lblAdditionalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblAdditionalCharges.Location = new System.Drawing.Point(410, 33);
+            this.lblAdditionalCharges.Location = new System.Drawing.Point(500, 53);
             this.lblAdditionalCharges.Name = "lblAdditionalCharges";
             this.lblAdditionalCharges.Size = new System.Drawing.Size(134, 16);
             this.lblAdditionalCharges.TabIndex = 3;
@@ -207,7 +251,7 @@ namespace SaleBillSystem.NET.Forms
             this.lblNetAmount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblNetAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Bold);
             this.lblNetAmount.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
-            this.lblNetAmount.Location = new System.Drawing.Point(880, 30);
+            this.lblNetAmount.Location = new System.Drawing.Point(880, 23);
             this.lblNetAmount.Name = "lblNetAmount";
             this.lblNetAmount.Size = new System.Drawing.Size(280, 24);
             this.lblNetAmount.TabIndex = 2;
@@ -218,7 +262,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.lblTotalCharges.AutoSize = true;
             this.lblTotalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblTotalCharges.Location = new System.Drawing.Point(210, 33);
+            this.lblTotalCharges.Location = new System.Drawing.Point(210, 23);
             this.lblTotalCharges.Name = "lblTotalCharges";
             this.lblTotalCharges.Size = new System.Drawing.Size(139, 16);
             this.lblTotalCharges.TabIndex = 1;
@@ -228,7 +272,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.lblTotalAmount.AutoSize = true;
             this.lblTotalAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblTotalAmount.Location = new System.Drawing.Point(20, 33);
+            this.lblTotalAmount.Location = new System.Drawing.Point(20, 23);
             this.lblTotalAmount.Name = "lblTotalAmount";
             this.lblTotalAmount.Size = new System.Drawing.Size(126, 16);
             this.lblTotalAmount.TabIndex = 0;
@@ -311,5 +355,9 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.ComboBox cmbParty;
         private System.Windows.Forms.ComboBox cmbBroker;
+        private System.Windows.Forms.TextBox txtChequeAmountFirm1;
+        private System.Windows.Forms.Label lblChequeAmountFirm1;
+        private System.Windows.Forms.TextBox txtChequeAmountFirm2;
+        private System.Windows.Forms.Label lblChequeAmountFirm2;
     }
 }

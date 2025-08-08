@@ -55,29 +55,35 @@ namespace SaleBillSystem.NET.Forms
         }
 
         private void SetupForm()
-{
-    txtBillNo.ReadOnly = true;
-    txtBillNo.BackColor = Color.LightGray;
-    
-    SetupDataGridView();
-    SetupEventHandlers();
-    
-    // Populate the Item ComboBox
-    PopulateItemComboBox();
-    
-    // Setup Party and Broker ComboBoxes
-    SetupPartyComboBox();
-    SetupBrokerComboBox();
-    
-    if (_isEditMode)
-    {
-        LoadBillData();
-    }
-    else
-    {
-        ClearForm();
-    }
-}
+        {
+            txtBillNo.ReadOnly = true;
+            txtBillNo.BackColor = Color.LightGray;
+            
+            SetupDataGridView();
+            SetupEventHandlers();
+            
+            // Populate the Item ComboBox
+            PopulateItemComboBox();
+            
+            // Setup Party and Broker ComboBoxes
+            SetupPartyComboBox();
+            SetupBrokerComboBox();
+            
+            // Show shortcuts info
+            if (lblShortcutsInfo != null)
+            {
+                lblShortcutsInfo.Visible = true;
+            }
+            
+            if (_isEditMode)
+            {
+                LoadBillData();
+            }
+            else
+            {
+                ClearForm();
+            }
+        }
 
         private void SetupDataGridView()
         {
@@ -156,8 +162,118 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Click += BtnSave_Click;
             btnCancel.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
             
+            // Quick Add Party button - Check if it exists before adding event handler
+            if (btnQuickAddParty != null)
+            {
+                btnQuickAddParty.Click += BtnQuickAddParty_Click;
+            }
+            
+            // Quick Add Broker button - Check if it exists before adding event handler
+            if (btnQuickAddBroker != null)
+            {
+                btnQuickAddBroker.Click += BtnQuickAddBroker_Click;
+            }
+            
             // Setup tooltips
             SetupTooltips();
+        }
+
+        private void BtnQuickAddParty_Click(object? sender, EventArgs e)
+        {
+            using (var quickAddPartyForm = new QuickAddPartyForm())
+            {
+                if (quickAddPartyForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Refresh parties list and select the newly added party
+                    ReloadParties(quickAddPartyForm.NewParty?.PartyID);
+                }
+            }
+        }
+
+        private void ReloadParties(int? selectPartyId = null)
+        {
+            // Store current selection if we're not selecting a specific party
+            int? currentPartyId = selectPartyId;
+            if (!currentPartyId.HasValue && cmbParty.SelectedValue is int selectedPartyId)
+            {
+                currentPartyId = selectedPartyId;
+            }
+            
+            // Reload parties
+            _allParties = PartyService.GetAllParties();
+            
+            // Unbind event temporarily to avoid triggering while updating
+            cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+            
+            // Reset data source
+            cmbParty.DataSource = null;
+            cmbParty.DataSource = _allParties;
+            cmbParty.DisplayMember = "PartyName";
+            cmbParty.ValueMember = "PartyID";
+            
+            // Restore selected item if possible
+            if (currentPartyId.HasValue)
+            {
+                cmbParty.SelectedValue = currentPartyId.Value;
+            }
+            
+            // Reattach event
+            cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            
+            // Force update if a party is selected
+            if (cmbParty.SelectedIndex >= 0)
+            {
+                CmbParty_SelectedIndexChanged(cmbParty, EventArgs.Empty);
+            }
+        }
+
+        private void BtnQuickAddBroker_Click(object? sender, EventArgs e)
+        {
+            using (var quickAddBrokerForm = new QuickAddBrokerForm())
+            {
+                if (quickAddBrokerForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Refresh brokers list and select the newly added broker
+                    ReloadBrokers(quickAddBrokerForm.NewBroker?.BrokerID);
+                }
+            }
+        }
+
+        private void ReloadBrokers(int? selectBrokerId = null)
+        {
+            // Store current selection if we're not selecting a specific broker
+            int? currentBrokerId = selectBrokerId;
+            if (!currentBrokerId.HasValue && cmbBroker.SelectedValue is int selectedBrokerId)
+            {
+                currentBrokerId = selectedBrokerId;
+            }
+            
+            // Reload brokers
+            _allBrokers = BrokerService.GetAllBrokers();
+            
+            // Unbind event temporarily to avoid triggering while updating
+            cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
+            
+            // Reset data source
+            cmbBroker.DataSource = null;
+            cmbBroker.DataSource = _allBrokers;
+            cmbBroker.DisplayMember = "BrokerName";
+            cmbBroker.ValueMember = "BrokerID";
+            
+            // Restore selected item if possible
+            if (currentBrokerId.HasValue)
+            {
+                cmbBroker.SelectedValue = currentBrokerId.Value;
+            }
+            
+            // Reattach event
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+            
+            // Force update if a broker is selected
+            if (cmbBroker.SelectedIndex >= 0)
+            {
+                CmbBroker_SelectedIndexChanged(cmbBroker, EventArgs.Empty);
+            }
         }
 
         private void TxtBillDate_KeyDown(object? sender, KeyEventArgs e)
@@ -226,7 +342,21 @@ namespace SaleBillSystem.NET.Forms
             var toolTip = new ToolTip();
             toolTip.SetToolTip(txtBillDate, "Enter bill date in dd-mm-yyyy format (F1)");
             toolTip.SetToolTip(cmbParty, "Type to search or use dropdown to select party (F2)");
+            
+            // Check if btnQuickAddParty exists before setting its tooltip
+            if (btnQuickAddParty != null)
+            {
+                toolTip.SetToolTip(btnQuickAddParty, "Add a new party quickly");
+            }
+            
             toolTip.SetToolTip(cmbBroker, "Type to search or use dropdown to select broker");
+            
+            // Check if btnQuickAddBroker exists before setting its tooltip
+            if (btnQuickAddBroker != null)
+            {
+                toolTip.SetToolTip(btnQuickAddBroker, "Add a new broker quickly");
+            }
+            
             toolTip.SetToolTip(dgvItems, "Items: Type to search or use dropdown to select items. Press Enter to move to next field.");
         }
 
@@ -401,41 +531,125 @@ namespace SaleBillSystem.NET.Forms
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-{
-    if (keyData == Keys.Escape)
-    {
-        CloseRequested?.Invoke(this, EventArgs.Empty);
-        return true;
-    }
-    if (keyData == (Keys.Control | Keys.S))
-    {
-        BtnSave_Click(this, EventArgs.Empty);
-        return true;
-    }
-    if (keyData == Keys.F1) { txtBillDate.Focus(); return true; }
-    if (keyData == Keys.F2) { cmbParty.Focus(); return true; }
-    if (keyData == Keys.F3) { 
-        dgvItems.Focus(); 
-        if (dgvItems.Rows.Count > 0)
         {
-            dgvItems.CurrentCell = dgvItems.Rows[0].Cells[0];
-            dgvItems.BeginEdit(true);
+            // Handle custom shortcuts
+            if (keyData == Keys.Escape)
+            {
+                CloseRequested?.Invoke(this, EventArgs.Empty);
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.S))
+            {
+                BtnSave_Click(this, EventArgs.Empty);
+                return true;
+            }
+            if (keyData == Keys.F1)
+            {
+                txtBillDate.Focus();
+                return true;
+            }
+            if (keyData == Keys.F2)
+            {
+                cmbParty.Focus();
+                return true;
+            }
+            if (keyData == Keys.F3)
+            {
+                dgvItems.Focus();
+                if (dgvItems.Rows.Count > 0)
+                {
+                    dgvItems.CurrentCell = dgvItems.Rows[0].Cells[0];
+                    dgvItems.BeginEdit(true);
+                }
+                return true;
+            }
+            if (keyData == Keys.F4)
+            {
+                txtAdditionalCharges.Focus();
+                return true;
+            }
+            if (keyData == Keys.F8)
+            {
+                // F8 to delete current row
+                if (dgvItems.Focused || dgvItems.IsCurrentCellInEditMode)
+                {
+                    DeleteCurrentRow();
+                    return true;
+                }
+            }
+            else if (keyData == (Keys.Control | Keys.P))
+            {
+                // Ctrl+P - Quick add party
+                if (btnQuickAddParty != null)
+                {
+                    btnQuickAddParty.PerformClick();
+                    return true;
+                }
+            }
+            else if (keyData == (Keys.Control | Keys.B))
+            {
+                // Ctrl+B - Quick add broker
+                if (btnQuickAddBroker != null)
+                {
+                    btnQuickAddBroker.PerformClick();
+                    return true;
+                }
+            }
+            else if (keyData == (Keys.Control | Keys.I))
+            {
+                // Ctrl+I - Quick add item
+                QuickAddItem();
+                return true;
+            }
+            
+            return base.ProcessCmdKey(ref msg, keyData);
         }
-        return true; 
-    }
-    if (keyData == Keys.F4) { txtAdditionalCharges.Focus(); return true; }
-    if (keyData == Keys.F8) { 
-        // F8 to delete current row
-        if (dgvItems.Focused || dgvItems.IsCurrentCellInEditMode)
+        
+        private void QuickAddItem()
         {
-            DeleteCurrentRow(); 
-            return true; 
+            using (var quickAddItemForm = new QuickAddItemForm())
+            {
+                if (quickAddItemForm.ShowDialog() == DialogResult.OK)
+                {
+                    ReloadItems(quickAddItemForm.NewItem?.ItemName);
+                    
+                    // Add a note at the top of the form about the shortcut
+                    MessageBox.Show("Item added successfully!\n\nRemember: Use Ctrl+I to quickly add new items.", 
+                        "Quick Item Add", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
         }
-    }
-
-    return base.ProcessCmdKey(ref msg, keyData);
-}
-
+        
+        private void ReloadItems(string? selectItemName = null)
+        {
+            // Store current selection if we're not selecting a specific item
+            string? currentItemName = selectItemName;
+            
+            // Reload items
+            _allItems = ItemService.GetAllItems();
+            
+            // Update combo box column data source
+            PopulateItemComboBox();
+            
+            // If we have a new item, try to select it in the current row
+            if (!string.IsNullOrEmpty(currentItemName) && dgvItems.CurrentRow != null)
+            {
+                dgvItems.CurrentRow.Cells["ItemName"].Value = currentItemName;
+                
+                // Try to find the item in our list to auto-fill other fields
+                var newItem = _allItems.FirstOrDefault(i => i.ItemName == currentItemName);
+                if (newItem != null)
+                {
+                    // Don't try to set Unit as there's no Unit column
+                    dgvItems.CurrentRow.Cells["Rate"].Value = newItem.DefaultRate;
+                    dgvItems.CurrentRow.Cells["Charges"].Value = newItem.Charges;
+                    dgvItems.CurrentRow.Cells["Quantity"].Value = 1;
+                    
+                    // Calculate row total
+                    CalculateRowTotal(dgvItems.CurrentRow.Index);
+                }
+            }
+        }
 
 
 // protected override bool ProcessDialogKey(Keys keyData)

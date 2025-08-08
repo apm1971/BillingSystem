@@ -12,7 +12,7 @@ namespace SaleBillSystem.NET.Forms
     public partial class PaymentEntryControl : UserControl
     {
         public event EventHandler? CloseRequested;
-        
+
         private List<Party> _parties = new List<Party>();
         private List<Broker> _brokers = new List<Broker>();
         private List<BillViewModel> _outstandingBills = new List<BillViewModel>();
@@ -37,11 +37,11 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.AutoGenerateColumns = false;
             dgvOutstandingBills.AllowUserToAddRows = false;
             dgvOutstandingBills.AllowUserToDeleteRows = false;
-            
-            dgvOutstandingBills.ReadOnly = false; 
-            
+
+            dgvOutstandingBills.ReadOnly = false;
+
             dgvOutstandingBills.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvOutstandingBills.MultiSelect = true; 
+            dgvOutstandingBills.MultiSelect = true;
             dgvOutstandingBills.RowHeadersVisible = false;
             dgvOutstandingBills.BackgroundColor = Color.White;
             dgvOutstandingBills.DefaultCellStyle.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular);
@@ -61,35 +61,38 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BrokerName", HeaderText = "Broker Name", Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BillDate", HeaderText = "Bill Date", DefaultCellStyle = new DataGridViewCellStyle { Format = "dd-MMM-yyyy" }, Width = 120, ReadOnly = true });
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmount", HeaderText = "Total Amount", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 150, ReadOnly = true });
-            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BalanceDue", HeaderText = "Balance Due", Name="BalanceDue", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9.75F, FontStyle.Bold), ForeColor = Color.Red }, Width = 150, ReadOnly = true });
-            
-            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { 
-                DataPropertyName = "PaymentAllocation", 
-                HeaderText = "Allocated Payment", 
-                Name = "PaymentAllocation", 
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "BalanceDue", HeaderText = "Balance Due", Name = "BalanceDue", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, Font = new Font("Segoe UI", 9.75F, FontStyle.Bold), ForeColor = Color.Red }, Width = 150, ReadOnly = true });
+
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "PaymentAllocation",
+                HeaderText = "Allocated Payment",
+                Name = "PaymentAllocation",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightYellow },
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-                ReadOnly = false 
+                ReadOnly = false
             });
-            
+
             // Add Cheque Amount Firm1 column
-            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { 
-                DataPropertyName = "ChequeAmountFirm1", 
-                HeaderText = "Cheque Amt Firm1", 
-                Name = "ChequeAmountFirm1", 
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "ChequeAmountFirm1",
+                HeaderText = "Cheque Amt Firm1",
+                Name = "ChequeAmountFirm1",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightCyan },
                 Width = 120,
-                ReadOnly = true 
+                ReadOnly = true
             });
-            
+
             // Add Cheque Amount Firm2 column
-            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn { 
-                DataPropertyName = "ChequeAmountFirm2", 
-                HeaderText = "Cheque Amt Firm2", 
-                Name = "ChequeAmountFirm2", 
+            dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "ChequeAmountFirm2",
+                HeaderText = "Cheque Amt Firm2",
+                Name = "ChequeAmountFirm2",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightCyan },
                 Width = 120,
-                ReadOnly = true 
+                ReadOnly = true
             });
         }
 
@@ -103,7 +106,7 @@ namespace SaleBillSystem.NET.Forms
                 cmbParty.DataSource = _parties;
                 cmbParty.DisplayMember = "PartyName";
                 cmbParty.ValueMember = "PartyID";
-                
+
                 cmbBroker.DataSource = _brokers;
                 cmbBroker.DisplayMember = "BrokerName";
                 cmbBroker.ValueMember = "BrokerID";
@@ -122,8 +125,8 @@ namespace SaleBillSystem.NET.Forms
             btnAutoAllocate.Click += BtnAutoAllocate_Click;
             btnSave.Click += BtnSave_Click;
             btnClear.Click += BtnClear_Click;
-            btnClose.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
-            
+            // Note: btnClose doesn't exist in the designer, removed the event handler
+
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
             txtPaymentDate.TextChanged += TxtPaymentDate_TextChanged;
         }
@@ -134,27 +137,27 @@ namespace SaleBillSystem.NET.Forms
             cmbBroker.SelectedIndex = -1;
             dgvOutstandingBills.DataSource = null;
             _outstandingBills = new List<BillViewModel>();
-            
+
             // Set default values from settings
             txtInterestDays.Text = SettingsService.GetDefaultInterestDays().ToString();
             txtDiscountDays.Text = SettingsService.GetDefaultDiscountDays().ToString();
             txtDiscountRate.Text = SettingsService.GetDefaultDiscountRate().ToString("F2");
             txtInterestRate.Text = SettingsService.GetDefaultInterestRate().ToString("F2");
             txtBrokerageRate.Text = SettingsService.GetDefaultBrokerageRate().ToString("F2");
-            
-            lblDiscountValue.Text = "Earned Discount: ₹0.00";
-            lblInterestValue.Text = "Accrued Interest: ₹0.00";
+
+            lblDiscountValue.Text = "Discount: ₹0.00";
+            lblInterestValue.Text = "Interest: ₹0.00";
             lblBrokerageValue.Text = "Brokerage: ₹0.00";
-            lblFinalAmount.Text = "Final Amount Due: ₹0.00";
+            lblFinalAmount.Text = "Amount Due: ₹0.00";
 
             txtPaymentAmount.Text = "0.00";
             txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
             cmbPaymentMethod.SelectedIndex = 0;
             txtReference.Clear();
-            
+
             // Make all fields editable by default
             SetFieldsEditable(true);
-            
+
             cmbParty.Focus();
         }
 
@@ -249,13 +252,13 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 var bills = BillService.GetAllBillsForParty(partyId);
-                
+
                 // Filter by broker if specified
                 if (brokerId.HasValue && brokerId.Value > 0)
                 {
                     bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
                 }
-                
+
                 _outstandingBills = bills
                     .Select(b => new BillViewModel
                     {
@@ -290,7 +293,7 @@ namespace SaleBillSystem.NET.Forms
             {
                 var allBills = BillService.GetAllBills();
                 var bills = allBills.Where(b => b.BrokerID == brokerId).ToList();
-                
+
                 _outstandingBills = bills
                     .Select(b => new BillViewModel
                     {
@@ -328,8 +331,8 @@ namespace SaleBillSystem.NET.Forms
             if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
             if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
             {
-                 MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                 return;
+                MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
             decimal totalDiscount = 0;
@@ -343,7 +346,7 @@ namespace SaleBillSystem.NET.Forms
                 MessageBox.Show("Please select one or more bills to reconcile, or check 'Apply to all'.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            
+
             dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
             ResetGridStyles();
             foreach (var billVm in billsToProcess)
@@ -360,11 +363,11 @@ namespace SaleBillSystem.NET.Forms
                 finalAmount -= brokerageAmount;
                 // Set the payment allocation to the calculated final amount
                 billVm.PaymentAllocation = finalAmount;
-                
+
                 // Highlight the row
-                foreach(DataGridViewRow row in dgvOutstandingBills.Rows)
+                foreach (DataGridViewRow row in dgvOutstandingBills.Rows)
                 {
-                    if((row.DataBoundItem as BillViewModel)?.BillID == billVm.BillID)
+                    if ((row.DataBoundItem as BillViewModel)?.BillID == billVm.BillID)
                     {
                         row.DefaultCellStyle.BackColor = Color.LightGreen;
                         break;
@@ -374,11 +377,11 @@ namespace SaleBillSystem.NET.Forms
 
             // Calculate brokerage on total bill amount
             totalAmountDue -= totalBrokerage;
-            
+
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
 
             dgvOutstandingBills.Refresh();
-            
+
             // Update payment amount to include brokerage
             txtPaymentAmount.Text = totalAmountDue.ToString("F2");
 
@@ -393,8 +396,8 @@ namespace SaleBillSystem.NET.Forms
             if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
             if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
             {
-                 MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                 return;
+                MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
             if (!decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount) || paymentAmount <= 0)
             {
@@ -416,10 +419,10 @@ namespace SaleBillSystem.NET.Forms
             // Calculate brokerage on total bill amount
             // decimal totalBillAmount = billsToProcess.Sum(b => b.BalanceDue);
             // decimal totalBrokerage = totalBillAmount * (brokerageRate / 100m);
-            
+
             // Subtract brokerage from payment amount for allocation
             decimal remainingAmount = paymentAmount;
-            
+
             foreach (var billVm in billsToProcess.OrderBy(b => b.BillDate)) // Ensure FIFO on selected bills
             {
                 if (remainingAmount <= 0)
@@ -434,7 +437,7 @@ namespace SaleBillSystem.NET.Forms
                 // Calculate the true amount needed to settle this bill
                 var (_, _, settlementAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
                 var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
-                settlementAmount-= brokerageAmount;
+                settlementAmount -= brokerageAmount;
                 decimal amountToAllocate = Math.Min(remainingAmount, settlementAmount);
                 billVm.PaymentAllocation = amountToAllocate;
                 remainingAmount -= amountToAllocate;
@@ -443,7 +446,7 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
             dgvOutstandingBills.Refresh();
             UpdateTotalPaymentFromGrid();
-            
+
             // Update summary to show brokerage
             // lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
         }
@@ -462,7 +465,7 @@ namespace SaleBillSystem.NET.Forms
             decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
             txtPaymentAmount.Text = totalAllocated.ToString("F2");
         }
-        
+
         private void ResetGridStyles()
         {
             foreach (DataGridViewRow row in dgvOutstandingBills.Rows)
@@ -544,37 +547,59 @@ namespace SaleBillSystem.NET.Forms
                     {
                         var fullBill = BillService.GetBillByID(billVm.BillID);
                         if (fullBill == null) continue;
-                        
+
                         var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
                         var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
-                        bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount-brokerageAmount);
+                        bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount - brokerageAmount);
 
                         if (isFinalSettlement)
                         {
                             if (interest > 0)
                             {
-                                var interestTx = new Transaction {
-                                    PaymentID = paymentId, PartyID = fullBill.PartyID, BillID = fullBill.BillID, TransactionDate = paymentDate,
-                                    TransactionType = "Interest", Description = $"Interest on Bill No: {fullBill.BillNo}",
-                                    DebitAmount = interest, UserID = 1, CompanyID = 1
+                                var interestTx = new Transaction
+                                {
+                                    PaymentID = paymentId,
+                                    PartyID = fullBill.PartyID,
+                                    BillID = fullBill.BillID,
+                                    TransactionDate = paymentDate,
+                                    TransactionType = "Interest",
+                                    Description = $"Interest on Bill No: {fullBill.BillNo}",
+                                    DebitAmount = interest,
+                                    UserID = 1,
+                                    CompanyID = 1
                                 };
                                 LedgerService.AddTransaction(interestTx, conn, dbTransaction);
                             }
 
                             if (discount > 0)
                             {
-                                var discountTx = new Transaction {
-                                    PaymentID = paymentId, PartyID = fullBill.PartyID, BillID = fullBill.BillID, TransactionDate = paymentDate,
-                                    TransactionType = "Discount", Description = $"Discount on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = discount, UserID = 1, CompanyID = 1
+                                var discountTx = new Transaction
+                                {
+                                    PaymentID = paymentId,
+                                    PartyID = fullBill.PartyID,
+                                    BillID = fullBill.BillID,
+                                    TransactionDate = paymentDate,
+                                    TransactionType = "Discount",
+                                    Description = $"Discount on Bill No: {fullBill.BillNo}",
+                                    CreditAmount = discount,
+                                    UserID = 1,
+                                    CompanyID = 1
                                 };
                                 LedgerService.AddTransaction(discountTx, conn, dbTransaction);
                             }
-                            if(brokerageAmount > 0){
-                                var brokerageTx = new Transaction {
-                                    PaymentID = paymentId, PartyID = fullBill.PartyID, BillID = fullBill.BillID, TransactionDate = paymentDate,
-                                    TransactionType = "Brokerage", Description = $"Brokerage on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = brokerageAmount, UserID = 1, CompanyID = 1
+                            if (brokerageAmount > 0)
+                            {
+                                var brokerageTx = new Transaction
+                                {
+                                    PaymentID = paymentId,
+                                    PartyID = fullBill.PartyID,
+                                    BillID = fullBill.BillID,
+                                    TransactionDate = paymentDate,
+                                    TransactionType = "Brokerage",
+                                    Description = $"Brokerage on Bill No: {fullBill.BillNo}",
+                                    CreditAmount = brokerageAmount,
+                                    UserID = 1,
+                                    CompanyID = 1
                                 };
                                 LedgerService.AddTransaction(brokerageTx, conn, dbTransaction);
                             }
@@ -596,18 +621,18 @@ namespace SaleBillSystem.NET.Forms
                         };
                         LedgerService.AddTransaction(paymentTx, conn, dbTransaction);
                     }
-                    
+
                     // First commit the ledger transactions
                     dbTransaction.Commit();
-                    
+
                     // Now update bill statuses in a new transaction
                     UpdateBillStatuses(paymentsToSave);
-                    
+
                     MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    
+
                     // Show payment trace with print option
                     ShowPaymentTraceAfterSave(paymentId);
-                    
+
                     ClearForm();
                 }
                 catch (Exception ex)
@@ -638,14 +663,14 @@ namespace SaleBillSystem.NET.Forms
                 {
                     conn.Open();
                     var trans = conn.BeginTransaction();
-                    
+
                     try
                     {
                         foreach (var billVm in paidBills)
                         {
                             // Calculate current balance after payment (now ledger transactions are committed)
                             decimal dueAmount = LedgerService.GetDueAmount(billVm.BillID);
-                            
+
                             // Determine new status based on balance
                             string newStatus;
                             if (dueAmount <= 0)
@@ -660,12 +685,12 @@ namespace SaleBillSystem.NET.Forms
                             {
                                 newStatus = "Partial";
                             }
-                            
+
                             // Update the bill status in the database
                             string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
                             var statusParam = new OleDbParameter("Status", newStatus);
                             var billIdParam = new OleDbParameter("BillID", billVm.BillID);
-                            
+
                             using (var cmd = new OleDbCommand(updateSql, conn, trans))
                             {
                                 cmd.Parameters.Add(statusParam);
@@ -673,7 +698,7 @@ namespace SaleBillSystem.NET.Forms
                                 cmd.ExecuteNonQuery();
                             }
                         }
-                        
+
                         trans.Commit();
                     }
                     catch (Exception ex)
@@ -693,10 +718,12 @@ namespace SaleBillSystem.NET.Forms
         #endregion
 
         #region Validation & Helpers
-        
+
         private List<BillViewModel> GetSelectedBillsFromGrid()
         {
-            if (chkApplyToAll.Checked)
+            // Note: chkApplyToAll checkbox doesn't exist in the designer
+            // For now, return all bills if no rows are selected, otherwise return selected rows
+            if (dgvOutstandingBills.SelectedRows.Count == 0)
             {
                 return _outstandingBills.ToList();
             }
@@ -711,7 +738,7 @@ namespace SaleBillSystem.NET.Forms
             }
             return selectedBills;
         }
-        
+
         private void TxtPaymentDate_TextChanged(object? sender, EventArgs e)
         {
             if (txtPaymentDate.Text.Length == 2 && !txtPaymentDate.Text.Contains("-"))
@@ -821,5 +848,25 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
+
+        private void btnCalculate_Click_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void cmbPaymentMethod_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void gbReconciliation_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnCalculate_Click_2(object sender, EventArgs e)
+        {
+
+        }
     }
 }

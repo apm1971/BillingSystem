@@ -198,5 +198,29 @@ namespace SaleBillSystem.NET.Data
                 CompanyID = Convert.ToInt32(row["CompanyID"])
             };
         }
+        
+        // Check if an item with the given name already exists
+        public static bool ItemExists(string itemName, int? excludeItemID = null)
+        {
+            // Get the active company ID
+            int companyID = Program.ActiveCompany?.CompanyID ?? 0;
+            
+            string sql = "SELECT COUNT(*) FROM ItemMaster WHERE ItemName = ? AND CompanyID = ?";
+            List<OleDbParameter> parameters = new List<OleDbParameter>
+            {
+                new OleDbParameter("ItemName", OleDbType.VarChar) { Value = itemName.Trim() },
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+            };
+            
+            // Exclude the current item if we're updating
+            if (excludeItemID.HasValue)
+            {
+                sql += " AND ItemID <> ?";
+                parameters.Add(new OleDbParameter("ItemID", OleDbType.Integer) { Value = excludeItemID.Value });
+            }
+            
+            int count = Convert.ToInt32(DatabaseManager.ExecuteScalar(sql, parameters.ToArray()));
+            return count > 0;
+        }
     }
 } 

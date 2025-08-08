@@ -37,14 +37,14 @@ namespace SaleBillSystem.NET.Forms
                 _allBills = BillService.GetAllBills();
                 _parties = PartyService.GetAllParties();
                 _brokers = BrokerService.GetAllBrokers();
-                
+
                 // Update status for each bill based on due amount and populate broker names from broker ID
                 foreach (var bill in _allBills)
                 {
                     // Calculate balance from transaction ledger
                     decimal dueAmount = LedgerService.GetDueAmount(bill.BillID);
                     bill.Balance = dueAmount;
-                    
+
                     // Look up broker name from broker ID
                     if (bill.BrokerID.HasValue && bill.BrokerID.Value > 0)
                     {
@@ -55,11 +55,25 @@ namespace SaleBillSystem.NET.Forms
                     {
                         bill.BrokerName = "No Broker";
                     }
+
+                    // Set bill status based on balance
+                    if (dueAmount <= 0)
+                    {
+                        bill.Status = "Paid";
+                    }
+                    else if (dueAmount < bill.TotalAmount)
+                    {
+                        bill.Status = "Partial";
+                    }
+                    else
+                    {
+                        bill.Status = "Unpaid";
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading data: {ex.Message}", "Error", 
+                MessageBox.Show($"Error loading data: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -106,23 +120,47 @@ namespace SaleBillSystem.NET.Forms
             btnViewDetails.Click += BtnViewDetails_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
             btnRefresh.Click += BtnRefresh_Click;
-            
+
             txtSearch.TextChanged += TxtSearch_TextChanged;
             dgvBills.CellDoubleClick += DgvBills_CellDoubleClick;
             this.KeyDown += BillListUserControl_KeyDown;
-            
+
             // --- NEW: Add event handler for column header click for sorting ---
             dgvBills.ColumnHeaderMouseClick += DgvBills_ColumnHeaderMouseClick;
-            
+
             // Add custom cell formatting for balance styling
             dgvBills.CellFormatting += DgvBills_CellFormatting;
+
+            // Initialize date pickers
+            dtpStartDate.Value = DateTime.Now.AddMonths(-1);
+            dtpEndDate.Value = DateTime.Now;
+
+            // Add event handlers for date pickers to update list dynamically
+            dtpStartDate.ValueChanged += DatePicker_ValueChanged;
+            dtpEndDate.ValueChanged += DatePicker_ValueChanged;
+
+            // Setup status filter
+            cmbStatus.SelectedIndex = 0; // Select "All" by default
+            cmbStatus.SelectedIndexChanged += CmbStatus_SelectedIndexChanged;
 
             RefreshGrid();
         }
 
+        private void CmbStatus_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // When status selection changes, update the filter
+            ApplyFilters();
+        }
+
+        private void DatePicker_ValueChanged(object sender, EventArgs e)
+        {
+            // When dates change, automatically update the filter
+            ApplyFilters();
+        }
+
         private void RefreshGrid()
         {
-            TxtSearch_TextChanged(null, EventArgs.Empty); // Apply current search filter
+            ApplyFilters();
         }
 
         private void DgvBills_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
@@ -152,28 +190,103 @@ namespace SaleBillSystem.NET.Forms
                     }
                 }
             }
+
+            // Handle status column styling
+            if (e.ColumnIndex == dgvBills.Columns["Status"].Index && e.Value != null)
+            {
+                string status = e.Value.ToString();
+
+                switch (status)
+                {
+                    case "Paid":
+                        e.CellStyle.ForeColor = Color.Green;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                        break;
+                    case "Partial":
+                        e.CellStyle.ForeColor = Color.Blue;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                        break;
+                    case "Unpaid":
+                        e.CellStyle.ForeColor = Color.Red;
+                        e.CellStyle.Font = new Font(e.CellStyle.Font, FontStyle.Bold);
+                        break;
+                }
+            }
         }
 
         private void TxtSearch_TextChanged(object sender, EventArgs e)
         {
-            string searchText = txtSearch.Text.ToLower().Trim();
-            List<Bill> filteredBills;
+            ApplyFilters();
+        }
 
-            if (string.IsNullOrWhiteSpace(searchText))
+        private void ApplyFilters()
+        {
+            string searchText = txtSearch.Text.ToLower().Trim();
+            List<Bill> filteredBills = _allBills;
+
+            // Apply date filter
+            DateTime startDate = dtpStartDate.Value.Date;
+            DateTime endDate = dtpEndDate.Value.Date.AddDays(1).AddSeconds(-1); // Include entire end date
+
+            filteredBills = filteredBills.Where(b =>
+                b.BillDate >= startDate &&
+                b.BillDate <= endDate
+            ).ToList();
+
+            // Apply status filter if not "All"
+            string selectedStatus = cmbStatus.SelectedItem.ToString();
+            if (selectedStatus != "All")
             {
-                filteredBills = _allBills;
+                filteredBills = filteredBills.Where(b => b.Status == selectedStatus).ToList();
             }
-            else
+
+            // Apply text filter if specified
+            if (!string.IsNullOrWhiteSpace(searchText))
             {
-                filteredBills = _allBills.Where(b => 
+                filteredBills = filteredBills.Where(b =>
                     b.BillNo.ToLower().Contains(searchText) ||
                     b.PartyName.ToLower().Contains(searchText) ||
                     (b.BrokerName?.ToLower().Contains(searchText) ?? false)
                 ).ToList();
             }
-            
+
             dgvBills.DataSource = null;
             dgvBills.DataSource = filteredBills;
+
+            // Calculate and display totals
+            UpdateTotals(filteredBills);
+        }
+
+        private void UpdateTotals(List<Bill> bills)
+        {
+            decimal totalAmount = bills.Sum(b => b.OriginalAmount);
+            decimal totalCharges = bills.Sum(b => b.AdditionalCharges);
+            decimal netAmount = totalAmount + totalCharges;
+            decimal totalBalance = bills.Sum(b => b.Balance);
+            decimal totalChequeFirm1 = bills.Sum(b => b.ChequeAmountFirm1);
+            decimal totalChequeFirm2 = bills.Sum(b => b.ChequeAmountFirm2);
+
+            // Format with commas for thousand separators and always show 2 decimal places
+            // Note: lblTotalAmountValue and lblTotalChargesValue don't exist in the designer
+            // Using available labels for display
+            lblNetAmountValue.Text = string.Format("₹{0:N2}", netAmount);
+            lblTotalBalanceValue.Text = string.Format("₹{0:N2}", totalBalance);
+            lblChequeFirm1Value.Text = string.Format("₹{0:N2}", totalChequeFirm1);
+            lblChequeFirm2Value.Text = string.Format("₹{0:N2}", totalChequeFirm2);
+
+            // Set color for balance total
+            if (totalBalance > 0)
+            {
+                lblTotalBalanceValue.ForeColor = Color.Red;
+            }
+            else if (totalBalance == 0)
+            {
+                lblTotalBalanceValue.ForeColor = Color.Green;
+            }
+            else
+            {
+                lblTotalBalanceValue.ForeColor = Color.Blue;
+            }
         }
 
         #region Sorting Logic
@@ -181,7 +294,7 @@ namespace SaleBillSystem.NET.Forms
         private void DgvBills_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
             var column = dgvBills.Columns[e.ColumnIndex];
-            
+
             // Determine the new sort order
             if (_sortedColumn == column)
             {
@@ -197,7 +310,7 @@ namespace SaleBillSystem.NET.Forms
             }
 
             _sortedColumn = column;
-            
+
             // Sort the data based on the column's DataPropertyName
             switch (column.DataPropertyName)
             {
@@ -219,6 +332,9 @@ namespace SaleBillSystem.NET.Forms
                 case "Balance":
                     _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.Balance).ToList() : _allBills.OrderByDescending(b => b.Balance).ToList();
                     break;
+                case "Status":
+                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.Status).ToList() : _allBills.OrderByDescending(b => b.Status).ToList();
+                    break;
             }
 
             // Update the sort glyph on the header cell
@@ -235,11 +351,12 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 var newBillControl = new SaleBillUserControl();
-                newBillControl.BillSaved += (s, args) => {
+                newBillControl.BillSaved += (s, args) =>
+                {
                     LoadData();
                     RefreshGrid();
                 };
-                
+
                 var parentForm = this.FindForm() as MainForm;
                 parentForm?.ShowControl(newBillControl);
             }
@@ -284,11 +401,12 @@ namespace SaleBillSystem.NET.Forms
                 try
                 {
                     var editBillControl = new SaleBillUserControl(selectedBill);
-                    editBillControl.BillSaved += (s, args) => {
+                    editBillControl.BillSaved += (s, args) =>
+                    {
                         LoadData();
                         RefreshGrid();
                     };
-                    
+
                     var parentForm = this.FindForm() as MainForm;
                     parentForm?.ShowControl(editBillControl);
                 }
@@ -307,7 +425,7 @@ namespace SaleBillSystem.NET.Forms
                 {
                     // Get the bill details using BillService.GetBillDetails
                     var billItems = BillService.GetBillDetails(selectedBill.BillID);
-                    
+
                     // Build the details message
                     var details = new System.Text.StringBuilder();
                     details.AppendLine($"Bill No: {selectedBill.BillNo}");
@@ -318,10 +436,10 @@ namespace SaleBillSystem.NET.Forms
                     details.AppendLine();
                     details.AppendLine("Items:");
                     details.AppendLine("----------------------------------------");
-                    
+
                     decimal totalItemAmount = 0;
                     decimal totalItemCharges = 0;
-                    
+
                     foreach (var item in billItems)
                     {
                         details.AppendLine($"• {item.ItemName}");
@@ -332,25 +450,25 @@ namespace SaleBillSystem.NET.Forms
                         }
                         details.AppendLine($"  Total: ₹{item.TotalAmount:N2}");
                         details.AppendLine();
-                        
+
                         totalItemAmount += item.Amount;
                         totalItemCharges += item.Charges;
                     }
-                    
+
                     details.AppendLine("----------------------------------------");
                     details.AppendLine($"Item Total: ₹{totalItemAmount:N2}");
                     details.AppendLine($"Item Charges: ₹{totalItemCharges:N2}");
                     details.AppendLine($"Additional Charges: ₹{selectedBill.AdditionalCharges:N2}");
                     details.AppendLine($"NET AMOUNT: ₹{selectedBill.TotalAmount:N2}");
                     details.AppendLine($"Balance: ₹{selectedBill.Balance:N2}");
-                    
+
                     if (!string.IsNullOrEmpty(selectedBill.Notes))
                     {
                         details.AppendLine();
                         details.AppendLine($"Notes: {selectedBill.Notes}");
                     }
-                    
-                    MessageBox.Show(details.ToString(), $"Bill Details - {selectedBill.BillNo}", 
+
+                    MessageBox.Show(details.ToString(), $"Bill Details - {selectedBill.BillNo}",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
@@ -412,5 +530,20 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
+
+        private void dgvBills_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void lblChequeFirm2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblTotalBalance_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

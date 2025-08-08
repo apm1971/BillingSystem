@@ -18,7 +18,9 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btnQuickAddParty = new System.Windows.Forms.Button();
             this.cmbBroker = new System.Windows.Forms.ComboBox();
+            this.btnQuickAddBroker = new System.Windows.Forms.Button();
             this.cmbParty = new System.Windows.Forms.ComboBox();
             this.lblPartyDetails = new System.Windows.Forms.Label();
             this.lblBroker = new System.Windows.Forms.Label();
@@ -42,6 +44,8 @@ namespace SaleBillSystem.NET.Forms
             this.panel1 = new System.Windows.Forms.Panel();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.lblShortcutsInfo = new System.Windows.Forms.Label();
 
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -50,9 +54,32 @@ namespace SaleBillSystem.NET.Forms
             this.panel1.SuspendLayout();
             this.SuspendLayout();
             // 
+            // lblTitle
+            // 
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.lblTitle.Location = new System.Drawing.Point(529, 11);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(118, 26);
+            this.lblTitle.TabIndex = 5;
+            this.lblTitle.Text = "New Sale";
+            // 
+            // lblShortcutsInfo
+            // 
+            this.lblShortcutsInfo.AutoSize = true;
+            this.lblShortcutsInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.lblShortcutsInfo.ForeColor = System.Drawing.Color.DarkBlue;
+            this.lblShortcutsInfo.Location = new System.Drawing.Point(529, 37);
+            this.lblShortcutsInfo.Name = "lblShortcutsInfo";
+            this.lblShortcutsInfo.Size = new System.Drawing.Size(230, 13);
+            this.lblShortcutsInfo.TabIndex = 6;
+            this.lblShortcutsInfo.Text = "Use Ctrl+I to quickly add a new item";
+            // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.btnQuickAddParty);
             this.groupBox1.Controls.Add(this.cmbBroker);
+            this.groupBox1.Controls.Add(this.btnQuickAddBroker);
             this.groupBox1.Controls.Add(this.cmbParty);
             this.groupBox1.Controls.Add(this.lblPartyDetails);
             this.groupBox1.Controls.Add(this.lblBroker);
@@ -69,6 +96,16 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Bill Details";
             // 
+            // btnQuickAddParty
+            // 
+            this.btnQuickAddParty.Location = new System.Drawing.Point(355, 80);
+            this.btnQuickAddParty.Name = "btnQuickAddParty";
+            this.btnQuickAddParty.Size = new System.Drawing.Size(30, 21);
+            this.btnQuickAddParty.TabIndex = 11;
+            this.btnQuickAddParty.Text = "+";
+            this.btnQuickAddParty.UseVisualStyleBackColor = true;
+            this.btnQuickAddParty.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
+            // 
             // cmbBroker
             // 
             this.cmbBroker.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
@@ -78,6 +115,16 @@ namespace SaleBillSystem.NET.Forms
             this.cmbBroker.Name = "cmbBroker";
             this.cmbBroker.Size = new System.Drawing.Size(250, 21);
             this.cmbBroker.TabIndex = 3;
+            // 
+            // btnQuickAddBroker
+            // 
+            this.btnQuickAddBroker.Location = new System.Drawing.Point(355, 109);
+            this.btnQuickAddBroker.Name = "btnQuickAddBroker";
+            this.btnQuickAddBroker.Size = new System.Drawing.Size(30, 21);
+            this.btnQuickAddBroker.TabIndex = 12;
+            this.btnQuickAddBroker.Text = "+";
+            this.btnQuickAddBroker.UseVisualStyleBackColor = true;
+            this.btnQuickAddBroker.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
             // 
             // cmbParty
             // 
@@ -92,7 +139,7 @@ namespace SaleBillSystem.NET.Forms
             // lblPartyDetails
             // 
             this.lblPartyDetails.AutoSize = true;
-            this.lblPartyDetails.Location = new System.Drawing.Point(370, 83);
+            this.lblPartyDetails.Location = new System.Drawing.Point(420, 83);
             this.lblPartyDetails.Name = "lblPartyDetails";
             this.lblPartyDetails.Size = new System.Drawing.Size(126, 13);
             this.lblPartyDetails.TabIndex = 10;
@@ -313,11 +360,14 @@ namespace SaleBillSystem.NET.Forms
             // 
             // SaleBillUserControl
             // 
-
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.lblShortcutsInfo);
+            this.Controls.Add(this.lblTitle);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox3);
-            this.Controls.Add(this.panel1);
             this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.panel1);
             this.Name = "SaleBillUserControl";
             this.Padding = new System.Windows.Forms.Padding(10);
             this.Size = new System.Drawing.Size(1200, 621);
@@ -359,5 +409,9 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label lblChequeAmountFirm1;
         private System.Windows.Forms.TextBox txtChequeAmountFirm2;
         private System.Windows.Forms.Label lblChequeAmountFirm2;
+        private System.Windows.Forms.Button btnQuickAddParty;
+        private System.Windows.Forms.Button btnQuickAddBroker;
+        private System.Windows.Forms.Label lblTitle;
+        private System.Windows.Forms.Label lblShortcutsInfo;
     }
 }

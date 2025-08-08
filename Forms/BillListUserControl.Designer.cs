@@ -28,131 +28,323 @@ namespace SaleBillSystem.NET.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.btnRefresh = new System.Windows.Forms.Button();
-            this.btnDeleteBill = new System.Windows.Forms.Button();
-            this.btnViewDetails = new System.Windows.Forms.Button();
-            this.btnEditBill = new System.Windows.Forms.Button();
-            this.btnNewBill = new System.Windows.Forms.Button();
-            this.txtSearch = new System.Windows.Forms.TextBox();
-            this.lblSearch = new System.Windows.Forms.Label();
-            this.dgvBills = new System.Windows.Forms.DataGridView();
-            this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvBills)).BeginInit();
-            this.SuspendLayout();
+            panel1 = new Panel();
+            cmbStatus = new ComboBox();
+            lblStatus = new Label();
+            dtpEndDate = new DateTimePicker();
+            dtpStartDate = new DateTimePicker();
+            lblEndDate = new Label();
+            lblStartDate = new Label();
+            btnRefresh = new Button();
+            btnDeleteBill = new Button();
+            btnViewDetails = new Button();
+            btnEditBill = new Button();
+            btnNewBill = new Button();
+            txtSearch = new TextBox();
+            lblSearch = new Label();
+            dgvBills = new DataGridView();
+            panelSummary = new Panel();
+            lblChequeFirm2Value = new Label();
+            lblChequeFirm2 = new Label();
+            lblChequeFirm1Value = new Label();
+            lblChequeFirm1 = new Label();
+            lblNetAmountValue = new Label();
+            lblNetAmount = new Label();
+            lblTotalBalanceValue = new Label();
+            lblTotalBalance = new Label();
+            panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvBills).BeginInit();
+            panelSummary.SuspendLayout();
+            SuspendLayout();
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.btnRefresh);
-            this.panel1.Controls.Add(this.btnDeleteBill);
-            this.panel1.Controls.Add(this.btnViewDetails);
-            this.panel1.Controls.Add(this.btnEditBill);
-            this.panel1.Controls.Add(this.btnNewBill);
-            this.panel1.Controls.Add(this.txtSearch);
-            this.panel1.Controls.Add(this.lblSearch);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panel1.Location = new System.Drawing.Point(0, 0);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1200, 60);
-            this.panel1.TabIndex = 0;
+            panel1.Controls.Add(cmbStatus);
+            panel1.Controls.Add(lblStatus);
+            panel1.Controls.Add(dtpEndDate);
+            panel1.Controls.Add(dtpStartDate);
+            panel1.Controls.Add(lblEndDate);
+            panel1.Controls.Add(lblStartDate);
+            panel1.Controls.Add(btnRefresh);
+            panel1.Controls.Add(btnDeleteBill);
+            panel1.Controls.Add(btnViewDetails);
+            panel1.Controls.Add(btnEditBill);
+            panel1.Controls.Add(btnNewBill);
+            panel1.Controls.Add(txtSearch);
+            panel1.Controls.Add(lblSearch);
+            panel1.Dock = DockStyle.Top;
+            panel1.Location = new Point(0, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(1314, 60);
+            panel1.TabIndex = 0;
+            // 
+            // cmbStatus
+            // 
+            cmbStatus.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbStatus.FormattingEnabled = true;
+            cmbStatus.Items.AddRange(new object[] { "All", "Paid", "Partial", "Unpaid" });
+            cmbStatus.Location = new Point(640, 18);
+            cmbStatus.Name = "cmbStatus";
+            cmbStatus.Size = new Size(80, 28);
+            cmbStatus.TabIndex = 12;
+            // 
+            // lblStatus
+            // 
+            lblStatus.AutoSize = true;
+            lblStatus.Location = new Point(595, 21);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(52, 20);
+            lblStatus.TabIndex = 11;
+            lblStatus.Text = "Status:";
+            // 
+            // dtpEndDate
+            // 
+            dtpEndDate.Format = DateTimePickerFormat.Short;
+            dtpEndDate.Location = new Point(490, 18);
+            dtpEndDate.Name = "dtpEndDate";
+            dtpEndDate.Size = new Size(100, 27);
+            dtpEndDate.TabIndex = 10;
+            // 
+            // dtpStartDate
+            // 
+            dtpStartDate.Format = DateTimePickerFormat.Short;
+            dtpStartDate.Location = new Point(350, 18);
+            dtpStartDate.Name = "dtpStartDate";
+            dtpStartDate.Size = new Size(100, 27);
+            dtpStartDate.TabIndex = 9;
+            // 
+            // lblEndDate
+            // 
+            lblEndDate.AutoSize = true;
+            lblEndDate.Location = new Point(460, 21);
+            lblEndDate.Name = "lblEndDate";
+            lblEndDate.Size = new Size(28, 20);
+            lblEndDate.TabIndex = 8;
+            lblEndDate.Text = "To:";
+            // 
+            // lblStartDate
+            // 
+            lblStartDate.AutoSize = true;
+            lblStartDate.Location = new Point(315, 21);
+            lblStartDate.Name = "lblStartDate";
+            lblStartDate.Size = new Size(46, 20);
+            lblStartDate.TabIndex = 7;
+            lblStartDate.Text = "From:";
             // 
             // btnRefresh
             // 
-            this.btnRefresh.BackColor = System.Drawing.Color.FromArgb(0, 122, 204);
-            this.btnRefresh.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnRefresh.ForeColor = System.Drawing.Color.White;
-            this.btnRefresh.Location = new System.Drawing.Point(1080, 15);
-            this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(100, 30);
-            this.btnRefresh.TabIndex = 5;
-            this.btnRefresh.Text = "Refresh";
-            this.btnRefresh.UseVisualStyleBackColor = false;
+            btnRefresh.BackColor = Color.FromArgb(0, 122, 204);
+            btnRefresh.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnRefresh.ForeColor = Color.White;
+            btnRefresh.Location = new Point(1175, 15);
+            btnRefresh.Name = "btnRefresh";
+            btnRefresh.Size = new Size(100, 30);
+            btnRefresh.TabIndex = 5;
+            btnRefresh.Text = "Refresh";
+            btnRefresh.UseVisualStyleBackColor = false;
             // 
             // btnDeleteBill
             // 
-            this.btnDeleteBill.BackColor = System.Drawing.Color.FromArgb(204, 82, 0);
-            this.btnDeleteBill.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnDeleteBill.ForeColor = System.Drawing.Color.White;
-            this.btnDeleteBill.Location = new System.Drawing.Point(970, 15);
-            this.btnDeleteBill.Name = "btnDeleteBill";
-            this.btnDeleteBill.Size = new System.Drawing.Size(100, 30);
-            this.btnDeleteBill.TabIndex = 4;
-            this.btnDeleteBill.Text = "Delete";
-            this.btnDeleteBill.UseVisualStyleBackColor = false;
-            // 
-            // btnEditBill
-            // 
-            this.btnEditBill.BackColor = System.Drawing.Color.FromArgb(0, 122, 204);
-            this.btnEditBill.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnEditBill.ForeColor = System.Drawing.Color.White;
-            this.btnEditBill.Location = new System.Drawing.Point(860, 15);
-            this.btnEditBill.Name = "btnEditBill";
-            this.btnEditBill.Size = new System.Drawing.Size(100, 30);
-            this.btnEditBill.TabIndex = 3;
-            this.btnEditBill.Text = "Edit";
-            this.btnEditBill.UseVisualStyleBackColor = false;
+            btnDeleteBill.BackColor = Color.FromArgb(204, 82, 0);
+            btnDeleteBill.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnDeleteBill.ForeColor = Color.White;
+            btnDeleteBill.Location = new Point(1060, 15);
+            btnDeleteBill.Name = "btnDeleteBill";
+            btnDeleteBill.Size = new Size(100, 30);
+            btnDeleteBill.TabIndex = 4;
+            btnDeleteBill.Text = "Delete";
+            btnDeleteBill.UseVisualStyleBackColor = false;
             // 
             // btnViewDetails
             // 
-            this.btnViewDetails.BackColor = System.Drawing.Color.FromArgb(0, 150, 136);
-            this.btnViewDetails.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnViewDetails.ForeColor = System.Drawing.Color.White;
-            this.btnViewDetails.Location = new System.Drawing.Point(750, 15);
-            this.btnViewDetails.Name = "btnViewDetails";
-            this.btnViewDetails.Size = new System.Drawing.Size(100, 30);
-            this.btnViewDetails.TabIndex = 6;
-            this.btnViewDetails.Text = "View Details";
-            this.btnViewDetails.UseVisualStyleBackColor = false;
+            btnViewDetails.BackColor = Color.FromArgb(0, 150, 136);
+            btnViewDetails.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnViewDetails.ForeColor = Color.White;
+            btnViewDetails.Location = new Point(840, 15);
+            btnViewDetails.Name = "btnViewDetails";
+            btnViewDetails.Size = new Size(100, 30);
+            btnViewDetails.TabIndex = 6;
+            btnViewDetails.Text = "View Details";
+            btnViewDetails.UseVisualStyleBackColor = false;
+            // 
+            // btnEditBill
+            // 
+            btnEditBill.BackColor = Color.FromArgb(0, 122, 204);
+            btnEditBill.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnEditBill.ForeColor = Color.White;
+            btnEditBill.Location = new Point(950, 15);
+            btnEditBill.Name = "btnEditBill";
+            btnEditBill.Size = new Size(100, 30);
+            btnEditBill.TabIndex = 3;
+            btnEditBill.Text = "Edit";
+            btnEditBill.UseVisualStyleBackColor = false;
             // 
             // btnNewBill
             // 
-            this.btnNewBill.BackColor = System.Drawing.Color.FromArgb(0, 122, 204);
-            this.btnNewBill.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnNewBill.ForeColor = System.Drawing.Color.White;
-            this.btnNewBill.Location = new System.Drawing.Point(640, 15);
-            this.btnNewBill.Name = "btnNewBill";
-            this.btnNewBill.Size = new System.Drawing.Size(100, 30);
-            this.btnNewBill.TabIndex = 2;
-            this.btnNewBill.Text = "New Bill";
-            this.btnNewBill.UseVisualStyleBackColor = false;
+            btnNewBill.BackColor = Color.FromArgb(0, 122, 204);
+            btnNewBill.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnNewBill.ForeColor = Color.White;
+            btnNewBill.Location = new Point(730, 15);
+            btnNewBill.Name = "btnNewBill";
+            btnNewBill.Size = new Size(100, 30);
+            btnNewBill.TabIndex = 2;
+            btnNewBill.Text = "New Bill";
+            btnNewBill.UseVisualStyleBackColor = false;
             // 
             // txtSearch
             // 
-            this.txtSearch.Location = new System.Drawing.Point(100, 18);
-            this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Size = new System.Drawing.Size(200, 23);
-            this.txtSearch.TabIndex = 1;
+            txtSearch.Location = new Point(100, 18);
+            txtSearch.Name = "txtSearch";
+            txtSearch.Size = new Size(200, 27);
+            txtSearch.TabIndex = 1;
             // 
             // lblSearch
             // 
-            this.lblSearch.AutoSize = true;
-            this.lblSearch.Location = new System.Drawing.Point(20, 21);
-            this.lblSearch.Name = "lblSearch";
-            this.lblSearch.Size = new System.Drawing.Size(45, 15);
-            this.lblSearch.TabIndex = 0;
-            this.lblSearch.Text = "Search:";
+            lblSearch.AutoSize = true;
+            lblSearch.Location = new Point(20, 21);
+            lblSearch.Name = "lblSearch";
+            lblSearch.Size = new Size(56, 20);
+            lblSearch.TabIndex = 0;
+            lblSearch.Text = "Search:";
             // 
             // dgvBills
             // 
-            this.dgvBills.BackgroundColor = System.Drawing.SystemColors.Window;
-            this.dgvBills.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvBills.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvBills.Location = new System.Drawing.Point(0, 60);
-            this.dgvBills.Name = "dgvBills";
-            this.dgvBills.Size = new System.Drawing.Size(1200, 610);
-            this.dgvBills.TabIndex = 1;
+            dgvBills.BackgroundColor = SystemColors.Window;
+            dgvBills.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvBills.Dock = DockStyle.Fill;
+            dgvBills.Location = new Point(0, 60);
+            dgvBills.Name = "dgvBills";
+            dgvBills.RowHeadersWidth = 51;
+            dgvBills.Size = new Size(1314, 570);
+            dgvBills.TabIndex = 1;
+            dgvBills.CellContentClick += dgvBills_CellContentClick;
+            // 
+            // panelSummary
+            // 
+            panelSummary.BackColor = Color.FromArgb(245, 245, 245);
+            panelSummary.BorderStyle = BorderStyle.FixedSingle;
+            panelSummary.Controls.Add(lblChequeFirm2Value);
+            panelSummary.Controls.Add(lblChequeFirm2);
+            panelSummary.Controls.Add(lblChequeFirm1Value);
+            panelSummary.Controls.Add(lblChequeFirm1);
+            panelSummary.Controls.Add(lblNetAmountValue);
+            panelSummary.Controls.Add(lblNetAmount);
+            panelSummary.Controls.Add(lblTotalBalanceValue);
+            panelSummary.Controls.Add(lblTotalBalance);
+            panelSummary.Dock = DockStyle.Bottom;
+            panelSummary.Location = new Point(0, 630);
+            panelSummary.Name = "panelSummary";
+            panelSummary.Size = new Size(1314, 40);
+            panelSummary.TabIndex = 2;
+            // 
+            // lblChequeFirm2Value
+            // 
+            lblChequeFirm2Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblChequeFirm2Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblChequeFirm2Value.ForeColor = Color.DarkCyan;
+            lblChequeFirm2Value.Location = new Point(678, 12);
+            lblChequeFirm2Value.Name = "lblChequeFirm2Value";
+            lblChequeFirm2Value.Size = new Size(100, 23);
+            lblChequeFirm2Value.TabIndex = 11;
+            lblChequeFirm2Value.Text = "₹0.00";
+            lblChequeFirm2Value.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblChequeFirm2
+            // 
+            lblChequeFirm2.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblChequeFirm2.AutoSize = true;
+            lblChequeFirm2.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblChequeFirm2.Location = new Point(532, 11);
+            lblChequeFirm2.Name = "lblChequeFirm2";
+            lblChequeFirm2.Size = new Size(140, 25);
+            lblChequeFirm2.TabIndex = 10;
+            lblChequeFirm2.Text = "Cheque Firm2:";
+            lblChequeFirm2.Click += lblChequeFirm2_Click;
+            // 
+            // lblChequeFirm1Value
+            // 
+            lblChequeFirm1Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblChequeFirm1Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblChequeFirm1Value.ForeColor = Color.DarkCyan;
+            lblChequeFirm1Value.Location = new Point(421, 12);
+            lblChequeFirm1Value.Name = "lblChequeFirm1Value";
+            lblChequeFirm1Value.Size = new Size(85, 23);
+            lblChequeFirm1Value.TabIndex = 9;
+            lblChequeFirm1Value.Text = "₹0.00";
+            lblChequeFirm1Value.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblChequeFirm1
+            // 
+            lblChequeFirm1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblChequeFirm1.AutoSize = true;
+            lblChequeFirm1.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblChequeFirm1.Location = new Point(263, 10);
+            lblChequeFirm1.Name = "lblChequeFirm1";
+            lblChequeFirm1.Size = new Size(140, 25);
+            lblChequeFirm1.TabIndex = 8;
+            lblChequeFirm1.Text = "Cheque Firm1:";
+            // 
+            // lblNetAmountValue
+            // 
+            lblNetAmountValue.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblNetAmountValue.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblNetAmountValue.ForeColor = Color.Black;
+            lblNetAmountValue.Location = new Point(929, 10);
+            lblNetAmountValue.Name = "lblNetAmountValue";
+            lblNetAmountValue.Size = new Size(120, 23);
+            lblNetAmountValue.TabIndex = 7;
+            lblNetAmountValue.Text = "₹0.00";
+            lblNetAmountValue.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblNetAmount
+            // 
+            lblNetAmount.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblNetAmount.AutoSize = true;
+            lblNetAmount.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblNetAmount.Location = new Point(800, 10);
+            lblNetAmount.Name = "lblNetAmount";
+            lblNetAmount.Size = new Size(127, 25);
+            lblNetAmount.TabIndex = 6;
+            lblNetAmount.Text = "Net Amount:";
+            // 
+            // lblTotalBalanceValue
+            // 
+            lblTotalBalanceValue.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblTotalBalanceValue.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTotalBalanceValue.ForeColor = Color.Red;
+            lblTotalBalanceValue.Location = new Point(1189, 10);
+            lblTotalBalanceValue.Name = "lblTotalBalanceValue";
+            lblTotalBalanceValue.Size = new Size(120, 23);
+            lblTotalBalanceValue.TabIndex = 3;
+            lblTotalBalanceValue.Text = "₹0.00";
+            lblTotalBalanceValue.TextAlign = ContentAlignment.MiddleRight;
+            // 
+            // lblTotalBalance
+            // 
+            lblTotalBalance.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblTotalBalance.AutoSize = true;
+            lblTotalBalance.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            lblTotalBalance.Location = new Point(1059, 10);
+            lblTotalBalance.Name = "lblTotalBalance";
+            lblTotalBalance.Size = new Size(133, 25);
+            lblTotalBalance.TabIndex = 1;
+            lblTotalBalance.Text = "Total Balance:";
+            lblTotalBalance.Click += lblTotalBalance_Click;
             // 
             // BillListUserControl
             // 
-            this.Controls.Add(this.dgvBills);
-            this.Controls.Add(this.panel1);
-            this.Name = "BillListUserControl";
-            this.Size = new System.Drawing.Size(1200, 670);
-            this.Load += new System.EventHandler(this.BillListUserControl_Load);
-            this.panel1.ResumeLayout(false);
-            this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvBills)).EndInit();
-            this.ResumeLayout(false);
+            Controls.Add(dgvBills);
+            Controls.Add(panelSummary);
+            Controls.Add(panel1);
+            Name = "BillListUserControl";
+            Size = new Size(1314, 670);
+            Load += BillListUserControl_Load;
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvBills).EndInit();
+            panelSummary.ResumeLayout(false);
+            panelSummary.PerformLayout();
+            ResumeLayout(false);
         }
 
         #endregion
@@ -166,5 +358,20 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Label lblSearch;
         private System.Windows.Forms.DataGridView dgvBills;
+        private System.Windows.Forms.DateTimePicker dtpStartDate;
+        private System.Windows.Forms.DateTimePicker dtpEndDate;
+        private System.Windows.Forms.Label lblStartDate;
+        private System.Windows.Forms.Label lblEndDate;
+        private System.Windows.Forms.ComboBox cmbStatus;
+        private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.Panel panelSummary;
+        private System.Windows.Forms.Label lblTotalBalanceValue;
+        private System.Windows.Forms.Label lblTotalBalance;
+        private System.Windows.Forms.Label lblNetAmountValue;
+        private System.Windows.Forms.Label lblNetAmount;
+        private System.Windows.Forms.Label lblChequeFirm2Value;
+        private System.Windows.Forms.Label lblChequeFirm2;
+        private System.Windows.Forms.Label lblChequeFirm1Value;
+        private System.Windows.Forms.Label lblChequeFirm1;
     }
 } 

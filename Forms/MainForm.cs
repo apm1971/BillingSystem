@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using System.Drawing; // Added for Font
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -20,28 +21,25 @@ namespace SaleBillSystem.NET.Forms
         {
             // Temporarily bypass the login screen for development
             ShowMainApplicationUI();
-            
+
             // To re-enable login later, uncomment the line below and comment out the line above
             // ShowLoginScreen();
         }
 
         #region Login Flow Management
 
-        private void ShowLoginScreen()
-        {
-            mainMenuStrip.Visible = false;
+        // private void ShowLoginScreen()
+        // {
+        //     mainMenuStrip.Visible = false;
 
-            // The loginControl is already on the form from the Designer
-            loginControl.Visible = true;
-            loginControl.Dock = DockStyle.Fill;
-            loginControl.LoginSuccess += OnLoginSuccess;
-        }
+        //     // The loginControl is already on the form from the Designer
+        //     loginControl.Visible = true;
+        //     loginControl.Dock = DockStyle.Fill;
+        //     loginControl.LoginSuccess += OnLoginSuccess;
+        // }
 
         private void OnLoginSuccess(object sender, User authenticatedUser)
         {
-            Program.CurrentUser = authenticatedUser;
-            loginControl.LoginSuccess -= OnLoginSuccess;
-            loginControl.Visible = false;
 
             // Once login is successful, show the main UI
             ShowMainApplicationUI();
@@ -70,7 +68,7 @@ namespace SaleBillSystem.NET.Forms
             // Set up the new control
             _currentControl = controlToShow;
             _currentControl.Dock = DockStyle.Fill;
-            
+
             // Add the new control to the form's controls
             this.Controls.Add(_currentControl);
 
@@ -104,46 +102,60 @@ namespace SaleBillSystem.NET.Forms
             // Clear existing items to prevent duplicates if called multiple times
             mainMenuStrip.Items.Clear();
 
+            // Create a bold, larger font for menu items
+            var menuFont = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+
             // === MASTERS MENU ===
             var mastersMenu = new ToolStripMenuItem("&Masters");
-            
+            mastersMenu.Font = menuFont;
+
             var partyMasterItem = new ToolStripMenuItem("&Party Master");
+            partyMasterItem.Font = menuFont;
             partyMasterItem.Click += (s, e) => { ShowControl(new PartyMasterUserControl()); };
-            
+
             var itemMasterItem = new ToolStripMenuItem("&Item Master");
+            itemMasterItem.Font = menuFont;
             itemMasterItem.Click += (s, e) => { ShowControl(new ItemMasterUserControl()); };
 
             var brokerMasterItem = new ToolStripMenuItem("&Broker Master");
+            brokerMasterItem.Font = menuFont;
             brokerMasterItem.Click += (s, e) => { ShowControl(new BrokerMasterUserControl()); };
-            
+
             mastersMenu.DropDownItems.Add(partyMasterItem);
             mastersMenu.DropDownItems.Add(itemMasterItem);
             mastersMenu.DropDownItems.Add(brokerMasterItem);
-            
+
             // === BILLS MENU ===
             var billsMenu = new ToolStripMenuItem("&Bills");
-            
+            billsMenu.Font = menuFont;
+
             var newBillItem = new ToolStripMenuItem("&New Bill");
+            newBillItem.Font = menuFont;
             newBillItem.Click += (s, e) => { ShowControl(new SaleBillUserControl()); };
 
             var billledgerItem = new ToolStripMenuItem("&Bill Ledger");
+            billledgerItem.Font = menuFont;
             billledgerItem.Click += (s, e) => { ShowControl(new BillLedgerControl()); };
             var billListItem = new ToolStripMenuItem("&Bill List");
+            billListItem.Font = menuFont;
             billListItem.Click += (s, e) => { ShowControl(new BillListUserControl()); };
-            
+
             billsMenu.DropDownItems.Add(newBillItem);
             billsMenu.DropDownItems.Add(billledgerItem);
             billsMenu.DropDownItems.Add(billListItem);
-            
+
             // === PAYMENTS MENU ===
             var paymentsMenu = new ToolStripMenuItem("&Payments");
-            
+            paymentsMenu.Font = menuFont;
+
             var paymentEntryItem = new ToolStripMenuItem("&Payment Entry");
+            paymentEntryItem.Font = menuFont;
             paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
-            
+
             var paymentListItem = new ToolStripMenuItem("&Payment List");
-            paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };  
-            
+            paymentListItem.Font = menuFont;
+            paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };
+
             paymentsMenu.DropDownItems.Add(paymentEntryItem);
             paymentsMenu.DropDownItems.Add(paymentListItem);
 
@@ -151,7 +163,7 @@ namespace SaleBillSystem.NET.Forms
             mainMenuStrip.Items.Add(mastersMenu);
             mainMenuStrip.Items.Add(billsMenu);
             mainMenuStrip.Items.Add(paymentsMenu);
-            
+
             // Add Transactions, Reports, etc. menus here
         }
 
@@ -177,5 +189,10 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
+
+        // private void loginControl_Load(object sender, EventArgs e)
+        // {
+
+        // }
     }
 }

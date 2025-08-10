@@ -85,7 +85,7 @@ namespace SaleBillSystem.NET.Forms
             cmbStatus.Items.AddRange(new object[] { "All", "Paid", "Partial", "Unpaid" });
             cmbStatus.Location = new Point(640, 18);
             cmbStatus.Name = "cmbStatus";
-            cmbStatus.Size = new Size(80, 28);
+            cmbStatus.Size = new Size(80, 23);
             cmbStatus.TabIndex = 12;
             // 
             // lblStatus
@@ -93,7 +93,7 @@ namespace SaleBillSystem.NET.Forms
             lblStatus.AutoSize = true;
             lblStatus.Location = new Point(595, 21);
             lblStatus.Name = "lblStatus";
-            lblStatus.Size = new Size(52, 20);
+            lblStatus.Size = new Size(42, 15);
             lblStatus.TabIndex = 11;
             lblStatus.Text = "Status:";
             // 
@@ -102,7 +102,7 @@ namespace SaleBillSystem.NET.Forms
             dtpEndDate.Format = DateTimePickerFormat.Short;
             dtpEndDate.Location = new Point(490, 18);
             dtpEndDate.Name = "dtpEndDate";
-            dtpEndDate.Size = new Size(100, 27);
+            dtpEndDate.Size = new Size(100, 23);
             dtpEndDate.TabIndex = 10;
             // 
             // dtpStartDate
@@ -110,7 +110,7 @@ namespace SaleBillSystem.NET.Forms
             dtpStartDate.Format = DateTimePickerFormat.Short;
             dtpStartDate.Location = new Point(350, 18);
             dtpStartDate.Name = "dtpStartDate";
-            dtpStartDate.Size = new Size(100, 27);
+            dtpStartDate.Size = new Size(100, 23);
             dtpStartDate.TabIndex = 9;
             // 
             // lblEndDate
@@ -118,7 +118,7 @@ namespace SaleBillSystem.NET.Forms
             lblEndDate.AutoSize = true;
             lblEndDate.Location = new Point(460, 21);
             lblEndDate.Name = "lblEndDate";
-            lblEndDate.Size = new Size(28, 20);
+            lblEndDate.Size = new Size(22, 15);
             lblEndDate.TabIndex = 8;
             lblEndDate.Text = "To:";
             // 
@@ -127,7 +127,7 @@ namespace SaleBillSystem.NET.Forms
             lblStartDate.AutoSize = true;
             lblStartDate.Location = new Point(315, 21);
             lblStartDate.Name = "lblStartDate";
-            lblStartDate.Size = new Size(46, 20);
+            lblStartDate.Size = new Size(38, 15);
             lblStartDate.TabIndex = 7;
             lblStartDate.Text = "From:";
             // 
@@ -195,7 +195,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             txtSearch.Location = new Point(100, 18);
             txtSearch.Name = "txtSearch";
-            txtSearch.Size = new Size(200, 27);
+            txtSearch.Size = new Size(200, 23);
             txtSearch.TabIndex = 1;
             // 
             // lblSearch
@@ -203,7 +203,7 @@ namespace SaleBillSystem.NET.Forms
             lblSearch.AutoSize = true;
             lblSearch.Location = new Point(20, 21);
             lblSearch.Name = "lblSearch";
-            lblSearch.Size = new Size(56, 20);
+            lblSearch.Size = new Size(45, 15);
             lblSearch.TabIndex = 0;
             lblSearch.Text = "Search:";
             // 
@@ -242,21 +242,21 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm2Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm2Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblChequeFirm2Value.ForeColor = Color.DarkCyan;
-            lblChequeFirm2Value.Location = new Point(678, 12);
+            lblChequeFirm2Value.Location = new Point(628, 8);
             lblChequeFirm2Value.Name = "lblChequeFirm2Value";
-            lblChequeFirm2Value.Size = new Size(100, 23);
+            lblChequeFirm2Value.Size = new Size(147, 23);
             lblChequeFirm2Value.TabIndex = 11;
             lblChequeFirm2Value.Text = "₹0.00";
-            lblChequeFirm2Value.TextAlign = ContentAlignment.MiddleRight;
+            lblChequeFirm2Value.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblChequeFirm2
             // 
             lblChequeFirm2.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm2.AutoSize = true;
             lblChequeFirm2.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblChequeFirm2.Location = new Point(532, 11);
+            lblChequeFirm2.Location = new Point(501, 9);
             lblChequeFirm2.Name = "lblChequeFirm2";
-            lblChequeFirm2.Size = new Size(140, 25);
+            lblChequeFirm2.Size = new Size(110, 20);
             lblChequeFirm2.TabIndex = 10;
             lblChequeFirm2.Text = "Cheque Firm2:";
             lblChequeFirm2.Click += lblChequeFirm2_Click;
@@ -266,21 +266,21 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm1Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm1Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblChequeFirm1Value.ForeColor = Color.DarkCyan;
-            lblChequeFirm1Value.Location = new Point(421, 12);
+            lblChequeFirm1Value.Location = new Point(340, 8);
             lblChequeFirm1Value.Name = "lblChequeFirm1Value";
-            lblChequeFirm1Value.Size = new Size(85, 23);
+            lblChequeFirm1Value.Size = new Size(123, 23);
             lblChequeFirm1Value.TabIndex = 9;
             lblChequeFirm1Value.Text = "₹0.00";
-            lblChequeFirm1Value.TextAlign = ContentAlignment.MiddleRight;
+            lblChequeFirm1Value.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblChequeFirm1
             // 
             lblChequeFirm1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm1.AutoSize = true;
             lblChequeFirm1.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblChequeFirm1.Location = new Point(263, 10);
+            lblChequeFirm1.Location = new Point(201, 8);
             lblChequeFirm1.Name = "lblChequeFirm1";
-            lblChequeFirm1.Size = new Size(140, 25);
+            lblChequeFirm1.Size = new Size(110, 20);
             lblChequeFirm1.TabIndex = 8;
             lblChequeFirm1.Text = "Cheque Firm1:";
             // 
@@ -294,16 +294,16 @@ namespace SaleBillSystem.NET.Forms
             lblNetAmountValue.Size = new Size(120, 23);
             lblNetAmountValue.TabIndex = 7;
             lblNetAmountValue.Text = "₹0.00";
-            lblNetAmountValue.TextAlign = ContentAlignment.MiddleRight;
+            lblNetAmountValue.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblNetAmount
             // 
             lblNetAmount.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblNetAmount.AutoSize = true;
             lblNetAmount.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblNetAmount.Location = new Point(800, 10);
+            lblNetAmount.Location = new Point(812, 10);
             lblNetAmount.Name = "lblNetAmount";
-            lblNetAmount.Size = new Size(127, 25);
+            lblNetAmount.Size = new Size(101, 20);
             lblNetAmount.TabIndex = 6;
             lblNetAmount.Text = "Net Amount:";
             // 
@@ -312,21 +312,22 @@ namespace SaleBillSystem.NET.Forms
             lblTotalBalanceValue.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblTotalBalanceValue.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblTotalBalanceValue.ForeColor = Color.Red;
-            lblTotalBalanceValue.Location = new Point(1189, 10);
+            lblTotalBalanceValue.ImageAlign = ContentAlignment.MiddleLeft;
+            lblTotalBalanceValue.Location = new Point(1171, 10);
             lblTotalBalanceValue.Name = "lblTotalBalanceValue";
             lblTotalBalanceValue.Size = new Size(120, 23);
             lblTotalBalanceValue.TabIndex = 3;
             lblTotalBalanceValue.Text = "₹0.00";
-            lblTotalBalanceValue.TextAlign = ContentAlignment.MiddleRight;
+            lblTotalBalanceValue.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblTotalBalance
             // 
             lblTotalBalance.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblTotalBalance.AutoSize = true;
             lblTotalBalance.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblTotalBalance.Location = new Point(1059, 10);
+            lblTotalBalance.Location = new Point(1053, 12);
             lblTotalBalance.Name = "lblTotalBalance";
-            lblTotalBalance.Size = new Size(133, 25);
+            lblTotalBalance.Size = new Size(106, 20);
             lblTotalBalance.TabIndex = 1;
             lblTotalBalance.Text = "Total Balance:";
             lblTotalBalance.Click += lblTotalBalance_Click;

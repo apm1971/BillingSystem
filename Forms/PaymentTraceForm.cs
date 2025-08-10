@@ -205,24 +205,36 @@ namespace SaleBillSystem.NET.Forms
             var billDetails = GetBillPartyBrokerDetails(billGroups.Select(g => g.Key.Value).ToList());
             
             // --- HTML and CSS Styling ---
-            sb.AppendLine("<html><head><title>Payment Trace Report</title>");
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html><head><title>Payment Receipt</title>");
+            sb.AppendLine("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
             sb.AppendLine("<style>");
-            sb.AppendLine("body { font-family: 'Segoe UI', sans-serif; margin: 20px; }");
-            sb.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 20px; }");
-            sb.AppendLine("th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }");
-            sb.AppendLine("th { background-color: #f2f2f2; }");
-            sb.AppendLine(".header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; }");
-            sb.AppendLine(".header-left, .header-right { width: 48%; }");
+            sb.AppendLine("@page { size: A6; margin: 5mm; }"); // A6 page size with small margins
+            sb.AppendLine("body { font-family: 'Arial', sans-serif; margin: 0; padding: 5px; font-size: 8pt; }");
+            sb.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 7pt; }");
+            sb.AppendLine("th, td { border: 0.5px solid #ccc; padding: 2px; text-align: left; }");
+            sb.AppendLine("th { background-color: #f2f2f2; font-weight: bold; }");
+            sb.AppendLine(".header { border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 5px; }");
             sb.AppendLine(".text-right { text-align: right; }");
             sb.AppendLine(".total-row { font-weight: bold; background-color: #f8f8f8; }");
-            sb.AppendLine(".payment-info { background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0; }");
-            sb.AppendLine(".summary-box { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ddd; }");
-            sb.AppendLine(".payment-tables { display: flex; gap: 20px; }");
-            sb.AppendLine(".payment-table { flex: 1; }");
-            sb.AppendLine("h1, h2, h3 { margin: 5px 0 15px 0; }");
+            sb.AppendLine(".payment-info { background-color: #f0f8ff; padding: 5px; border-radius: 3px; margin: 5px 0; }");
+            sb.AppendLine(".summary-box { background-color: #f5f5f5; padding: 5px; border-radius: 3px; margin: 5px 0; border: 0.5px solid #ddd; }");
+            sb.AppendLine(".payment-tables { margin-top: 5px; }"); // Changed from flex to block for small screens
+            sb.AppendLine(".payment-table { margin-bottom: 5px; }");
+            sb.AppendLine("h1 { font-size: 10pt; margin: 3px 0; text-align: center; }");
+            sb.AppendLine("h2 { font-size: 9pt; margin: 3px 0; }");
+            sb.AppendLine("h3 { font-size: 8pt; margin: 3px 0; }");
+            sb.AppendLine("h4 { font-size: 8pt; margin: 3px 0; }");
+            sb.AppendLine("p { margin: 2px 0; }");
             sb.AppendLine(".positive-amount { color: green; font-weight: bold; }");
             sb.AppendLine(".negative-amount { color: red; font-weight: bold; }");
-            sb.AppendLine(".section { margin-bottom: 20px; }");
+            sb.AppendLine(".section { margin-bottom: 5px; }");
+            sb.AppendLine(".compact-info { display: flex; flex-wrap: wrap; }");
+            sb.AppendLine(".compact-info div { flex: 1; min-width: 120px; margin-bottom: 2px; }");
+            sb.AppendLine("@media print {");
+            sb.AppendLine("  .page-break { page-break-before: always; }");
+            sb.AppendLine("  body { width: 105mm; height: 148mm; }"); // A6 dimensions
+            sb.AppendLine("}");
             sb.AppendLine("</style></head><body>");
 
             // --- Report Header ---
@@ -232,20 +244,35 @@ namespace SaleBillSystem.NET.Forms
             // --- Payment Information ---
             sb.AppendLine("<div class='payment-info'>");
             sb.AppendLine("<div class='header'>");
-            sb.AppendLine("<div class='header-left'>");
             sb.AppendLine($"<h2>Payment Details</h2>");
-            sb.AppendLine($"<p><strong>Payment ID:</strong> {payment.PaymentID}</p>");
-            sb.AppendLine($"<p><strong>Payment Date:</strong> {payment.PaymentDate:dd-MMM-yyyy}</p>");
-            sb.AppendLine($"<p><strong>Total Amount Paid:</strong> ₹{payment.TotalAmountPaid:N2}</p>");
-            sb.AppendLine($"<p><strong>Payment Method:</strong> {payment.PaymentMethod}</p>");
-            sb.AppendLine("</div>");
             
-            sb.AppendLine("<div class='header-right'>");
+            sb.AppendLine("<div class='compact-info'>");
+            sb.AppendLine($"<div><strong>Payment ID:</strong> {payment.PaymentID}</div>");
+            sb.AppendLine($"<div><strong>Date:</strong> {payment.PaymentDate:dd-MMM-yyyy}</div>");
+            sb.AppendLine($"<div><strong>Method:</strong> {payment.PaymentMethod}</div>");
+            sb.AppendLine($"<div><strong>Amount:</strong> ₹{payment.TotalAmountPaid:N2}</div>");
+            
             if (!string.IsNullOrEmpty(payment.Reference))
             {
-                sb.AppendLine($"<p><strong>Reference:</strong> {payment.Reference}</p>");
+                sb.AppendLine($"<div><strong>Ref:</strong> {payment.Reference}</div>");
             }
-            sb.AppendLine("</div>");
+            sb.AppendLine("</div>"); // End compact-info div
+            
+            // Add Cheque Firm amounts if payment method is Cheque
+            if (payment.PaymentMethod == "Cheque")
+            {
+                sb.AppendLine("<div style='margin-top: 2px;'>");
+                if (payment.ChequeAmountFirm1 > 0)
+                {
+                    sb.AppendLine($"<span style='margin-right: 10px;'><strong>Firm 1:</strong> ₹{payment.ChequeAmountFirm1:N2}</span>");
+                }
+                if (payment.ChequeAmountFirm2 > 0)
+                {
+                    sb.AppendLine($"<span><strong>Firm 2:</strong> ₹{payment.ChequeAmountFirm2:N2}</span>");
+                }
+                sb.AppendLine("</div>");
+            }
+            
             sb.AppendLine("</div>"); // End header div
             sb.AppendLine("</div>"); // End payment-info div
 
@@ -253,7 +280,7 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine("<div class='section'>");
             sb.AppendLine("<h3>Bill Details</h3>");
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th>Broker</th><th>Bill Date</th><th class='text-right'>Bill Amount (₹)</th></tr>");
+            sb.AppendLine("<tr><th>Bill No</th><th>Party</th><th>Date</th><th class='text-right'>Amount (₹)</th></tr>");
             
             decimal totalBillAmount = 0;
             decimal totalPreviousCash = 0;
@@ -291,17 +318,19 @@ namespace SaleBillSystem.NET.Forms
                     brokerName = detail.BrokerName;
                 }
                 
+                // Format date to be more compact
+                string dateStr = bill.BillDate?.ToString("dd-MMM-yy") ?? "N/A";
+                
                 sb.AppendLine("<tr>");
                 sb.AppendLine($"<td>{bill.BillNo}</td>");
                 sb.AppendLine($"<td>{partyName}</td>");
-                sb.AppendLine($"<td>{brokerName}</td>");
-                sb.AppendLine($"<td>{bill.BillDate?.ToString("dd-MMM-yyyy") ?? "N/A"}</td>");
+                sb.AppendLine($"<td>{dateStr}</td>");
                 sb.AppendLine($"<td class='text-right'>{bill.BillAmount:N2}</td>");
                 sb.AppendLine("</tr>");
             }
             
             sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='4'><strong>Total</strong></td>");
+            sb.AppendLine("<td colspan='3'><strong>Total</strong></td>");
             sb.AppendLine($"<td class='text-right'><strong>₹{totalBillAmount:N2}</strong></td>");
             sb.AppendLine("</tr>");
             sb.AppendLine("</table>");
@@ -310,25 +339,16 @@ namespace SaleBillSystem.NET.Forms
             // --- Previous Payments Tables ---
             sb.AppendLine("<div class='section'>");
             sb.AppendLine("<h3>Previous Payments</h3>");
-            sb.AppendLine("<div class='payment-tables'>");
             
-            // --- Cash Payments Table ---
-            sb.AppendLine("<div class='payment-table'>");
-            sb.AppendLine("<h4>Cash Payments</h4>");
+            // --- Combined Previous Payments Table ---
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th class='text-right'>Amount (₹)</th></tr>");
+            sb.AppendLine("<tr><th>Bill No</th><th>Method</th><th class='text-right'>Amount (₹)</th></tr>");
             
+            // First add cash payments
             foreach (var billGroup in billGroups)
             {
                 var bill = billGroup.First();
                 if (!bill.BillID.HasValue) continue;
-                
-                // Get party name
-                string partyName = "Unknown";
-                if (billDetails.ContainsKey(bill.BillID.Value))
-                {
-                    partyName = billDetails[bill.BillID.Value].PartyName;
-                }
                 
                 // Check for cash payments
                 decimal cashAmount = 0;
@@ -342,36 +362,17 @@ namespace SaleBillSystem.NET.Forms
                 {
                     sb.AppendLine("<tr>");
                     sb.AppendLine($"<td>{bill.BillNo}</td>");
-                    sb.AppendLine($"<td>{partyName}</td>");
+                    sb.AppendLine($"<td>Cash</td>");
                     sb.AppendLine($"<td class='text-right'>{cashAmount:N2}</td>");
                     sb.AppendLine("</tr>");
                 }
             }
             
-            sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='2'><strong>Total Cash</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{totalPreviousCash:N2}</strong></td>");
-            sb.AppendLine("</tr>");
-            sb.AppendLine("</table>");
-            sb.AppendLine("</div>");
-            
-            // --- Cheque Payments Table ---
-            sb.AppendLine("<div class='payment-table'>");
-            sb.AppendLine("<h4>Cheque Payments</h4>");
-            sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th class='text-right'>Amount (₹)</th></tr>");
-            
+            // Then add cheque payments
             foreach (var billGroup in billGroups)
             {
                 var bill = billGroup.First();
                 if (!bill.BillID.HasValue) continue;
-                
-                // Get party name
-                string partyName = "Unknown";
-                if (billDetails.ContainsKey(bill.BillID.Value))
-                {
-                    partyName = billDetails[bill.BillID.Value].PartyName;
-                }
                 
                 // Check for cheque payments
                 decimal chequeAmount = 0;
@@ -381,31 +382,83 @@ namespace SaleBillSystem.NET.Forms
                     chequeAmount = previousPayments[bill.BillID.Value]["Cheque"];
                 }
                 
+                // Get firm amounts for this bill's previous payments
+                decimal firm1Amount = 0;
+                decimal firm2Amount = 0;
+                
+                // Only try to get firm amounts if there are cheque payments for this bill
                 if (chequeAmount > 0)
                 {
+                    try
+                    {
+                        // Try to get the firm amounts from the payment records
+                        GetChequeAmountsByFirm(bill.BillID.Value, out firm1Amount, out firm2Amount);
+                    }
+                    catch (Exception ex)
+                    {
+                        // If there's an error, just log it and continue with zeros
+                        System.Diagnostics.Debug.WriteLine($"Error getting firm amounts: {ex.Message}");
+                    }
+                }
+                
+                if (chequeAmount > 0)
+                {
+                    string firmDetails = "";
+                    if (firm1Amount > 0 || firm2Amount > 0)
+                    {
+                        firmDetails = $" (F1: ₹{firm1Amount:N2}, F2: ₹{firm2Amount:N2})";
+                    }
+                    
                     sb.AppendLine("<tr>");
                     sb.AppendLine($"<td>{bill.BillNo}</td>");
-                    sb.AppendLine($"<td>{partyName}</td>");
+                    sb.AppendLine($"<td>Cheque{firmDetails}</td>");
                     sb.AppendLine($"<td class='text-right'>{chequeAmount:N2}</td>");
                     sb.AppendLine("</tr>");
                 }
             }
             
-            sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='2'><strong>Total Cheque</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{totalPreviousCheque:N2}</strong></td>");
-            sb.AppendLine("</tr>");
-            sb.AppendLine("</table>");
-            sb.AppendLine("</div>");
+            // Get totals for firm amounts
+            decimal totalFirm1 = 0;
+            decimal totalFirm2 = 0;
             
-            sb.AppendLine("</div>"); // End payment-tables div
+            // Only calculate firm amounts if there are previous cheque payments
+            if (totalPreviousCheque > 0)
+            {
+                foreach (var billId in previousPayments.Keys)
+                {
+                    // Only process bills that have cheque payments
+                    if (previousPayments[billId].ContainsKey("Cheque") && previousPayments[billId]["Cheque"] > 0)
+                    {
+                        GetChequeAmountsByFirm(billId, out decimal firm1, out decimal firm2);
+                        totalFirm1 += firm1;
+                        totalFirm2 += firm2;
+                    }
+                }
+            }
+            
+            // Add totals row
+            sb.AppendLine("<tr class='total-row'>");
+            sb.AppendLine("<td colspan='2'><strong>Total</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{(totalPreviousCash + totalPreviousCheque):N2}</strong></td>");
+            sb.AppendLine("</tr>");
+            
+            // Add firm details if there are cheque payments
+            if (totalPreviousCheque > 0 && (totalFirm1 > 0 || totalFirm2 > 0))
+            {
+                sb.AppendLine("<tr>");
+                sb.AppendLine("<td colspan='2'><em>Cheque Details</em></td>");
+                sb.AppendLine($"<td class='text-right'><em>F1: ₹{totalFirm1:N2}, F2: ₹{totalFirm2:N2}</em></td>");
+                sb.AppendLine("</tr>");
+            }
+            
+            sb.AppendLine("</table>");
             sb.AppendLine("</div>"); // End section div
 
             // --- Transactions Table ---
-            sb.AppendLine("<div class='section'>");
-            sb.AppendLine("<h3>Payment Application Details</h3>");
-            sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th>Broker</th><th>Transaction Type</th><th class='text-right'>Amount (₹)</th><th>Description</th></tr>");
+            // sb.AppendLine("<div class='section'>");
+            // sb.AppendLine("<h3>Payment Application Details</h3>");
+            // sb.AppendLine("<table>");
+            // sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th>Broker</th><th>Transaction Type</th><th class='text-right'>Amount (₹)</th><th>Description</th></tr>");
             
             // Calculate totals
             decimal totalPayment = paymentTrace.Where(t => t.TransactionType == "Payment").Sum(t => t.CreditAmount);
@@ -447,24 +500,24 @@ namespace SaleBillSystem.NET.Forms
                     brokerName = detail.BrokerName;
                 }
                 
-                sb.AppendLine("<tr>");
-                sb.AppendLine($"<td>{entry.BillNo}</td>");
-                sb.AppendLine($"<td>{partyName}</td>");
-                sb.AppendLine($"<td>{brokerName}</td>");
-                sb.AppendLine($"<td>{entry.TransactionType}</td>");
-                sb.AppendLine($"<td class='text-right {amountClass}'>{amount:N2}</td>");
-                sb.AppendLine($"<td>{entry.Description}</td>");
-                sb.AppendLine("</tr>");
+                // sb.AppendLine("<tr>");
+                // sb.AppendLine($"<td>{entry.BillNo}</td>");
+                // sb.AppendLine($"<td>{partyName}</td>");
+                // sb.AppendLine($"<td>{brokerName}</td>");
+                // sb.AppendLine($"<td>{entry.TransactionType}</td>");
+                // sb.AppendLine($"<td class='text-right {amountClass}'>{amount:N2}</td>");
+                // sb.AppendLine($"<td>{entry.Description}</td>");
+                // sb.AppendLine("</tr>");
             }
             
-            sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='4'><strong>Totals</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>Payments: ₹{totalPayment:N2}</strong></td>");
-            sb.AppendLine("<td></td>");
-            sb.AppendLine("</tr>");
+            // sb.AppendLine("<tr class='total-row'>");
+            // sb.AppendLine("<td colspan='4'><strong>Totals</strong></td>");
+            // sb.AppendLine($"<td class='text-right'><strong>Payments: ₹{totalPayment:N2}</strong></td>");
+            // sb.AppendLine("<td></td>");
+            // sb.AppendLine("</tr>");
             
-            sb.AppendLine("</table>");
-            sb.AppendLine("</div>");
+            // sb.AppendLine("</table>");
+            // sb.AppendLine("</div>");
             
             // Show Summary Calculation only if this is the final payment for all bills
             if (showFinalSettlement)
@@ -475,38 +528,51 @@ namespace SaleBillSystem.NET.Forms
                 sb.AppendLine("<div class='summary-box'>");
                 sb.AppendLine("<h3>Payment Summary</h3>");
                 sb.AppendLine("<table>");
-                sb.AppendLine("<tr><td>Total Bill Amount</td><td class='text-right'>₹" + totalBillAmount.ToString("N2") + "</td></tr>");
-                if (totalPreviousCash > 0)
+                sb.AppendLine("<tr><td>Bill Amount</td><td class='text-right'>₹" + totalBillAmount.ToString("N2") + "</td></tr>");
+                
+                // Combine previous payments into one line
+                if (totalPreviousCash > 0 || totalPreviousCheque > 0)
                 {
-                    sb.AppendLine("<tr><td>Previous Cash Payments (-)</td><td class='text-right'>₹" + totalPreviousCash.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Previous Payments (-)</td><td class='text-right'>₹" + totalPreviousPayments.ToString("N2") + "</td></tr>");
                 }
-                if (totalPreviousCheque > 0)
+                
+                // Only show interest if greater than zero
+                if (totalInterest > 0)
                 {
-                    sb.AppendLine("<tr><td>Previous Cheque Payments (-)</td><td class='text-right'>₹" + totalPreviousCheque.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Interest (+)</td><td class='text-right'>₹" + totalInterest.ToString("N2") + "</td></tr>");
                 }
-                sb.AppendLine("<tr><td>Interest (+)</td><td class='text-right'>₹" + totalInterest.ToString("N2") + "</td></tr>");
-                sb.AppendLine("<tr><td>Discount (-)</td><td class='text-right'>₹" + totalDiscount.ToString("N2") + "</td></tr>");
-                sb.AppendLine("<tr><td>Brokerage (-)</td><td class='text-right'>₹" + totalBrokerage.ToString("N2") + "</td></tr>");
-                sb.AppendLine("<tr class='total-row'><td><strong>Net Payable Amount</strong></td><td class='text-right'><strong>₹" + netPayableAmount.ToString("N2") + "</strong></td></tr>");
+                
+                // Only show discount if greater than zero
+                if (totalDiscount > 0)
+                {
+                    sb.AppendLine("<tr><td>Discount (-)</td><td class='text-right'>₹" + totalDiscount.ToString("N2") + "</td></tr>");
+                }
+                
+                // Only show brokerage if greater than zero
+                if (totalBrokerage > 0)
+                {
+                    sb.AppendLine("<tr><td>Brokerage (-)</td><td class='text-right'>₹" + totalBrokerage.ToString("N2") + "</td></tr>");
+                }
+                
+                sb.AppendLine("<tr class='total-row'><td><strong>Net Amount</strong></td><td class='text-right'><strong>₹" + netPayableAmount.ToString("N2") + "</strong></td></tr>");
                 sb.AppendLine("</table>");
                 
-                // Verify payment amounts match net payable
+                // Verify payment amounts match net payable - use a simpler indicator
                 if (Math.Abs(payment.TotalAmountPaid - netPayableAmount) < 0.01m)
                 {
-                    sb.AppendLine("<p style='color: green; font-weight: bold;'>✓ Payment amount matches net payable amount</p>");
+                    sb.AppendLine("<p style='color: green; font-size: 7pt; margin: 2px 0;'>✓ Payment matches net amount</p>");
                 }
                 else
                 {
-                    sb.AppendLine("<p style='color: red; font-weight: bold;'>⚠ Payment amount does not match net payable amount!</p>");
-                    sb.AppendLine($"<p>Payment: ₹{payment.TotalAmountPaid:N2} | Net Payable: ₹{netPayableAmount:N2} | " + 
-                                  $"Difference: ₹{(payment.TotalAmountPaid - netPayableAmount):N2}</p>");
+                    sb.AppendLine("<p style='color: red; font-size: 7pt; margin: 2px 0;'>⚠ Payment differs from net amount</p>");
                 }
                 sb.AppendLine("</div>");
             }
             
             // --- Footer ---
-            sb.AppendLine("<div style='margin-top: 30px; text-align: center; color: #666;'>");
+            sb.AppendLine("<div style='margin-top: 10px; text-align: center; color: #666; font-size: 7pt;'>");
             sb.AppendLine("<p>Thank you for your business!</p>");
+            sb.AppendLine("<p style='font-size: 6pt;'>Generated by Sale Bill System</p>");
             sb.AppendLine("</div>");
             
             sb.AppendLine("</body></html>");
@@ -749,5 +815,44 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
+        
+        // Helper method to get cheque amounts by firm for a specific bill
+        private void GetChequeAmountsByFirm(int billId, out decimal firm1Amount, out decimal firm2Amount)
+        {
+            firm1Amount = 0;
+            firm2Amount = 0;
+            
+            try
+            {
+                string sql = @"
+                    SELECT pm.ChequeAmountFirm1, pm.ChequeAmountFirm2
+                    FROM PaymentMaster pm, TransactionLedger tl 
+                    WHERE pm.PaymentID = tl.PaymentID 
+                    AND tl.BillID = ? 
+                    AND tl.TransactionType = 'Payment' 
+                    AND pm.PaymentMethod = 'Cheque'";
+                
+                var parameter = new OleDbParameter("BillID", billId);
+                
+                DataTable dt = DatabaseManager.ExecuteQuery(sql, parameter);
+                
+                foreach (DataRow row in dt.Rows)
+                {
+                    if (row["ChequeAmountFirm1"] != DBNull.Value)
+                    {
+                        firm1Amount += Convert.ToDecimal(row["ChequeAmountFirm1"]);
+                    }
+                    
+                    if (row["ChequeAmountFirm2"] != DBNull.Value)
+                    {
+                        firm2Amount += Convert.ToDecimal(row["ChequeAmountFirm2"]);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting cheque amounts by firm: {ex.Message}");
+            }
+        }
     }
 } 

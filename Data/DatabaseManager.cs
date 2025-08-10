@@ -252,7 +252,9 @@ namespace SaleBillSystem.NET.Data
                         TotalAmountPaid CURRENCY NOT NULL,
                         PaymentMethod TEXT(50),
                         Reference TEXT(100),
-                        CompanyID INTEGER
+                        CompanyID INTEGER,
+                        ChequeAmountFirm1 CURRENCY DEFAULT 0,
+                        ChequeAmountFirm2 CURRENCY DEFAULT 0
                     )");
                     // Create PaymentDetails table
                     ExecuteNonQuery(conn, @"CREATE TABLE TransactionLedger (

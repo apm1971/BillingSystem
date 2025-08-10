@@ -40,6 +40,12 @@ namespace SaleBillSystem.NET.Forms
             lblDiscountValue = new Label();
             lblBrokerageValue = new Label();
             gbPayment = new GroupBox();
+            pnlChequeDetails = new Panel();
+            txtChequeAmountFirm2 = new TextBox();
+            lblChequeAmountFirm2 = new Label();
+            txtChequeAmountFirm1 = new TextBox();
+            lblChequeAmountFirm1 = new Label();
+            lblChequeDetails = new Label();
             btnAutoAllocate = new Button();
             txtPaymentDate = new TextBox();
             lblPaymentDate = new Label();
@@ -56,6 +62,7 @@ namespace SaleBillSystem.NET.Forms
             pnlTop.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvOutstandingBills).BeginInit();
             gbPayment.SuspendLayout();
+            pnlChequeDetails.SuspendLayout();
             pnlButtons.SuspendLayout();
             SuspendLayout();
             // 
@@ -66,10 +73,10 @@ namespace SaleBillSystem.NET.Forms
             pnlTop.Controls.Add(cmbParty);
             pnlTop.Controls.Add(lblParty);
             pnlTop.Dock = DockStyle.Top;
-            pnlTop.Location = new Point(13, 15);
-            pnlTop.Margin = new Padding(4, 5, 4, 5);
+            pnlTop.Location = new Point(11, 11);
+            pnlTop.Margin = new Padding(4);
             pnlTop.Name = "pnlTop";
-            pnlTop.Size = new Size(1610, 62);
+            pnlTop.Size = new Size(1410, 46);
             pnlTop.TabIndex = 0;
             // 
             // cmbBroker
@@ -77,19 +84,19 @@ namespace SaleBillSystem.NET.Forms
             cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
             cmbBroker.FormattingEnabled = true;
-            cmbBroker.Location = new Point(651, 14);
-            cmbBroker.Margin = new Padding(4, 5, 4, 5);
+            cmbBroker.Location = new Point(570, 10);
+            cmbBroker.Margin = new Padding(4);
             cmbBroker.Name = "cmbBroker";
-            cmbBroker.Size = new Size(399, 28);
+            cmbBroker.Size = new Size(350, 23);
             cmbBroker.TabIndex = 1;
             // 
             // lblBroker
             // 
             lblBroker.AutoSize = true;
-            lblBroker.Location = new Point(537, 18);
+            lblBroker.Location = new Point(470, 14);
             lblBroker.Margin = new Padding(4, 0, 4, 0);
             lblBroker.Name = "lblBroker";
-            lblBroker.Size = new Size(99, 20);
+            lblBroker.Size = new Size(78, 15);
             lblBroker.TabIndex = 0;
             lblBroker.Text = "Select Broker:";
             // 
@@ -98,19 +105,19 @@ namespace SaleBillSystem.NET.Forms
             cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
             cmbParty.FormattingEnabled = true;
-            cmbParty.Location = new Point(117, 14);
-            cmbParty.Margin = new Padding(4, 5, 4, 5);
+            cmbParty.Location = new Point(102, 10);
+            cmbParty.Margin = new Padding(4);
             cmbParty.Name = "cmbParty";
-            cmbParty.Size = new Size(399, 28);
+            cmbParty.Size = new Size(350, 23);
             cmbParty.TabIndex = 0;
             // 
             // lblParty
             // 
             lblParty.AutoSize = true;
-            lblParty.Location = new Point(4, 18);
+            lblParty.Location = new Point(4, 14);
             lblParty.Margin = new Padding(4, 0, 4, 0);
             lblParty.Name = "lblParty";
-            lblParty.Size = new Size(100, 20);
+            lblParty.Size = new Size(80, 15);
             lblParty.TabIndex = 0;
             lblParty.Text = "Select a Party:";
             // 
@@ -120,11 +127,11 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.AllowUserToDeleteRows = false;
             dgvOutstandingBills.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvOutstandingBills.Dock = DockStyle.Top;
-            dgvOutstandingBills.Location = new Point(13, 77);
-            dgvOutstandingBills.Margin = new Padding(4, 5, 4, 5);
+            dgvOutstandingBills.Location = new Point(11, 57);
+            dgvOutstandingBills.Margin = new Padding(4);
             dgvOutstandingBills.Name = "dgvOutstandingBills";
             dgvOutstandingBills.RowHeadersWidth = 51;
-            dgvOutstandingBills.Size = new Size(1610, 650);
+            dgvOutstandingBills.Size = new Size(1410, 346);
             dgvOutstandingBills.TabIndex = 1;
             // 
             // btnCalculate
@@ -132,10 +139,10 @@ namespace SaleBillSystem.NET.Forms
             btnCalculate.BackColor = Color.LightPink;
             btnCalculate.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
             btnCalculate.ForeColor = Color.Black;
-            btnCalculate.Location = new Point(573, 76);
-            btnCalculate.Margin = new Padding(4, 5, 4, 5);
+            btnCalculate.Location = new Point(501, 57);
+            btnCalculate.Margin = new Padding(4);
             btnCalculate.Name = "btnCalculate";
-            btnCalculate.Size = new Size(132, 44);
+            btnCalculate.Size = new Size(116, 33);
             btnCalculate.TabIndex = 10;
             btnCalculate.Text = "Calculate";
             toolTip1.SetToolTip(btnCalculate, "Calculate final amount based on the terms provided");
@@ -144,91 +151,91 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtBrokerageRate
             // 
-            txtBrokerageRate.Location = new Point(186, 135);
-            txtBrokerageRate.Margin = new Padding(4, 5, 4, 5);
+            txtBrokerageRate.Location = new Point(163, 101);
+            txtBrokerageRate.Margin = new Padding(4);
             txtBrokerageRate.Name = "txtBrokerageRate";
-            txtBrokerageRate.Size = new Size(105, 27);
+            txtBrokerageRate.Size = new Size(92, 23);
             txtBrokerageRate.TabIndex = 4;
             // 
             // label7
             // 
             label7.AutoSize = true;
-            label7.Location = new Point(54, 138);
+            label7.Location = new Point(47, 104);
             label7.Margin = new Padding(4, 0, 4, 0);
             label7.Name = "label7";
-            label7.Size = new Size(114, 20);
+            label7.Size = new Size(89, 15);
             label7.TabIndex = 6;
             label7.Text = "Brokerage Rate:";
             // 
             // txtInterestRate
             // 
-            txtInterestRate.Location = new Point(117, 84);
-            txtInterestRate.Margin = new Padding(4, 5, 4, 5);
+            txtInterestRate.Location = new Point(102, 63);
+            txtInterestRate.Margin = new Padding(4);
             txtInterestRate.Name = "txtInterestRate";
-            txtInterestRate.Size = new Size(86, 27);
+            txtInterestRate.Size = new Size(76, 23);
             txtInterestRate.TabIndex = 1;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(9, 88);
+            label3.Location = new Point(8, 66);
             label3.Margin = new Padding(4, 0, 4, 0);
             label3.Name = "label3";
-            label3.Size = new Size(95, 20);
+            label3.Size = new Size(75, 15);
             label3.TabIndex = 4;
             label3.Text = "Interest Rate:";
             // 
             // txtDiscountRate
             // 
-            txtDiscountRate.Location = new Point(334, 84);
-            txtDiscountRate.Margin = new Padding(4, 5, 4, 5);
+            txtDiscountRate.Location = new Point(292, 63);
+            txtDiscountRate.Margin = new Padding(4);
             txtDiscountRate.Name = "txtDiscountRate";
-            txtDiscountRate.Size = new Size(84, 27);
+            txtDiscountRate.Size = new Size(74, 23);
             txtDiscountRate.TabIndex = 3;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(222, 88);
+            label2.Location = new Point(194, 66);
             label2.Margin = new Padding(4, 0, 4, 0);
             label2.Name = "label2";
-            label2.Size = new Size(104, 20);
+            label2.Size = new Size(83, 15);
             label2.TabIndex = 2;
             label2.Text = "Discount Rate:";
             // 
             // txtInterestDays
             // 
-            txtInterestDays.Location = new Point(117, 46);
-            txtInterestDays.Margin = new Padding(4, 5, 4, 5);
+            txtInterestDays.Location = new Point(102, 34);
+            txtInterestDays.Margin = new Padding(4);
             txtInterestDays.Name = "txtInterestDays";
-            txtInterestDays.Size = new Size(86, 27);
+            txtInterestDays.Size = new Size(76, 23);
             txtInterestDays.TabIndex = 0;
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(7, 49);
+            label1.Location = new Point(6, 37);
             label1.Margin = new Padding(4, 0, 4, 0);
             label1.Name = "label1";
-            label1.Size = new Size(97, 20);
+            label1.Size = new Size(77, 15);
             label1.TabIndex = 0;
             label1.Text = "Interest Days:";
             // 
             // txtDiscountDays
             // 
-            txtDiscountDays.Location = new Point(333, 47);
-            txtDiscountDays.Margin = new Padding(4, 5, 4, 5);
+            txtDiscountDays.Location = new Point(291, 35);
+            txtDiscountDays.Margin = new Padding(4);
             txtDiscountDays.Name = "txtDiscountDays";
-            txtDiscountDays.Size = new Size(85, 27);
+            txtDiscountDays.Size = new Size(75, 23);
             txtDiscountDays.TabIndex = 2;
             // 
             // label8
             // 
             label8.AutoSize = true;
-            label8.Location = new Point(219, 50);
+            label8.Location = new Point(192, 38);
             label8.Margin = new Padding(4, 0, 4, 0);
             label8.Name = "label8";
-            label8.Size = new Size(106, 20);
+            label8.Size = new Size(85, 15);
             label8.TabIndex = 7;
             label8.Text = "Discount Days:";
             // 
@@ -237,21 +244,21 @@ namespace SaleBillSystem.NET.Forms
             lblFinalAmount.AutoSize = true;
             lblFinalAmount.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
             lblFinalAmount.ForeColor = Color.ForestGreen;
-            lblFinalAmount.Location = new Point(1017, 29);
+            lblFinalAmount.Location = new Point(744, 22);
             lblFinalAmount.Margin = new Padding(4, 0, 4, 0);
             lblFinalAmount.Name = "lblFinalAmount";
-            lblFinalAmount.Size = new Size(251, 25);
+            lblFinalAmount.Size = new Size(208, 20);
             lblFinalAmount.TabIndex = 2;
-            lblFinalAmount.Text = "Final Amount Due: ₹0.00";
+            lblFinalAmount.Text = "Amount Due: ₹0.00";
             // 
             // lblInterestValue
             // 
             lblInterestValue.AutoSize = true;
             lblInterestValue.Font = new Font("Microsoft Sans Serif", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblInterestValue.Location = new Point(799, 33);
+            lblInterestValue.Location = new Point(501, 25);
             lblInterestValue.Margin = new Padding(4, 0, 4, 0);
             lblInterestValue.Name = "lblInterestValue";
-            lblInterestValue.Size = new Size(130, 20);
+            lblInterestValue.Size = new Size(114, 17);
             lblInterestValue.TabIndex = 1;
             lblInterestValue.Text = "Interest: ₹0.00";
             // 
@@ -259,10 +266,10 @@ namespace SaleBillSystem.NET.Forms
             // 
             lblDiscountValue.AutoSize = true;
             lblDiscountValue.Font = new Font("Microsoft Sans Serif", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblDiscountValue.Location = new Point(292, 33);
+            lblDiscountValue.Location = new Point(47, 25);
             lblDiscountValue.Margin = new Padding(4, 0, 4, 0);
             lblDiscountValue.Name = "lblDiscountValue";
-            lblDiscountValue.Size = new Size(141, 20);
+            lblDiscountValue.Size = new Size(122, 17);
             lblDiscountValue.TabIndex = 0;
             lblDiscountValue.Text = "Discount: ₹0.00";
             // 
@@ -270,15 +277,16 @@ namespace SaleBillSystem.NET.Forms
             // 
             lblBrokerageValue.AutoSize = true;
             lblBrokerageValue.Font = new Font("Microsoft Sans Serif", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblBrokerageValue.Location = new Point(537, 33);
+            lblBrokerageValue.Location = new Point(265, 25);
             lblBrokerageValue.Margin = new Padding(4, 0, 4, 0);
             lblBrokerageValue.Name = "lblBrokerageValue";
-            lblBrokerageValue.Size = new Size(152, 20);
+            lblBrokerageValue.Size = new Size(134, 17);
             lblBrokerageValue.TabIndex = 3;
             lblBrokerageValue.Text = "Brokerage: ₹0.00";
             // 
             // gbPayment
             // 
+            gbPayment.Controls.Add(pnlChequeDetails);
             gbPayment.Controls.Add(btnAutoAllocate);
             gbPayment.Controls.Add(label7);
             gbPayment.Controls.Add(txtBrokerageRate);
@@ -300,21 +308,21 @@ namespace SaleBillSystem.NET.Forms
             gbPayment.Controls.Add(txtPaymentAmount);
             gbPayment.Controls.Add(label4);
             gbPayment.Dock = DockStyle.Fill;
-            gbPayment.Location = new Point(13, 582);
-            gbPayment.Margin = new Padding(4, 5, 4, 5);
+            gbPayment.Location = new Point(11, 403);
+            gbPayment.Margin = new Padding(4);
             gbPayment.Name = "gbPayment";
-            gbPayment.Padding = new Padding(4, 5, 4, 5);
-            gbPayment.Size = new Size(1610, 199);
+            gbPayment.Padding = new Padding(4);
+            gbPayment.Size = new Size(1410, 183);
             gbPayment.TabIndex = 4;
             gbPayment.TabStop = false;
             gbPayment.Text = "Payment Details";
             // 
             // btnAutoAllocate
             // 
-            btnAutoAllocate.Location = new Point(1108, 27);
-            btnAutoAllocate.Margin = new Padding(4, 5, 4, 5);
+            btnAutoAllocate.Location = new Point(970, 20);
+            btnAutoAllocate.Margin = new Padding(4);
             btnAutoAllocate.Name = "btnAutoAllocate";
-            btnAutoAllocate.Size = new Size(149, 29);
+            btnAutoAllocate.Size = new Size(130, 22);
             btnAutoAllocate.TabIndex = 7;
             btnAutoAllocate.Text = "Allocate";
             toolTip1.SetToolTip(btnAutoAllocate, "Automatically apply the payment amount to the oldest bills first");
@@ -323,78 +331,145 @@ namespace SaleBillSystem.NET.Forms
             // txtPaymentDate
             // 
             txtPaymentDate.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtPaymentDate.Location = new Point(573, 33);
-            txtPaymentDate.Margin = new Padding(4, 5, 4, 5);
+            txtPaymentDate.Location = new Point(501, 25);
+            txtPaymentDate.Margin = new Padding(4);
             txtPaymentDate.MaxLength = 10;
             txtPaymentDate.Name = "txtPaymentDate";
-            txtPaymentDate.Size = new Size(132, 26);
+            txtPaymentDate.Size = new Size(116, 22);
             txtPaymentDate.TabIndex = 5;
             // 
             // lblPaymentDate
             // 
             lblPaymentDate.AutoSize = true;
-            lblPaymentDate.Location = new Point(446, 36);
+            lblPaymentDate.Location = new Point(390, 27);
             lblPaymentDate.Margin = new Padding(4, 0, 4, 0);
             lblPaymentDate.Name = "lblPaymentDate";
-            lblPaymentDate.Size = new Size(104, 20);
+            lblPaymentDate.Size = new Size(84, 15);
             lblPaymentDate.TabIndex = 5;
             lblPaymentDate.Text = "Payment Date:";
             // 
             // txtReference
             // 
-            txtReference.Location = new Point(888, 128);
-            txtReference.Margin = new Padding(4, 5, 4, 5);
+            txtReference.Location = new Point(777, 96);
+            txtReference.Margin = new Padding(4);
             txtReference.Name = "txtReference";
-            txtReference.Size = new Size(199, 27);
+            txtReference.Size = new Size(175, 23);
             txtReference.TabIndex = 9;
             // 
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(730, 135);
+            label6.Location = new Point(639, 101);
             label6.Margin = new Padding(4, 0, 4, 0);
             label6.Name = "label6";
-            label6.Size = new Size(131, 20);
+            label6.Size = new Size(104, 15);
             label6.TabIndex = 4;
             label6.Text = "Reference / Notes:";
+            // 
+            // pnlChequeDetails
+            // 
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm1);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm1);
+            pnlChequeDetails.Controls.Add(lblChequeDetails);
+            pnlChequeDetails.Location = new Point(970, 57);
+            pnlChequeDetails.Name = "pnlChequeDetails";
+            pnlChequeDetails.Size = new Size(300, 100);
+            pnlChequeDetails.TabIndex = 13;
+            pnlChequeDetails.Visible = false;
+            // 
+            // txtChequeAmountFirm2
+            // 
+            txtChequeAmountFirm2.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtChequeAmountFirm2.Location = new Point(150, 65);
+            txtChequeAmountFirm2.Margin = new Padding(4);
+            txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
+            txtChequeAmountFirm2.Size = new Size(130, 22);
+            txtChequeAmountFirm2.TabIndex = 15;
+            txtChequeAmountFirm2.Text = "0.00";
+            txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
+            // 
+            // lblChequeAmountFirm2
+            // 
+            lblChequeAmountFirm2.AutoSize = true;
+            lblChequeAmountFirm2.Location = new Point(13, 68);
+            lblChequeAmountFirm2.Margin = new Padding(4, 0, 4, 0);
+            lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
+            lblChequeAmountFirm2.Size = new Size(129, 15);
+            lblChequeAmountFirm2.TabIndex = 14;
+            lblChequeAmountFirm2.Text = "Cheque Amount Firm2:";
+            // 
+            // txtChequeAmountFirm1
+            // 
+            txtChequeAmountFirm1.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtChequeAmountFirm1.Location = new Point(150, 35);
+            txtChequeAmountFirm1.Margin = new Padding(4);
+            txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
+            txtChequeAmountFirm1.Size = new Size(130, 22);
+            txtChequeAmountFirm1.TabIndex = 13;
+            txtChequeAmountFirm1.Text = "0.00";
+            txtChequeAmountFirm1.TextChanged += TxtChequeAmount_TextChanged;
+            // 
+            // lblChequeAmountFirm1
+            // 
+            lblChequeAmountFirm1.AutoSize = true;
+            lblChequeAmountFirm1.Location = new Point(13, 38);
+            lblChequeAmountFirm1.Margin = new Padding(4, 0, 4, 0);
+            lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
+            lblChequeAmountFirm1.Size = new Size(129, 15);
+            lblChequeAmountFirm1.TabIndex = 12;
+            lblChequeAmountFirm1.Text = "Cheque Amount Firm1:";
+            // 
+            // lblChequeDetails
+            // 
+            lblChequeDetails.AutoSize = true;
+            lblChequeDetails.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblChequeDetails.Location = new Point(13, 10);
+            lblChequeDetails.Margin = new Padding(4, 0, 4, 0);
+            lblChequeDetails.Name = "lblChequeDetails";
+            lblChequeDetails.Size = new Size(94, 15);
+            lblChequeDetails.TabIndex = 11;
+            lblChequeDetails.Text = "Cheque Details:";
             // 
             // cmbPaymentMethod
             // 
             cmbPaymentMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbPaymentMethod.FormattingEnabled = true;
-            cmbPaymentMethod.Items.AddRange(new object[] { "Cash", "UPI", "Card", "Cheque", "Bank Transfer" });
-            cmbPaymentMethod.Location = new Point(888, 76);
-            cmbPaymentMethod.Margin = new Padding(4, 5, 4, 5);
+            cmbPaymentMethod.Items.AddRange(new object[] { "Cash", "Cheque" });
+            cmbPaymentMethod.Location = new Point(777, 57);
+            cmbPaymentMethod.Margin = new Padding(4);
             cmbPaymentMethod.Name = "cmbPaymentMethod";
-            cmbPaymentMethod.Size = new Size(199, 28);
+            cmbPaymentMethod.Size = new Size(175, 23);
             cmbPaymentMethod.TabIndex = 8;
+            cmbPaymentMethod.SelectedIndexChanged += CmbPaymentMethod_SelectedIndexChanged;
             // 
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(737, 84);
+            label5.Location = new Point(645, 63);
             label5.Margin = new Padding(4, 0, 4, 0);
             label5.Name = "label5";
-            label5.Size = new Size(124, 20);
+            label5.Size = new Size(102, 15);
             label5.TabIndex = 2;
             label5.Text = "Payment Method:";
             // 
             // txtPaymentAmount
             // 
             txtPaymentAmount.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            txtPaymentAmount.Location = new Point(888, 30);
-            txtPaymentAmount.Margin = new Padding(4, 5, 4, 5);
+            txtPaymentAmount.Location = new Point(777, 22);
+            txtPaymentAmount.Margin = new Padding(4);
             txtPaymentAmount.Name = "txtPaymentAmount";
-            txtPaymentAmount.Size = new Size(199, 26);
+            txtPaymentAmount.Size = new Size(175, 22);
             txtPaymentAmount.TabIndex = 6;
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(736, 33);
+            label4.Location = new Point(644, 25);
             label4.Margin = new Padding(4, 0, 4, 0);
             label4.Name = "label4";
-            label4.Size = new Size(125, 20);
+            label4.Size = new Size(104, 15);
             label4.TabIndex = 0;
             label4.Text = "Payment Amount:";
             // 
@@ -407,19 +482,19 @@ namespace SaleBillSystem.NET.Forms
             pnlButtons.Controls.Add(btnClear);
             pnlButtons.Controls.Add(btnSave);
             pnlButtons.Dock = DockStyle.Bottom;
-            pnlButtons.Location = new Point(13, 781);
-            pnlButtons.Margin = new Padding(4, 5, 4, 5);
+            pnlButtons.Location = new Point(11, 586);
+            pnlButtons.Margin = new Padding(4);
             pnlButtons.Name = "pnlButtons";
-            pnlButtons.Size = new Size(1610, 67);
+            pnlButtons.Size = new Size(1410, 50);
             pnlButtons.TabIndex = 5;
             // 
             // btnClear
             // 
             btnClear.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnClear.Location = new Point(1458, 16);
-            btnClear.Margin = new Padding(4, 5, 4, 5);
+            btnClear.Location = new Point(1277, 12);
+            btnClear.Margin = new Padding(4);
             btnClear.Name = "btnClear";
-            btnClear.Size = new Size(133, 42);
+            btnClear.Size = new Size(116, 32);
             btnClear.TabIndex = 12;
             btnClear.Text = "Clear";
             btnClear.UseVisualStyleBackColor = true;
@@ -429,32 +504,34 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnSave.BackColor = Color.LightGreen;
             btnSave.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnSave.Location = new Point(1295, 15);
-            btnSave.Margin = new Padding(4, 5, 4, 5);
+            btnSave.Location = new Point(1134, 11);
+            btnSave.Margin = new Padding(4);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(141, 44);
+            btnSave.Size = new Size(123, 33);
             btnSave.TabIndex = 11;
             btnSave.Text = "Save Payment";
             btnSave.UseVisualStyleBackColor = false;
             // 
             // PaymentEntryControl
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             Controls.Add(gbPayment);
             Controls.Add(dgvOutstandingBills);
             Controls.Add(pnlTop);
             Controls.Add(pnlButtons);
-            Margin = new Padding(4, 5, 4, 5);
+            Margin = new Padding(4);
             Name = "PaymentEntryControl";
-            Padding = new Padding(13, 15, 13, 15);
-            Size = new Size(1636, 863);
+            Padding = new Padding(11);
+            Size = new Size(1432, 647);
             Load += PaymentEntryControl_Load;
             pnlTop.ResumeLayout(false);
             pnlTop.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvOutstandingBills).EndInit();
             gbPayment.ResumeLayout(false);
             gbPayment.PerformLayout();
+            pnlChequeDetails.ResumeLayout(false);
+            pnlChequeDetails.PerformLayout();
             pnlButtons.ResumeLayout(false);
             pnlButtons.PerformLayout();
             ResumeLayout(false);
@@ -498,5 +575,11 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtInterestDays;
         private System.Windows.Forms.TextBox txtDiscountDays;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Panel pnlChequeDetails;
+        private System.Windows.Forms.TextBox txtChequeAmountFirm1;
+        private System.Windows.Forms.Label lblChequeAmountFirm1;
+        private System.Windows.Forms.TextBox txtChequeAmountFirm2;
+        private System.Windows.Forms.Label lblChequeAmountFirm2;
+        private System.Windows.Forms.Label lblChequeDetails;
     }
 }

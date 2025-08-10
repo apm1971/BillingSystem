@@ -160,7 +160,7 @@ namespace SaleBillSystem.NET.Forms
             
             txtAdditionalCharges.TextChanged += (s, e) => CalculateTotals();
             btnSave.Click += BtnSave_Click;
-            btnCancel.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
+            // btnCancel.Click += (s, e) => CloseRequested?.Invoke(this, EventArgs.Empty);
             
             // Quick Add Party button - Check if it exists before adding event handler
             if (btnQuickAddParty != null)

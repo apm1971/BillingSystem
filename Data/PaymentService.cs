@@ -19,8 +19,8 @@ namespace SaleBillSystem.NET.Data
             try
             {
                 string sql = @"
-                    INSERT INTO PaymentMaster (PartyID, BrokerID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    INSERT INTO PaymentMaster (PartyID, BrokerID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID, ChequeAmountFirm1, ChequeAmountFirm2)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 var parameters = new OleDbParameter[]
                 {
@@ -30,7 +30,9 @@ namespace SaleBillSystem.NET.Data
                     new OleDbParameter("TotalAmountPaid", payment.TotalAmountPaid),
                     new OleDbParameter("PaymentMethod", payment.PaymentMethod ?? (object)DBNull.Value),
                     new OleDbParameter("Reference", payment.Reference ?? (object)DBNull.Value),
-                    new OleDbParameter("CompanyID", payment.CompanyID)
+                    new OleDbParameter("CompanyID", payment.CompanyID),
+                    new OleDbParameter("ChequeAmountFirm1", payment.ChequeAmountFirm1),
+                    new OleDbParameter("ChequeAmountFirm2", payment.ChequeAmountFirm2)
                 };
 
                 using (var cmd = new OleDbCommand(sql, conn, trans))
@@ -64,7 +66,7 @@ namespace SaleBillSystem.NET.Data
     var payments = new List<PaymentViewModel>();
     // Simple query without JOINs to avoid Access syntax issues
     string sql = @"
-        SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID
+        SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID, ChequeAmountFirm1, ChequeAmountFirm2
         FROM PaymentMaster
         WHERE CompanyID = ?
         ORDER BY PaymentDate DESC";
@@ -102,7 +104,9 @@ namespace SaleBillSystem.NET.Data
                 PartyID = partyId,
                 PartyName = partyName, // You'll need to implement party lookup
                 BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
-                BrokerName = brokerName
+                BrokerName = brokerName,
+                ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0,
+                ChequeAmountFirm2 = row["ChequeAmountFirm2"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm2"]) : 0
             });
         }
     }
@@ -118,7 +122,7 @@ public static PaymentViewModel? GetPaymentById(int paymentId)
     try
     {
         string sql = @"
-            SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID
+            SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID, ChequeAmountFirm1, ChequeAmountFirm2
             FROM PaymentMaster
             WHERE PaymentID = ?";
         
@@ -151,7 +155,9 @@ public static PaymentViewModel? GetPaymentById(int paymentId)
                 PartyID = partyId,
                 PartyName = partyName,
                 BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
-                BrokerName = brokerName
+                BrokerName = brokerName,
+                ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0,
+                ChequeAmountFirm2 = row["ChequeAmountFirm2"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm2"]) : 0
             };
         }
     }

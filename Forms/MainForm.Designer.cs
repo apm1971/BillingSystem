@@ -4,7 +4,6 @@ namespace SaleBillSystem.NET.Forms
     {
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.MenuStrip mainMenuStrip;
-        private LoginControl loginControl; // Our new LoginControl
 
         protected override void Dispose(bool disposing)
         {
@@ -19,51 +18,50 @@ namespace SaleBillSystem.NET.Forms
 
         private void InitializeComponent()
         {
-            // Initialize the LoginControl
-            this.loginControl = new SaleBillSystem.NET.Forms.LoginControl();
-            
-            // Initialize the MenuStrip
-            this.mainMenuStrip = new System.Windows.Forms.MenuStrip();
-
-            this.SuspendLayout();
-            
-            // 
-            // loginControl
-            // 
-            this.loginControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.loginControl.Location = new System.Drawing.Point(0, 0);
-            this.loginControl.Name = "loginControl";
-            this.loginControl.Size = new System.Drawing.Size(800, 450);
-            this.loginControl.TabIndex = 0;
-            this.loginControl.Visible = false; // Initially hidden, shown in code
-            
+            mainMenuStrip = new MenuStrip();
+            // loginControl = new LoginControl();
+            SuspendLayout();
             // 
             // mainMenuStrip
             // 
-            this.mainMenuStrip.Location = new System.Drawing.Point(0, 0);
-            this.mainMenuStrip.Name = "mainMenuStrip";
-            this.mainMenuStrip.Size = new System.Drawing.Size(800, 24);
-            this.mainMenuStrip.TabIndex = 1;
-            this.mainMenuStrip.Text = "menuStrip1";
-            this.mainMenuStrip.Visible = false; // Initially hidden
-
+            mainMenuStrip.Location = new Point(0, 0);
+            mainMenuStrip.Name = "mainMenuStrip";
+            mainMenuStrip.Padding = new Padding(7, 2, 0, 2);
+            mainMenuStrip.Size = new Size(933, 28);
+            mainMenuStrip.TabIndex = 1;
+            mainMenuStrip.Text = "menuStrip1";
+            mainMenuStrip.Visible = false;
+            // 
+            // loginControl
+            // 
+            // loginControl.Dock = DockStyle.Fill;
+            // loginControl.Location = new Point(0, 0);
+            // loginControl.Margin = new Padding(5, 3, 5, 3);
+            // loginControl.Name = "loginControl";
+            // loginControl.Size = new Size(933, 519);
+            // loginControl.TabIndex = 0;
+            // loginControl.Visible = false;
+            // loginControl.Load += loginControl_Load;
             // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.loginControl);
-            this.Controls.Add(this.mainMenuStrip);
-            this.MainMenuStrip = this.mainMenuStrip;
-            this.Name = "MainForm";
-            this.Text = "Sale Bill System";
-            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
-            this.Load += new System.EventHandler(this.MainForm_Load);
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(933, 519);
+            // Controls.Add(loginControl);
+            Controls.Add(mainMenuStrip);
+            MainMenuStrip = mainMenuStrip;
+            Margin = new Padding(4, 3, 4, 3);
+            Name = "MainForm";
+            Text = "Sale Bill System";
+            WindowState = FormWindowState.Maximized;
+            Load += MainForm_Load;
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
+
+        // private LoginControl loginControl;
     }
 }

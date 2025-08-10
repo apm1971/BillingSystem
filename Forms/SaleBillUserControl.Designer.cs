@@ -17,369 +17,354 @@ namespace SaleBillSystem.NET.Forms
 
         private void InitializeComponent()
         {
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.btnQuickAddParty = new System.Windows.Forms.Button();
-            this.cmbBroker = new System.Windows.Forms.ComboBox();
-            this.btnQuickAddBroker = new System.Windows.Forms.Button();
-            this.cmbParty = new System.Windows.Forms.ComboBox();
-            this.lblPartyDetails = new System.Windows.Forms.Label();
-            this.lblBroker = new System.Windows.Forms.Label();
-            this.lblParty = new System.Windows.Forms.Label();
-            this.txtBillDate = new System.Windows.Forms.TextBox();
-            this.lblBillDate = new System.Windows.Forms.Label();
-            this.txtBillNo = new System.Windows.Forms.TextBox();
-            this.lblBillNo = new System.Windows.Forms.Label();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.dgvItems = new System.Windows.Forms.DataGridView();
-            this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.txtChequeAmountFirm2 = new System.Windows.Forms.TextBox();
-            this.lblChequeAmountFirm2 = new System.Windows.Forms.Label();
-            this.txtChequeAmountFirm1 = new System.Windows.Forms.TextBox();
-            this.lblChequeAmountFirm1 = new System.Windows.Forms.Label();
-            this.txtAdditionalCharges = new System.Windows.Forms.TextBox();
-            this.lblAdditionalCharges = new System.Windows.Forms.Label();
-            this.lblNetAmount = new System.Windows.Forms.Label();
-            this.lblTotalCharges = new System.Windows.Forms.Label();
-            this.lblTotalAmount = new System.Windows.Forms.Label();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.lblTitle = new System.Windows.Forms.Label();
-            this.lblShortcutsInfo = new System.Windows.Forms.Label();
-
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvItems)).BeginInit();
-            this.groupBox3.SuspendLayout();
-            this.panel1.SuspendLayout();
-            this.SuspendLayout();
-            // 
-            // lblTitle
-            // 
-            this.lblTitle.AutoSize = true;
-            this.lblTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblTitle.Location = new System.Drawing.Point(529, 11);
-            this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(118, 26);
-            this.lblTitle.TabIndex = 5;
-            this.lblTitle.Text = "New Sale";
-            // 
-            // lblShortcutsInfo
-            // 
-            this.lblShortcutsInfo.AutoSize = true;
-            this.lblShortcutsInfo.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblShortcutsInfo.ForeColor = System.Drawing.Color.DarkBlue;
-            this.lblShortcutsInfo.Location = new System.Drawing.Point(529, 37);
-            this.lblShortcutsInfo.Name = "lblShortcutsInfo";
-            this.lblShortcutsInfo.Size = new System.Drawing.Size(230, 13);
-            this.lblShortcutsInfo.TabIndex = 6;
-            this.lblShortcutsInfo.Text = "Use Ctrl+I to quickly add a new item";
+            groupBox1 = new GroupBox();
+            lblShortcutsInfo = new Label();
+            btnQuickAddParty = new Button();
+            lblTitle = new Label();
+            cmbBroker = new ComboBox();
+            btnQuickAddBroker = new Button();
+            cmbParty = new ComboBox();
+            lblPartyDetails = new Label();
+            lblBroker = new Label();
+            lblParty = new Label();
+            txtBillDate = new TextBox();
+            lblBillDate = new Label();
+            txtBillNo = new TextBox();
+            lblBillNo = new Label();
+            groupBox2 = new GroupBox();
+            dgvItems = new DataGridView();
+            groupBox3 = new GroupBox();
+            txtChequeAmountFirm2 = new TextBox();
+            lblChequeAmountFirm2 = new Label();
+            txtChequeAmountFirm1 = new TextBox();
+            lblChequeAmountFirm1 = new Label();
+            txtAdditionalCharges = new TextBox();
+            lblAdditionalCharges = new Label();
+            lblNetAmount = new Label();
+            lblTotalCharges = new Label();
+            lblTotalAmount = new Label();
+            panel1 = new Panel();
+            btnSave = new Button();
+            groupBox1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvItems).BeginInit();
+            groupBox3.SuspendLayout();
+            panel1.SuspendLayout();
+            SuspendLayout();
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.btnQuickAddParty);
-            this.groupBox1.Controls.Add(this.cmbBroker);
-            this.groupBox1.Controls.Add(this.btnQuickAddBroker);
-            this.groupBox1.Controls.Add(this.cmbParty);
-            this.groupBox1.Controls.Add(this.lblPartyDetails);
-            this.groupBox1.Controls.Add(this.lblBroker);
-            this.groupBox1.Controls.Add(this.lblParty);
-            this.groupBox1.Controls.Add(this.txtBillDate);
-            this.groupBox1.Controls.Add(this.lblBillDate);
-            this.groupBox1.Controls.Add(this.txtBillNo);
-            this.groupBox1.Controls.Add(this.lblBillNo);
-            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.groupBox1.Location = new System.Drawing.Point(10, 10);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1180, 150);
-            this.groupBox1.TabIndex = 0;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Bill Details";
+            groupBox1.Controls.Add(lblShortcutsInfo);
+            groupBox1.Controls.Add(btnQuickAddParty);
+            groupBox1.Controls.Add(lblTitle);
+            groupBox1.Controls.Add(cmbBroker);
+            groupBox1.Controls.Add(btnQuickAddBroker);
+            groupBox1.Controls.Add(cmbParty);
+            groupBox1.Controls.Add(lblPartyDetails);
+            groupBox1.Controls.Add(lblBroker);
+            groupBox1.Controls.Add(lblParty);
+            groupBox1.Controls.Add(txtBillDate);
+            groupBox1.Controls.Add(lblBillDate);
+            groupBox1.Controls.Add(txtBillNo);
+            groupBox1.Controls.Add(lblBillNo);
+            groupBox1.Dock = DockStyle.Top;
+            groupBox1.Location = new Point(10, 10);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(1180, 150);
+            groupBox1.TabIndex = 0;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Bill Details";
+            // 
+            // lblShortcutsInfo
+            // 
+            lblShortcutsInfo.AutoSize = true;
+            lblShortcutsInfo.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
+            lblShortcutsInfo.ForeColor = Color.DarkBlue;
+            lblShortcutsInfo.Location = new Point(955, 134);
+            lblShortcutsInfo.Name = "lblShortcutsInfo";
+            lblShortcutsInfo.Size = new Size(212, 13);
+            lblShortcutsInfo.TabIndex = 6;
+            lblShortcutsInfo.Text = "Use Ctrl+I to quickly add a new item";
             // 
             // btnQuickAddParty
             // 
-            this.btnQuickAddParty.Location = new System.Drawing.Point(355, 80);
-            this.btnQuickAddParty.Name = "btnQuickAddParty";
-            this.btnQuickAddParty.Size = new System.Drawing.Size(30, 21);
-            this.btnQuickAddParty.TabIndex = 11;
-            this.btnQuickAddParty.Text = "+";
-            this.btnQuickAddParty.UseVisualStyleBackColor = true;
-            this.btnQuickAddParty.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
+            btnQuickAddParty.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
+            btnQuickAddParty.Location = new Point(355, 80);
+            btnQuickAddParty.Name = "btnQuickAddParty";
+            btnQuickAddParty.Size = new Size(30, 21);
+            btnQuickAddParty.TabIndex = 11;
+            btnQuickAddParty.Text = "+";
+            btnQuickAddParty.UseVisualStyleBackColor = true;
+            // 
+            // lblTitle
+            // 
+            lblTitle.AutoSize = true;
+            lblTitle.Font = new Font("Microsoft Sans Serif", 16F, FontStyle.Bold);
+            lblTitle.Location = new Point(420, 17);
+            lblTitle.Name = "lblTitle";
+            lblTitle.Size = new Size(114, 26);
+            lblTitle.TabIndex = 5;
+            lblTitle.Text = "New Sale";
             // 
             // cmbBroker
             // 
-            this.cmbBroker.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.cmbBroker.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cmbBroker.FormattingEnabled = true;
-            this.cmbBroker.Location = new System.Drawing.Point(100, 109);
-            this.cmbBroker.Name = "cmbBroker";
-            this.cmbBroker.Size = new System.Drawing.Size(250, 21);
-            this.cmbBroker.TabIndex = 3;
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
+            cmbBroker.FormattingEnabled = true;
+            cmbBroker.Location = new Point(100, 109);
+            cmbBroker.Name = "cmbBroker";
+            cmbBroker.Size = new Size(250, 23);
+            cmbBroker.TabIndex = 3;
             // 
             // btnQuickAddBroker
             // 
-            this.btnQuickAddBroker.Location = new System.Drawing.Point(355, 109);
-            this.btnQuickAddBroker.Name = "btnQuickAddBroker";
-            this.btnQuickAddBroker.Size = new System.Drawing.Size(30, 21);
-            this.btnQuickAddBroker.TabIndex = 12;
-            this.btnQuickAddBroker.Text = "+";
-            this.btnQuickAddBroker.UseVisualStyleBackColor = true;
-            this.btnQuickAddBroker.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
+            btnQuickAddBroker.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold);
+            btnQuickAddBroker.Location = new Point(355, 109);
+            btnQuickAddBroker.Name = "btnQuickAddBroker";
+            btnQuickAddBroker.Size = new Size(30, 21);
+            btnQuickAddBroker.TabIndex = 12;
+            btnQuickAddBroker.Text = "+";
+            btnQuickAddBroker.UseVisualStyleBackColor = true;
             // 
             // cmbParty
             // 
-            this.cmbParty.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.cmbParty.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cmbParty.FormattingEnabled = true;
-            this.cmbParty.Location = new System.Drawing.Point(100, 80);
-            this.cmbParty.Name = "cmbParty";
-            this.cmbParty.Size = new System.Drawing.Size(250, 21);
-            this.cmbParty.TabIndex = 2;
+            cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
+            cmbParty.FormattingEnabled = true;
+            cmbParty.Location = new Point(100, 80);
+            cmbParty.Name = "cmbParty";
+            cmbParty.Size = new Size(250, 23);
+            cmbParty.TabIndex = 2;
             // 
             // lblPartyDetails
             // 
-            this.lblPartyDetails.AutoSize = true;
-            this.lblPartyDetails.Location = new System.Drawing.Point(420, 83);
-            this.lblPartyDetails.Name = "lblPartyDetails";
-            this.lblPartyDetails.Size = new System.Drawing.Size(126, 13);
-            this.lblPartyDetails.TabIndex = 10;
-            this.lblPartyDetails.Text = "Party details will appear here";
+            lblPartyDetails.AutoSize = true;
+            lblPartyDetails.Location = new Point(420, 83);
+            lblPartyDetails.Name = "lblPartyDetails";
+            lblPartyDetails.Size = new Size(157, 15);
+            lblPartyDetails.TabIndex = 10;
+            lblPartyDetails.Text = "Party details will appear here";
             // 
             // lblBroker
             // 
-            this.lblBroker.AutoSize = true;
-            this.lblBroker.Location = new System.Drawing.Point(20, 112);
-            this.lblBroker.Name = "lblBroker";
-            this.lblBroker.Size = new System.Drawing.Size(41, 13);
-            this.lblBroker.TabIndex = 8;
-            this.lblBroker.Text = "Broker:";
+            lblBroker.AutoSize = true;
+            lblBroker.Location = new Point(20, 112);
+            lblBroker.Name = "lblBroker";
+            lblBroker.Size = new Size(44, 15);
+            lblBroker.TabIndex = 8;
+            lblBroker.Text = "Broker:";
             // 
             // lblParty
             // 
-            this.lblParty.AutoSize = true;
-            this.lblParty.Location = new System.Drawing.Point(20, 83);
-            this.lblParty.Name = "lblParty";
-            this.lblParty.Size = new System.Drawing.Size(34, 13);
-            this.lblParty.TabIndex = 4;
-            this.lblParty.Text = "Party:";
+            lblParty.AutoSize = true;
+            lblParty.Location = new Point(20, 83);
+            lblParty.Name = "lblParty";
+            lblParty.Size = new Size(37, 15);
+            lblParty.TabIndex = 4;
+            lblParty.Text = "Party:";
             // 
             // txtBillDate
             // 
-            this.txtBillDate.Location = new System.Drawing.Point(100, 53);
-            this.txtBillDate.Name = "txtBillDate";
-            this.txtBillDate.Size = new System.Drawing.Size(120, 20);
-            this.txtBillDate.TabIndex = 1;
-            this.txtBillDate.PlaceholderText = "dd-mm-yyyy";
+            txtBillDate.Location = new Point(100, 53);
+            txtBillDate.Name = "txtBillDate";
+            txtBillDate.PlaceholderText = "dd-mm-yyyy";
+            txtBillDate.Size = new Size(120, 23);
+            txtBillDate.TabIndex = 1;
             // 
             // lblBillDate
             // 
-            this.lblBillDate.AutoSize = true;
-            this.lblBillDate.Location = new System.Drawing.Point(20, 56);
-            this.lblBillDate.Name = "lblBillDate";
-            this.lblBillDate.Size = new System.Drawing.Size(52, 13);
-            this.lblBillDate.TabIndex = 2;
-            this.lblBillDate.Text = "Bill Date:";
+            lblBillDate.AutoSize = true;
+            lblBillDate.Location = new Point(20, 56);
+            lblBillDate.Name = "lblBillDate";
+            lblBillDate.Size = new Size(53, 15);
+            lblBillDate.TabIndex = 2;
+            lblBillDate.Text = "Bill Date:";
             // 
             // txtBillNo
             // 
-            this.txtBillNo.Location = new System.Drawing.Point(100, 25);
-            this.txtBillNo.Name = "txtBillNo";
-            this.txtBillNo.Size = new System.Drawing.Size(120, 20);
-            this.txtBillNo.TabIndex = 0;
+            txtBillNo.Location = new Point(100, 25);
+            txtBillNo.Name = "txtBillNo";
+            txtBillNo.Size = new Size(120, 23);
+            txtBillNo.TabIndex = 0;
             // 
             // lblBillNo
             // 
-            this.lblBillNo.AutoSize = true;
-            this.lblBillNo.Location = new System.Drawing.Point(20, 28);
-            this.lblBillNo.Name = "lblBillNo";
-            this.lblBillNo.Size = new System.Drawing.Size(43, 13);
-            this.lblBillNo.TabIndex = 0;
-            this.lblBillNo.Text = "Bill No:";
+            lblBillNo.AutoSize = true;
+            lblBillNo.Location = new Point(20, 28);
+            lblBillNo.Name = "lblBillNo";
+            lblBillNo.Size = new Size(45, 15);
+            lblBillNo.TabIndex = 0;
+            lblBillNo.Text = "Bill No:";
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.dgvItems);
-            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox2.Location = new System.Drawing.Point(10, 160);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Padding = new System.Windows.Forms.Padding(10);
-            this.groupBox2.Size = new System.Drawing.Size(1180, 331);
-            this.groupBox2.TabIndex = 1;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Bill Items (Press Enter to add new row, F8 to delete)";
+            groupBox2.Controls.Add(dgvItems);
+            groupBox2.Dock = DockStyle.Fill;
+            groupBox2.Location = new Point(10, 160);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Padding = new Padding(10);
+            groupBox2.Size = new Size(1180, 311);
+            groupBox2.TabIndex = 1;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Bill Items (Press Enter to add new row, F8 to delete)";
             // 
             // dgvItems
             // 
-            this.dgvItems.BackgroundColor = System.Drawing.SystemColors.Window;
-            this.dgvItems.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvItems.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvItems.Location = new System.Drawing.Point(10, 23);
-            this.dgvItems.Name = "dgvItems";
-            this.dgvItems.Size = new System.Drawing.Size(1160, 298);
-            this.dgvItems.TabIndex = 0;
+            dgvItems.BackgroundColor = SystemColors.Window;
+            dgvItems.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvItems.Dock = DockStyle.Fill;
+            dgvItems.Location = new Point(10, 26);
+            dgvItems.Name = "dgvItems";
+            dgvItems.Size = new Size(1160, 275);
+            dgvItems.TabIndex = 0;
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.txtChequeAmountFirm2);
-            this.groupBox3.Controls.Add(this.lblChequeAmountFirm2);
-            this.groupBox3.Controls.Add(this.txtChequeAmountFirm1);
-            this.groupBox3.Controls.Add(this.lblChequeAmountFirm1);
-            this.groupBox3.Controls.Add(this.txtAdditionalCharges);
-            this.groupBox3.Controls.Add(this.lblAdditionalCharges);
-            this.groupBox3.Controls.Add(this.lblNetAmount);
-            this.groupBox3.Controls.Add(this.lblTotalCharges);
-            this.groupBox3.Controls.Add(this.lblTotalAmount);
-            this.groupBox3.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.groupBox3.Location = new System.Drawing.Point(10, 491);
-            this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(1180, 90);
-            this.groupBox3.TabIndex = 2;
-            this.groupBox3.TabStop = false;
-            this.groupBox3.Text = "Totals";
-            // 
-            // txtChequeAmountFirm1
-            // 
-            this.txtChequeAmountFirm1.Location = new System.Drawing.Point(150, 53);
-            this.txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
-            this.txtChequeAmountFirm1.Size = new System.Drawing.Size(100, 20);
-            this.txtChequeAmountFirm1.TabIndex = 5;
-            this.txtChequeAmountFirm1.Text = "0.00";
-            // 
-            // lblChequeAmountFirm1
-            // 
-            this.lblChequeAmountFirm1.AutoSize = true;
-            this.lblChequeAmountFirm1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.lblChequeAmountFirm1.Location = new System.Drawing.Point(20, 53);
-            this.lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
-            this.lblChequeAmountFirm1.Size = new System.Drawing.Size(128, 16);
-            this.lblChequeAmountFirm1.TabIndex = 4;
-            this.lblChequeAmountFirm1.Text = "Cheque Amt Firm1:";
+            groupBox3.Controls.Add(txtChequeAmountFirm2);
+            groupBox3.Controls.Add(lblChequeAmountFirm2);
+            groupBox3.Controls.Add(txtChequeAmountFirm1);
+            groupBox3.Controls.Add(lblChequeAmountFirm1);
+            groupBox3.Controls.Add(txtAdditionalCharges);
+            groupBox3.Controls.Add(lblAdditionalCharges);
+            groupBox3.Controls.Add(lblNetAmount);
+            groupBox3.Controls.Add(lblTotalCharges);
+            groupBox3.Controls.Add(lblTotalAmount);
+            groupBox3.Dock = DockStyle.Bottom;
+            groupBox3.Location = new Point(10, 471);
+            groupBox3.Name = "groupBox3";
+            groupBox3.Size = new Size(1180, 90);
+            groupBox3.TabIndex = 2;
+            groupBox3.TabStop = false;
+            groupBox3.Text = "Totals";
             // 
             // txtChequeAmountFirm2
             // 
-            this.txtChequeAmountFirm2.Location = new System.Drawing.Point(380, 53);
-            this.txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
-            this.txtChequeAmountFirm2.Size = new System.Drawing.Size(100, 20);
-            this.txtChequeAmountFirm2.TabIndex = 7;
-            this.txtChequeAmountFirm2.Text = "0.00";
+            txtChequeAmountFirm2.Location = new Point(380, 53);
+            txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
+            txtChequeAmountFirm2.Size = new Size(100, 23);
+            txtChequeAmountFirm2.TabIndex = 7;
+            txtChequeAmountFirm2.Text = "0.00";
             // 
             // lblChequeAmountFirm2
             // 
-            this.lblChequeAmountFirm2.AutoSize = true;
-            this.lblChequeAmountFirm2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.lblChequeAmountFirm2.Location = new System.Drawing.Point(250, 53);
-            this.lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
-            this.lblChequeAmountFirm2.Size = new System.Drawing.Size(128, 16);
-            this.lblChequeAmountFirm2.TabIndex = 6;
-            this.lblChequeAmountFirm2.Text = "Cheque Amt Firm2:";
+            lblChequeAmountFirm2.AutoSize = true;
+            lblChequeAmountFirm2.Font = new Font("Microsoft Sans Serif", 9.75F);
+            lblChequeAmountFirm2.Location = new Point(250, 53);
+            lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
+            lblChequeAmountFirm2.Size = new Size(119, 16);
+            lblChequeAmountFirm2.TabIndex = 6;
+            lblChequeAmountFirm2.Text = "Cheque Amt Firm2:";
+            // 
+            // txtChequeAmountFirm1
+            // 
+            txtChequeAmountFirm1.Location = new Point(150, 53);
+            txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
+            txtChequeAmountFirm1.Size = new Size(100, 23);
+            txtChequeAmountFirm1.TabIndex = 5;
+            txtChequeAmountFirm1.Text = "0.00";
+            // 
+            // lblChequeAmountFirm1
+            // 
+            lblChequeAmountFirm1.AutoSize = true;
+            lblChequeAmountFirm1.Font = new Font("Microsoft Sans Serif", 9.75F);
+            lblChequeAmountFirm1.Location = new Point(20, 53);
+            lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
+            lblChequeAmountFirm1.Size = new Size(119, 16);
+            lblChequeAmountFirm1.TabIndex = 4;
+            lblChequeAmountFirm1.Text = "Cheque Amt Firm1:";
             // 
             // txtAdditionalCharges
             // 
-            this.txtAdditionalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.txtAdditionalCharges.Location = new System.Drawing.Point(650, 53);
-            this.txtAdditionalCharges.Name = "txtAdditionalCharges";
-            this.txtAdditionalCharges.Size = new System.Drawing.Size(120, 22);
-            this.txtAdditionalCharges.TabIndex = 0;
-            this.txtAdditionalCharges.Text = "0.00";
-            this.txtAdditionalCharges.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            txtAdditionalCharges.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Bold);
+            txtAdditionalCharges.Location = new Point(660, 17);
+            txtAdditionalCharges.Name = "txtAdditionalCharges";
+            txtAdditionalCharges.Size = new Size(120, 22);
+            txtAdditionalCharges.TabIndex = 0;
+            txtAdditionalCharges.Text = "0.00";
+            txtAdditionalCharges.TextAlign = HorizontalAlignment.Right;
             // 
             // lblAdditionalCharges
             // 
-            this.lblAdditionalCharges.AutoSize = true;
-            this.lblAdditionalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblAdditionalCharges.Location = new System.Drawing.Point(500, 53);
-            this.lblAdditionalCharges.Name = "lblAdditionalCharges";
-            this.lblAdditionalCharges.Size = new System.Drawing.Size(134, 16);
-            this.lblAdditionalCharges.TabIndex = 3;
-            this.lblAdditionalCharges.Text = "Additional Charges:";
+            lblAdditionalCharges.AutoSize = true;
+            lblAdditionalCharges.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Bold);
+            lblAdditionalCharges.Location = new Point(511, 20);
+            lblAdditionalCharges.Name = "lblAdditionalCharges";
+            lblAdditionalCharges.Size = new Size(143, 16);
+            lblAdditionalCharges.TabIndex = 3;
+            lblAdditionalCharges.Text = "Additional Charges:";
             // 
             // lblNetAmount
             // 
-            this.lblNetAmount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblNetAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Bold);
-            this.lblNetAmount.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(0)))), ((int)(((byte)(192)))));
-            this.lblNetAmount.Location = new System.Drawing.Point(880, 23);
-            this.lblNetAmount.Name = "lblNetAmount";
-            this.lblNetAmount.Size = new System.Drawing.Size(280, 24);
-            this.lblNetAmount.TabIndex = 2;
-            this.lblNetAmount.Text = "NET AMOUNT: ₹0.00";
-            this.lblNetAmount.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            lblNetAmount.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblNetAmount.Font = new Font("Microsoft Sans Serif", 12F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblNetAmount.ForeColor = Color.FromArgb(0, 0, 192);
+            lblNetAmount.Location = new Point(845, 23);
+            lblNetAmount.Name = "lblNetAmount";
+            lblNetAmount.Size = new Size(280, 24);
+            lblNetAmount.TabIndex = 2;
+            lblNetAmount.Text = "NET AMOUNT: ₹0.00";
+            lblNetAmount.TextAlign = ContentAlignment.MiddleRight;
             // 
             // lblTotalCharges
             // 
-            this.lblTotalCharges.AutoSize = true;
-            this.lblTotalCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblTotalCharges.Location = new System.Drawing.Point(210, 23);
-            this.lblTotalCharges.Name = "lblTotalCharges";
-            this.lblTotalCharges.Size = new System.Drawing.Size(139, 16);
-            this.lblTotalCharges.TabIndex = 1;
-            this.lblTotalCharges.Text = "Item Charges: ₹0.00";
+            lblTotalCharges.AutoSize = true;
+            lblTotalCharges.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Bold);
+            lblTotalCharges.Location = new Point(210, 23);
+            lblTotalCharges.Name = "lblTotalCharges";
+            lblTotalCharges.Size = new Size(142, 16);
+            lblTotalCharges.TabIndex = 1;
+            lblTotalCharges.Text = "Item Charges: ₹0.00";
             // 
             // lblTotalAmount
             // 
-            this.lblTotalAmount.AutoSize = true;
-            this.lblTotalAmount.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold);
-            this.lblTotalAmount.Location = new System.Drawing.Point(20, 23);
-            this.lblTotalAmount.Name = "lblTotalAmount";
-            this.lblTotalAmount.Size = new System.Drawing.Size(126, 16);
-            this.lblTotalAmount.TabIndex = 0;
-            this.lblTotalAmount.Text = "Item Total: ₹0.00";
+            lblTotalAmount.AutoSize = true;
+            lblTotalAmount.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Bold);
+            lblTotalAmount.Location = new Point(20, 23);
+            lblTotalAmount.Name = "lblTotalAmount";
+            lblTotalAmount.Size = new Size(120, 16);
+            lblTotalAmount.TabIndex = 0;
+            lblTotalAmount.Text = "Item Total: ₹0.00";
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.btnCancel);
-            this.panel1.Controls.Add(this.btnSave);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel1.Location = new System.Drawing.Point(10, 561);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1180, 50);
-            this.panel1.TabIndex = 3;
-            // 
-            // btnCancel
-            // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancel.Location = new System.Drawing.Point(1067, 10);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(100, 30);
-            this.btnCancel.TabIndex = 1;
-            this.btnCancel.Text = "Close (Esc)";
-            this.btnCancel.UseVisualStyleBackColor = true;
+            panel1.Controls.Add(btnSave);
+            panel1.Dock = DockStyle.Bottom;
+            panel1.Location = new Point(10, 561);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(1180, 50);
+            panel1.TabIndex = 3;
             // 
             // btnSave
             // 
-            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSave.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnSave.Location = new System.Drawing.Point(961, 10);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(100, 30);
-            this.btnSave.TabIndex = 0;
-            this.btnSave.Text = "Save (Ctrl+S)";
-            this.btnSave.UseVisualStyleBackColor = true;
-            // 
-
+            btnSave.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSave.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnSave.Location = new Point(1025, 6);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(100, 30);
+            btnSave.TabIndex = 0;
+            btnSave.Text = "Save (Ctrl+S)";
+            btnSave.UseVisualStyleBackColor = true;
             // 
             // SaleBillUserControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.lblShortcutsInfo);
-            this.Controls.Add(this.lblTitle);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox3);
-            this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.panel1);
-            this.Name = "SaleBillUserControl";
-            this.Padding = new System.Windows.Forms.Padding(10);
-            this.Size = new System.Drawing.Size(1200, 621);
-            this.Load += new System.EventHandler(this.SaleBillUserControl_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            this.groupBox2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvItems)).EndInit();
-            this.groupBox3.ResumeLayout(false);
-            this.groupBox3.PerformLayout();
-            this.panel1.ResumeLayout(false);
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox3);
+            Controls.Add(groupBox1);
+            Controls.Add(panel1);
+            Name = "SaleBillUserControl";
+            Padding = new Padding(10);
+            Size = new Size(1200, 621);
+            Load += SaleBillUserControl_Load;
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
+            groupBox2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvItems).EndInit();
+            groupBox3.ResumeLayout(false);
+            groupBox3.PerformLayout();
+            panel1.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion
@@ -401,7 +386,6 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label lblTotalCharges;
         private System.Windows.Forms.Label lblTotalAmount;
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.ComboBox cmbParty;
         private System.Windows.Forms.ComboBox cmbBroker;
@@ -411,7 +395,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label lblChequeAmountFirm2;
         private System.Windows.Forms.Button btnQuickAddParty;
         private System.Windows.Forms.Button btnQuickAddBroker;
-        private System.Windows.Forms.Label lblTitle;
         private System.Windows.Forms.Label lblShortcutsInfo;
+        private Label lblTitle;
     }
 }

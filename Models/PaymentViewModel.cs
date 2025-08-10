@@ -16,5 +16,15 @@ namespace SaleBillSystem.NET.Models
         public string PartyName { get; set; }
         public int? BrokerID { get; set; }
         public string BrokerName { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Cheque amount from Firm1 (only applicable when PaymentMethod is "Cheque")
+        /// </summary>
+        public decimal ChequeAmountFirm1 { get; set; }
+        
+        /// <summary>
+        /// Cheque amount from Firm2 (only applicable when PaymentMethod is "Cheque")
+        /// </summary>
+        public decimal ChequeAmountFirm2 { get; set; }
     }
 }

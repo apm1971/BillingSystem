@@ -129,6 +129,11 @@ namespace SaleBillSystem.NET.Forms
 
             dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
             txtPaymentDate.TextChanged += TxtPaymentDate_TextChanged;
+            cmbPaymentMethod.SelectedIndexChanged += CmbPaymentMethod_SelectedIndexChanged;
+            
+            // Add event handlers for cheque amount fields
+            txtChequeAmountFirm1.TextChanged += TxtChequeAmount_TextChanged;
+            txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
         }
 
         private void ClearForm()
@@ -154,6 +159,11 @@ namespace SaleBillSystem.NET.Forms
             txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
             cmbPaymentMethod.SelectedIndex = 0;
             txtReference.Clear();
+            
+            // Reset cheque amount fields
+            txtChequeAmountFirm1.Text = "0.00";
+            txtChequeAmountFirm2.Text = "0.00";
+            pnlChequeDetails.Visible = false;
 
             // Make all fields editable by default
             SetFieldsEditable(true);
@@ -388,7 +398,7 @@ namespace SaleBillSystem.NET.Forms
             lblDiscountValue.Text = $"Earned Discount: ₹{totalDiscount:N2}";
             lblInterestValue.Text = $"Accrued Interest: ₹{totalInterest:N2}";
             lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
-            lblFinalAmount.Text = $"Final Amount Due: ₹{totalAmountDue:N2}";
+            lblFinalAmount.Text = $"Amount Due: ₹{totalAmountDue:N2}";
         }
 
         private void BtnAutoAllocate_Click(object? sender, EventArgs e)
@@ -538,8 +548,32 @@ namespace SaleBillSystem.NET.Forms
                         TotalAmountPaid = totalPaymentAmount,
                         PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
                         Reference = txtReference.Text,
-                        CompanyID = 1 // Replace with Program.ActiveCompany.CompanyID
+                        CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
+                        ChequeAmountFirm1 = 0,
+                        ChequeAmountFirm2 = 0
                     };
+                    
+                    // If payment method is Cheque, get the firm amounts
+                    if (paymentMaster.PaymentMethod == "Cheque")
+                    {
+                        if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount))
+                        {
+                            paymentMaster.ChequeAmountFirm1 = firm1Amount;
+                        }
+                        
+                        if (decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+                        {
+                            paymentMaster.ChequeAmountFirm2 = firm2Amount;
+                        }
+                        
+                        // Validate that the sum matches the total payment amount
+                        if (Math.Abs((paymentMaster.ChequeAmountFirm1 + paymentMaster.ChequeAmountFirm2) - totalPaymentAmount) > 0.01m)
+                        {
+                            MessageBox.Show("The sum of Firm 1 and Firm 2 amounts must equal the total payment amount.", 
+                                "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
                     int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
 
 
@@ -798,6 +832,43 @@ namespace SaleBillSystem.NET.Forms
                 txtPaymentDate.Focus();
                 return false;
             }
+            
+            // Check if payment method is Cheque and validate firm amounts
+            string paymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
+            if (paymentMethod == "Cheque")
+            {
+                if (!decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount) || firm1Amount < 0)
+                {
+                    MessageBox.Show("Firm 1 cheque amount is invalid.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtChequeAmountFirm1.Focus();
+                    return false;
+                }
+                
+                if (!decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount) || firm2Amount < 0)
+                {
+                    MessageBox.Show("Firm 2 cheque amount is invalid.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtChequeAmountFirm2.Focus();
+                    return false;
+                }
+                
+                // Verify that at least one firm amount is greater than zero
+                if (firm1Amount == 0 && firm2Amount == 0)
+                {
+                    MessageBox.Show("At least one firm cheque amount must be greater than zero.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtChequeAmountFirm1.Focus();
+                    return false;
+                }
+                
+                // Verify that the sum matches the total payment amount
+                if (Math.Abs((firm1Amount + firm2Amount) - paymentAmount) > 0.01m)
+                {
+                    MessageBox.Show("The sum of Firm 1 and Firm 2 amounts must equal the total payment amount.", 
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtChequeAmountFirm1.Focus();
+                    return false;
+                }
+            }
+            
             return true;
         }
 
@@ -854,9 +925,25 @@ namespace SaleBillSystem.NET.Forms
 
         }
 
-        private void cmbPaymentMethod_SelectedIndexChanged(object sender, EventArgs e)
+        private void CmbPaymentMethod_SelectedIndexChanged(object sender, EventArgs e)
         {
-
+            string selectedMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
+            
+            // Show/hide the cheque details panel based on payment method
+            pnlChequeDetails.Visible = selectedMethod == "Cheque";
+            
+            // If switching to Cash, reset the cheque amounts
+            if (selectedMethod == "Cash")
+            {
+                txtChequeAmountFirm1.Text = "0.00";
+                txtChequeAmountFirm2.Text = "0.00";
+            }
+            
+            // If switching to Cheque, set focus to the first firm amount field
+            if (selectedMethod == "Cheque")
+            {
+                txtChequeAmountFirm1.Focus();
+            }
         }
 
         private void gbReconciliation_Enter(object sender, EventArgs e)
@@ -867,6 +954,21 @@ namespace SaleBillSystem.NET.Forms
         private void btnCalculate_Click_2(object sender, EventArgs e)
         {
 
+        }
+        
+        private void TxtChequeAmount_TextChanged(object sender, EventArgs e)
+        {
+            // Only process if payment method is Cheque
+            if (cmbPaymentMethod.SelectedItem?.ToString() != "Cheque")
+                return;
+                
+            // Calculate the total of the two firm amounts
+            if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount) && 
+                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+            {
+                decimal totalChequeAmount = firm1Amount + firm2Amount;
+                txtPaymentAmount.Text = totalChequeAmount.ToString("F2");
+            }
         }
     }
 }

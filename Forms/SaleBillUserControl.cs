@@ -369,7 +369,10 @@ namespace SaleBillSystem.NET.Forms
 {
     _currentBill = new Bill();
     txtBillNo.Text = BillService.GenerateNewBillNumber();
-    txtBillDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
+    // txtBillDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
+    DateTime? lastBillDate = BillService.GetLastBillDate();
+    txtBillDate.Text = lastBillDate?.ToString("dd-MM-yyyy") ?? DateTime.Now.ToString("dd-MM-yyyy");
+    
     cmbParty.SelectedIndex = -1;
     cmbBroker.SelectedIndex = -1;
     lblPartyDetails.Text = "Party details will appear here";

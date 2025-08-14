@@ -339,7 +339,25 @@ namespace SaleBillSystem.NET.Data
                 return $"BILL-{DateTime.Now:yyyyMMdd}-{DateTime.Now:HHmmss}";
             }
         }
-
+        public static DateTime? GetLastBillDate()
+        {
+            try
+            {
+                string sql = "SELECT TOP 1 BillDate FROM BillMaster ORDER BY BillID DESC";
+                object result = DatabaseManager.ExecuteScalar(sql);
+                
+                if (result != null && result != DBNull.Value)
+                {
+                    return Convert.ToDateTime(result);
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting last bill date: {ex.Message}");
+                return null;
+            }
+        }
         #region == Helper Methods ==
 
         public static List<BillItem> GetBillDetails(int billId)

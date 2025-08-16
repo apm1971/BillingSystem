@@ -29,6 +29,67 @@ namespace SaleBillSystem.NET
             // Update database schema to add any missing columns
             DatabaseManager.UpdateDatabaseSchema();
 
+            // Fix CompanyID issues for existing data (runs automatically at startup)
+            try
+            {
+                DatabaseManager.UpdateAllCompanyIDsToOne();
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't stop the application from starting
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not update CompanyID fields: {ex.Message}");
+            }
+
+            // Set the active company to CompanyID = 1 so all services can find the data
+            try
+            {
+                // Load the existing company with ID = 1 from the database
+                using (var conn = DatabaseManager.GetConnection())
+                {
+                    conn.Open();
+                    string sql = "SELECT CompanyID, CompanyName, Address, Phone FROM CompanyMaster WHERE CompanyID = 1";
+                    using (var cmd = new System.Data.OleDb.OleDbCommand(sql, conn))
+                    {
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                Program.ActiveCompany = new Company
+                                {
+                                    CompanyID = Convert.ToInt32(reader["CompanyID"]),
+                                    CompanyName = reader["CompanyName"].ToString(),
+                                    Address = reader["Address"].ToString(),
+                                    Phone = reader["Phone"].ToString()
+                                };
+                            }
+                            else
+                            {
+                                // Fallback: create default company if none exists
+                                Program.ActiveCompany = new Company
+                                {
+                                    CompanyID = 1,
+                                    CompanyName = "Default Company",
+                                    Address = "Default Address",
+                                    Phone = "Default Phone"
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not set active company: {ex.Message}");
+                // Fallback: create default company if database access fails
+                Program.ActiveCompany = new Company
+                {
+                    CompanyID = 1,
+                    CompanyName = "Default Company",
+                    Address = "Default Address",
+                    Phone = "Default Phone"
+                };
+            }
+
             // Start the application with the main form, which will handle the login process internally.
             Application.Run(new MainForm());
         }

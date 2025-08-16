@@ -117,7 +117,7 @@ namespace SaleBillSystem.NET.Forms
             var totalApplied = _paymentTrace.Sum(t => t.AppliedAmount);
             var lblSummary = new Label
             {
-                Text = $"Total Applied: ₹{totalApplied:N2} | Total Transactions: {_paymentTrace.Count}",
+                Text = $"Total Applied: ₹{Math.Round(totalApplied):N0} | Total Transactions: {_paymentTrace.Count}",
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 Location = new Point(20, 510),
                 AutoSize = true
@@ -250,7 +250,7 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine($"<div><strong>Payment ID:</strong> {payment.PaymentID}</div>");
             sb.AppendLine($"<div><strong>Date:</strong> {payment.PaymentDate:dd-MMM-yyyy}</div>");
             sb.AppendLine($"<div><strong>Method:</strong> {payment.PaymentMethod}</div>");
-            sb.AppendLine($"<div><strong>Amount:</strong> ₹{payment.TotalAmountPaid:N2}</div>");
+            sb.AppendLine($"<div><strong>Amount:</strong> ₹{Math.Round(payment.TotalAmountPaid):N0}</div>");
             
             if (!string.IsNullOrEmpty(payment.Reference))
             {
@@ -264,11 +264,11 @@ namespace SaleBillSystem.NET.Forms
                 sb.AppendLine("<div style='margin-top: 2px;'>");
                 if (payment.ChequeAmountFirm1 > 0)
                 {
-                    sb.AppendLine($"<span style='margin-right: 10px;'><strong>Firm 1:</strong> ₹{payment.ChequeAmountFirm1:N2}</span>");
+                    sb.AppendLine($"<span style='margin-right: 10px;'><strong>Firm 1:</strong> ₹{Math.Round(payment.ChequeAmountFirm1):N0}</span>");
                 }
                 if (payment.ChequeAmountFirm2 > 0)
                 {
-                    sb.AppendLine($"<span><strong>Firm 2:</strong> ₹{payment.ChequeAmountFirm2:N2}</span>");
+                    sb.AppendLine($"<span><strong>Firm 2:</strong> ₹{Math.Round(payment.ChequeAmountFirm2):N0}</span>");
                 }
                 sb.AppendLine("</div>");
             }
@@ -280,7 +280,7 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine("<div class='section'>");
             sb.AppendLine("<h3>Bill Details</h3>");
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Party</th><th>Date</th><th class='text-right'>Amount (₹)</th></tr>");
+            sb.AppendLine("<tr><th>Broker</th><th>Party</th><th>Date</th><th class='text-right'>Amount (₹)</th></tr>");
             
             decimal totalBillAmount = 0;
             decimal totalPreviousCash = 0;
@@ -295,15 +295,15 @@ namespace SaleBillSystem.NET.Forms
                 totalBillAmount += bill.BillAmount;
                 
                 // Get previous payments by method for this bill
-                Dictionary<string, decimal> billPreviousPayments = new Dictionary<string, decimal>();
+                Dictionary<string, List<PreviousPaymentInfo>> billPreviousPayments = new Dictionary<string, List<PreviousPaymentInfo>>();
                 if (previousPayments.ContainsKey(bill.BillID.Value))
                 {
                     billPreviousPayments = previousPayments[bill.BillID.Value];
                 }
                 
-                // Calculate previous payment totals by method
-                decimal previousCash = billPreviousPayments.ContainsKey("Cash") ? billPreviousPayments["Cash"] : 0;
-                decimal previousCheque = billPreviousPayments.ContainsKey("Cheque") ? billPreviousPayments["Cheque"] : 0;
+                // Calculate previous payment totals by method safely
+                decimal previousCash = billPreviousPayments.ContainsKey("Cash") ? billPreviousPayments["Cash"].Sum(p => p.Amount) : 0;
+                decimal previousCheque = billPreviousPayments.ContainsKey("Cheque") ? billPreviousPayments["Cheque"].Sum(p => p.Amount) : 0;
                 
                 totalPreviousCash += previousCash;
                 totalPreviousCheque += previousCheque;
@@ -322,16 +322,16 @@ namespace SaleBillSystem.NET.Forms
                 string dateStr = bill.BillDate?.ToString("dd-MMM-yy") ?? "N/A";
                 
                 sb.AppendLine("<tr>");
-                sb.AppendLine($"<td>{bill.BillNo}</td>");
+                sb.AppendLine($"<td>{brokerName}</td>");
                 sb.AppendLine($"<td>{partyName}</td>");
                 sb.AppendLine($"<td>{dateStr}</td>");
-                sb.AppendLine($"<td class='text-right'>{bill.BillAmount:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>{Math.Round(bill.BillAmount):N0}</td>");
                 sb.AppendLine("</tr>");
             }
             
             sb.AppendLine("<tr class='total-row'>");
             sb.AppendLine("<td colspan='3'><strong>Total</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{totalBillAmount:N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{Math.Round(totalBillAmount):N0}</strong></td>");
             sb.AppendLine("</tr>");
             sb.AppendLine("</table>");
             sb.AppendLine("</div>");
@@ -342,7 +342,7 @@ namespace SaleBillSystem.NET.Forms
             
             // --- Combined Previous Payments Table ---
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Bill No</th><th>Method</th><th class='text-right'>Amount (₹)</th></tr>");
+            sb.AppendLine("<tr><th>Broker</th><th>Method</th><th>Date</th><th class='text-right'>Amount (₹)</th></tr>");
             
             // First add cash payments
             foreach (var billGroup in billGroups)
@@ -351,20 +351,30 @@ namespace SaleBillSystem.NET.Forms
                 if (!bill.BillID.HasValue) continue;
                 
                 // Check for cash payments
-                decimal cashAmount = 0;
                 if (previousPayments.ContainsKey(bill.BillID.Value) && 
                     previousPayments[bill.BillID.Value].ContainsKey("Cash"))
                 {
-                    cashAmount = previousPayments[bill.BillID.Value]["Cash"];
-                }
-                
-                if (cashAmount > 0)
-                {
-                    sb.AppendLine("<tr>");
-                    sb.AppendLine($"<td>{bill.BillNo}</td>");
-                    sb.AppendLine($"<td>Cash</td>");
-                    sb.AppendLine($"<td class='text-right'>{cashAmount:N2}</td>");
-                    sb.AppendLine("</tr>");
+                    var cashPayments = previousPayments[bill.BillID.Value]["Cash"];
+                    foreach (var cashPayment in cashPayments)
+                    {
+                        if (cashPayment.Amount > 0)
+                        {
+                            // Get broker information for this bill
+                            string brokerName = "";
+                            if (billDetails.ContainsKey(bill.BillID.Value))
+                            {
+                                var detail = billDetails[bill.BillID.Value];
+                                brokerName = detail.BrokerName;
+                            }
+                            
+                            sb.AppendLine("<tr>");
+                            sb.AppendLine($"<td>{brokerName}</td>");
+                            sb.AppendLine($"<td>Cash</td>");
+                            sb.AppendLine($"<td>{cashPayment.PaymentDate:dd-MMM-yy}</td>");
+                            sb.AppendLine($"<td class='text-right'>{Math.Round(cashPayment.Amount):N0}</td>");
+                            sb.AppendLine("</tr>");
+                        }
+                    }
                 }
             }
             
@@ -375,45 +385,51 @@ namespace SaleBillSystem.NET.Forms
                 if (!bill.BillID.HasValue) continue;
                 
                 // Check for cheque payments
-                decimal chequeAmount = 0;
                 if (previousPayments.ContainsKey(bill.BillID.Value) && 
                     previousPayments[bill.BillID.Value].ContainsKey("Cheque"))
                 {
-                    chequeAmount = previousPayments[bill.BillID.Value]["Cheque"];
-                }
-                
-                // Get firm amounts for this bill's previous payments
-                decimal firm1Amount = 0;
-                decimal firm2Amount = 0;
-                
-                // Only try to get firm amounts if there are cheque payments for this bill
-                if (chequeAmount > 0)
-                {
-                    try
+                    var chequePayments = previousPayments[bill.BillID.Value]["Cheque"];
+                    foreach (var chequePayment in chequePayments)
                     {
-                        // Try to get the firm amounts from the payment records
-                        GetChequeAmountsByFirm(bill.BillID.Value, out firm1Amount, out firm2Amount);
+                        if (chequePayment.Amount > 0)
+                        {
+                            // Get firm amounts for this bill's previous payments
+                            decimal firm1Amount = 0;
+                            decimal firm2Amount = 0;
+                            
+                            try
+                            {
+                                // Try to get the firm amounts from the payment records
+                                GetChequeAmountsByFirm(bill.BillID.Value, out firm1Amount, out firm2Amount);
+                            }
+                            catch (Exception ex)
+                            {
+                                // If there's an error, just log it and continue with zeros
+                                System.Diagnostics.Debug.WriteLine($"Error getting firm amounts: {ex.Message}");
+                            }
+                            
+                            string firmDetails = "";
+                            if (firm1Amount > 0 || firm2Amount > 0)
+                            {
+                                firmDetails = $" (F1: ₹{Math.Round(firm1Amount):N0}, F2: ₹{Math.Round(firm2Amount):N0})";
+                            }
+                            
+                            // Get broker information for this bill
+                            string brokerName = "";
+                            if (billDetails.ContainsKey(bill.BillID.Value))
+                            {
+                                var detail = billDetails[bill.BillID.Value];
+                                brokerName = detail.BrokerName;
+                            }
+                            
+                            sb.AppendLine("<tr>");
+                            sb.AppendLine($"<td>{brokerName}</td>");
+                            sb.AppendLine($"<td>Cheque{firmDetails}</td>");
+                            sb.AppendLine($"<td>{chequePayment.PaymentDate:dd-MMM-yy}</td>");
+                            sb.AppendLine($"<td class='text-right'>{Math.Round(chequePayment.Amount):N0}</td>");
+                            sb.AppendLine("</tr>");
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        // If there's an error, just log it and continue with zeros
-                        System.Diagnostics.Debug.WriteLine($"Error getting firm amounts: {ex.Message}");
-                    }
-                }
-                
-                if (chequeAmount > 0)
-                {
-                    string firmDetails = "";
-                    if (firm1Amount > 0 || firm2Amount > 0)
-                    {
-                        firmDetails = $" (F1: ₹{firm1Amount:N2}, F2: ₹{firm2Amount:N2})";
-                    }
-                    
-                    sb.AppendLine("<tr>");
-                    sb.AppendLine($"<td>{bill.BillNo}</td>");
-                    sb.AppendLine($"<td>Cheque{firmDetails}</td>");
-                    sb.AppendLine($"<td class='text-right'>{chequeAmount:N2}</td>");
-                    sb.AppendLine("</tr>");
                 }
             }
             
@@ -421,44 +437,41 @@ namespace SaleBillSystem.NET.Forms
             decimal totalFirm1 = 0;
             decimal totalFirm2 = 0;
             
-            // Only calculate firm amounts if there are previous cheque payments
-            if (totalPreviousCheque > 0)
+            // Calculate totals for previous payments
+            foreach (var billGroup in billGroups)
             {
-                foreach (var billId in previousPayments.Keys)
+                var bill = billGroup.First();
+                if (!bill.BillID.HasValue) continue;
+                
+                // Only process bills that have cheque payments
+                if (previousPayments.ContainsKey(bill.BillID.Value) && previousPayments[bill.BillID.Value].ContainsKey("Cheque") && previousPayments[bill.BillID.Value]["Cheque"].Any(p => p.Amount > 0))
                 {
-                    // Only process bills that have cheque payments
-                    if (previousPayments[billId].ContainsKey("Cheque") && previousPayments[billId]["Cheque"] > 0)
-                    {
-                        GetChequeAmountsByFirm(billId, out decimal firm1, out decimal firm2);
-                        totalFirm1 += firm1;
-                        totalFirm2 += firm2;
-                    }
+                    GetChequeAmountsByFirm(bill.BillID.Value, out decimal firm1, out decimal firm2);
+                    totalFirm1 += firm1;
+                    totalFirm2 += firm2;
                 }
             }
             
             // Add totals row
-            sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='2'><strong>Total</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{(totalPreviousCash + totalPreviousCheque):N2}</strong></td>");
-            sb.AppendLine("</tr>");
-            
-            // Add firm details if there are cheque payments
-            if (totalPreviousCheque > 0 && (totalFirm1 > 0 || totalFirm2 > 0))
+            if (totalPreviousCash > 0 || totalPreviousCheque > 0)
             {
-                sb.AppendLine("<tr>");
-                sb.AppendLine("<td colspan='2'><em>Cheque Details</em></td>");
-                sb.AppendLine($"<td class='text-right'><em>F1: ₹{totalFirm1:N2}, F2: ₹{totalFirm2:N2}</em></td>");
+                sb.AppendLine("<tr class='total-row'>");
+                sb.AppendLine("<td colspan='3'><strong>Total Previous Payments</strong></td>");
+                sb.AppendLine($"<td class='text-right'><strong>₹{Math.Round(totalPreviousCash + totalPreviousCheque):N0}</strong></td>");
                 sb.AppendLine("</tr>");
+                
+                // Add firm details if applicable
+                if (totalFirm1 > 0 || totalFirm2 > 0)
+                {
+                    sb.AppendLine("<tr class='total-row'>");
+                    sb.AppendLine("<td colspan='3'><em>Firm Breakdown</em></td>");
+                    sb.AppendLine($"<td class='text-right'><em>F1: ₹{Math.Round(totalFirm1):N0}, F2: ₹{Math.Round(totalFirm2):N0}</em></td>");
+                    sb.AppendLine("</tr>");
+                }
             }
             
             sb.AppendLine("</table>");
             sb.AppendLine("</div>"); // End section div
-
-            // --- Transactions Table ---
-            // sb.AppendLine("<div class='section'>");
-            // sb.AppendLine("<h3>Payment Application Details</h3>");
-            // sb.AppendLine("<table>");
-            // sb.AppendLine("<tr><th>Bill No</th><th>Party Name</th><th>Broker</th><th>Transaction Type</th><th class='text-right'>Amount (₹)</th><th>Description</th></tr>");
             
             // Calculate totals
             decimal totalPayment = paymentTrace.Where(t => t.TransactionType == "Payment").Sum(t => t.CreditAmount);
@@ -501,9 +514,8 @@ namespace SaleBillSystem.NET.Forms
                 }
                 
                 // sb.AppendLine("<tr>");
-                // sb.AppendLine($"<td>{entry.BillNo}</td>");
-                // sb.AppendLine($"<td>{partyName}</td>");
                 // sb.AppendLine($"<td>{brokerName}</td>");
+                // sb.AppendLine($"<td>{partyName}</td>");
                 // sb.AppendLine($"<td>{entry.TransactionType}</td>");
                 // sb.AppendLine($"<td class='text-right {amountClass}'>{amount:N2}</td>");
                 // sb.AppendLine($"<td>{entry.Description}</td>");
@@ -522,43 +534,46 @@ namespace SaleBillSystem.NET.Forms
             // Show Summary Calculation only if this is the final payment for all bills
             if (showFinalSettlement)
             {
-                decimal totalPreviousPayments = totalPreviousCash + totalPreviousCheque;
-                decimal netPayableAmount = totalBillAmount + totalInterest - totalDiscount - totalBrokerage - totalPreviousPayments;
+                decimal totalPreviousPayments = Math.Round(totalPreviousCash + totalPreviousCheque);
+                decimal netPayableAmount = Math.Round(totalBillAmount) + Math.Round(totalInterest) - Math.Round(totalDiscount) - Math.Round(totalBrokerage) - totalPreviousPayments;
                 
                 sb.AppendLine("<div class='summary-box'>");
                 sb.AppendLine("<h3>Payment Summary</h3>");
                 sb.AppendLine("<table>");
-                sb.AppendLine("<tr><td>Bill Amount</td><td class='text-right'>₹" + totalBillAmount.ToString("N2") + "</td></tr>");
+                sb.AppendLine("<tr><td>Bill Amount</td><td class='text-right'>₹" + Math.Round(totalBillAmount).ToString("N0") + "</td></tr>");
                 
                 // Combine previous payments into one line
                 if (totalPreviousCash > 0 || totalPreviousCheque > 0)
                 {
-                    sb.AppendLine("<tr><td>Previous Payments (-)</td><td class='text-right'>₹" + totalPreviousPayments.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Previous Payments (-)</td><td class='text-right'>₹" + Math.Round(totalPreviousPayments).ToString("N0") + "</td></tr>");
                 }
                 
                 // Only show interest if greater than zero
                 if (totalInterest > 0)
                 {
-                    sb.AppendLine("<tr><td>Interest (+)</td><td class='text-right'>₹" + totalInterest.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Interest (+)</td><td class='text-right'>₹" + Math.Round(totalInterest).ToString("N0") + "</td></tr>");
                 }
                 
                 // Only show discount if greater than zero
                 if (totalDiscount > 0)
                 {
-                    sb.AppendLine("<tr><td>Discount (-)</td><td class='text-right'>₹" + totalDiscount.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Discount (-)</td><td class='text-right'>₹" + Math.Round(totalDiscount).ToString("N0") + "</td></tr>");
                 }
                 
                 // Only show brokerage if greater than zero
                 if (totalBrokerage > 0)
                 {
-                    sb.AppendLine("<tr><td>Brokerage (-)</td><td class='text-right'>₹" + totalBrokerage.ToString("N2") + "</td></tr>");
+                    sb.AppendLine("<tr><td>Brokerage (-)</td><td class='text-right'>₹" + Math.Round(totalBrokerage).ToString("N0") + "</td></tr>");
                 }
                 
-                sb.AppendLine("<tr class='total-row'><td><strong>Net Amount</strong></td><td class='text-right'><strong>₹" + netPayableAmount.ToString("N2") + "</strong></td></tr>");
+                // Round the net payable amount
+                decimal roundedNetPayableAmount = Math.Round(netPayableAmount);
+                
+                sb.AppendLine("<tr class='total-row'><td><strong>Net Amount</strong></td><td class='text-right'><strong>₹" + roundedNetPayableAmount.ToString("N0") + "</strong></td></tr>");
                 sb.AppendLine("</table>");
                 
                 // Verify payment amounts match net payable - use a simpler indicator
-                if (Math.Abs(payment.TotalAmountPaid - netPayableAmount) < 0.01m)
+                if (Math.Round(payment.TotalAmountPaid) == roundedNetPayableAmount)
                 {
                     sb.AppendLine("<p style='color: green; font-size: 7pt; margin: 2px 0;'>✓ Payment matches net amount</p>");
                 }
@@ -605,8 +620,18 @@ namespace SaleBillSystem.NET.Forms
                 // Calculate total bill amount (bill original amount)
                 decimal billAmount = bill.BillAmount;
                 
-                // Get previous payments for this bill
-                decimal previousPayment = previousPayments.ContainsKey(bill.BillID.Value) ? previousPayments[bill.BillID.Value]["Cash"] + previousPayments[bill.BillID.Value]["Cheque"] : 0;
+                // Get previous payments for this bill safely
+                decimal previousPayment = 0;
+                if (previousPayments.ContainsKey(bill.BillID.Value))
+                {
+                    var methodDict = previousPayments[bill.BillID.Value];
+                    // Add Cash payments if present
+                    if (methodDict.ContainsKey("Cash")) 
+                        previousPayment += methodDict["Cash"].Sum(p => p.Amount);
+                    // Add Cheque payments if present
+                    if (methodDict.ContainsKey("Cheque"))
+                        previousPayment += methodDict["Cheque"].Sum(p => p.Amount);
+                }
                 
                 // Calculate payments applied to this bill in this payment
                 decimal currentPayment = billGroup.Where(t => t.TransactionType == "Payment").Sum(t => t.CreditAmount);
@@ -621,7 +646,7 @@ namespace SaleBillSystem.NET.Forms
                 
                 // Check if total payments (previous + current) covers the net payable amount
                 decimal totalPayments = previousPayment + currentPayment;
-                if (totalPayments < netPayable || Math.Abs(totalPayments - netPayable) > 0.01m)
+                if (Math.Round(totalPayments) != Math.Round(netPayable))
                 {
                     return false;
                 }
@@ -669,9 +694,9 @@ namespace SaleBillSystem.NET.Forms
         }
 
         // Helper method to get previous payments for each bill
-        private Dictionary<int, Dictionary<string, decimal>> GetPreviousPayments(List<PaymentTraceViewModel> currentPaymentTrace, int currentPaymentId)
+        private Dictionary<int, Dictionary<string, List<PreviousPaymentInfo>>> GetPreviousPayments(List<PaymentTraceViewModel> currentPaymentTrace, int currentPaymentId)
         {
-            var result = new Dictionary<int, Dictionary<string, decimal>>();
+            var result = new Dictionary<int, Dictionary<string, List<PreviousPaymentInfo>>>();
             
             // Get all bill IDs from the current payment trace
             var billIds = currentPaymentTrace
@@ -689,7 +714,7 @@ namespace SaleBillSystem.NET.Forms
                 {
                     // Get all transactions for this bill
                     string sql = @"
-                        SELECT TransactionID, PaymentID, TransactionType, DebitAmount, CreditAmount, PaymentMethod 
+                        SELECT TransactionID, PaymentID, TransactionType, DebitAmount, CreditAmount, PaymentMethod, TransactionDate 
                         FROM TransactionLedger 
                         WHERE BillID = ? AND TransactionType = 'Payment' AND PaymentID <> ?
                         ORDER BY TransactionDate";
@@ -702,24 +727,28 @@ namespace SaleBillSystem.NET.Forms
                     
                     DataTable dt = DatabaseManager.ExecuteQuery(sql, parameters);
                     
-                    Dictionary<string, decimal> paymentsByMethod = new Dictionary<string, decimal>();
+                    Dictionary<string, List<PreviousPaymentInfo>> paymentsByMethod = new Dictionary<string, List<PreviousPaymentInfo>>();
+                    // Initialize with empty lists for both payment methods
+                    paymentsByMethod["Cash"] = new List<PreviousPaymentInfo>();
+                    paymentsByMethod["Cheque"] = new List<PreviousPaymentInfo>();
                     
                     foreach (DataRow row in dt.Rows)
                     {
                         string paymentMethod = row["PaymentMethod"] != DBNull.Value ? row["PaymentMethod"].ToString() : "Cash";
                         decimal amount = Convert.ToDecimal(row["CreditAmount"]);
+                        DateTime paymentDate = Convert.ToDateTime(row["TransactionDate"]);
                         
                         // Default to "Cash" for empty payment methods
                         if (string.IsNullOrWhiteSpace(paymentMethod))
                             paymentMethod = "Cash";
                         
-                        // Initialize payment method in dictionary if not exists
-                        if (!paymentsByMethod.ContainsKey(paymentMethod))
+                        var paymentInfo = new PreviousPaymentInfo
                         {
-                            paymentsByMethod[paymentMethod] = 0;
-                        }
+                            Amount = amount,
+                            PaymentDate = paymentDate
+                        };
                         
-                        paymentsByMethod[paymentMethod] += amount;
+                        paymentsByMethod[paymentMethod].Add(paymentInfo);
                     }
                     
                     result[billId] = paymentsByMethod;
@@ -731,6 +760,13 @@ namespace SaleBillSystem.NET.Forms
             }
             
             return result;
+        }
+        
+        // Helper class to store previous payment information
+        private class PreviousPaymentInfo
+        {
+            public decimal Amount { get; set; }
+            public DateTime PaymentDate { get; set; }
         }
 
         // Helper method to fetch party and broker details for each bill

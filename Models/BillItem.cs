@@ -12,6 +12,9 @@ namespace SaleBillSystem.NET.Models
         public decimal Rate { get; set; }
         public decimal Amount { get; set; }
         public decimal Charges { get; set; }
+        public decimal SubQuantity { get; set; }  // Number of sub-quantity units (numeric value)
+        public string SubQuantityUnit { get; set; } = "";  // Sub-quantity unit description (from ItemMaster)
+        public decimal TotalCharges { get; set; }  // Total charges (SubQuantity * Charges)
         public decimal TotalAmount { get; set; }
         public int CompanyID { get; set; }
     }

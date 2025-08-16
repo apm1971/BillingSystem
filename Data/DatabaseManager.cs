@@ -398,6 +398,122 @@ namespace SaleBillSystem.NET.Data
                     conn.Open();
                 }
                 
+                // Check if ItemMaster table has SubQuantity column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 SubQuantity FROM ItemMaster", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE ItemMaster ADD COLUMN SubQuantity TEXT(50)", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                            System.Windows.Forms.MessageBox.Show(
+                                "Added SubQuantity field to ItemMaster table. This represents the sub-quantity unit type (e.g., bag, box).",
+                                "Database Update",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding SubQuantity column: {ex.Message}");
+                    }
+                }
+                
+                // Check if BillDetails table has SubQuantity column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 SubQuantity FROM BillDetails", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE BillDetails ADD COLUMN SubQuantity DOUBLE DEFAULT 0", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                            System.Windows.Forms.MessageBox.Show(
+                                "Added SubQuantity field to BillDetails table. This represents the number of sub-quantity units.",
+                                "Database Update",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding SubQuantity column to BillDetails: {ex.Message}");
+                    }
+                }
+
+                // Check if BillDetails table has SubQuantityUnit column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 SubQuantityUnit FROM BillDetails", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE BillDetails ADD COLUMN SubQuantityUnit TEXT(50)", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                            System.Windows.Forms.MessageBox.Show(
+                                "Added SubQuantityUnit field to BillDetails table. This represents the sub-quantity unit description (e.g., bag, box).",
+                                "Database Update",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding SubQuantityUnit column to BillDetails: {ex.Message}");
+                    }
+                }
+
+                // Check if BillDetails table has TotalCharges column
+                try
+                {
+                    using (var cmd = new OleDbCommand("SELECT TOP 1 TotalCharges FROM BillDetails", conn))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+                }
+                catch
+                {
+                    // Column doesn't exist, add it
+                    try
+                    {
+                        using (var cmd = new OleDbCommand("ALTER TABLE BillDetails ADD COLUMN TotalCharges CURRENCY DEFAULT 0", conn))
+                        {
+                            cmd.ExecuteNonQuery();
+                            System.Windows.Forms.MessageBox.Show(
+                                "Added TotalCharges field to BillDetails table. This represents the total charges (SubQuantity * Charges).",
+                                "Database Update",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding TotalCharges column to BillDetails: {ex.Message}");
+                    }
+                }
+                
                 // Check if BillDetails table has Charges column
                 try
                 {
@@ -463,217 +579,7 @@ namespace SaleBillSystem.NET.Data
             }
         }
 
-        // Create all necessary tables if they don't exist
-        public static void CreateTablesIfNeeded(OleDbConnection existingConn = null)
-        {
-            OleDbConnection conn = existingConn ?? GetConnection();
-            bool shouldCloseConn = existingConn == null;
-            
-            try
-            {
-                if (shouldCloseConn)
-                {
-                    conn.Open();
-                }
-                
-                // Check and create UserMaster table
-                var userTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "UserMaster" });
-                if (userTableInfo.Rows.Count == 0)
-                {
-                    // Create UserMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE UserMaster (
-                        UserID COUNTER PRIMARY KEY,
-                        Username TEXT(50) UNIQUE,
-                        PasswordHash TEXT(255),
-                        DisplayName TEXT(100),
-                        IsAdmin BIT,
-                        IsActive BIT,
-                        CreatedOn DATETIME,
-                        LastLogin DATETIME
-                    )");
-                }
-                
-                // Check and create CompanyMaster table
-                var companyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "CompanyMaster" });
-                if (companyTableInfo.Rows.Count == 0)
-                {
-                    // Create CompanyMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE CompanyMaster (
-                        CompanyID COUNTER PRIMARY KEY,
-                        CompanyName TEXT(255),
-                        PrintName TEXT(255),
-                        Address TEXT(255),
-                        City TEXT(100),
-                        FinancialYearStart DATETIME,
-                        FinancialYearEnd DATETIME,
-                        IsActive BIT,
-                        CreatedOn DATETIME
-                    )");
-                }
-                
-                // Check and create BrokerMaster table
-                var brokerTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BrokerMaster" });
-                if (brokerTableInfo.Rows.Count == 0)
-                {
-                    // Create BrokerMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE BrokerMaster (
-                        BrokerID COUNTER PRIMARY KEY,
-                        BrokerName TEXT(255),
-                        Phone TEXT(50),
-                        Email TEXT(100),
-                        CompanyID INTEGER
-                    )");
-                }
-                
-                // Check and create PartyMaster table
-                var partyTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PartyMaster" });
-                if (partyTableInfo.Rows.Count == 0)
-                {
-                    // Create PartyMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE PartyMaster (
-                        PartyID COUNTER PRIMARY KEY,
-                        PartyName TEXT(255),
-                        Address TEXT(255),
-                        City TEXT(100),
-                        Phone TEXT(50),
-                        Email TEXT(100),
-                        GSTNo TEXT(50),
-                        PAN TEXT(50),
-                        OpeningBalance CURRENCY,
-                        OpeningBalanceDate DATETIME,
-                        CreditDays INTEGER,
-                        BrokerID INTEGER,
-                        BrokerName TEXT(255),
-                        CompanyID INTEGER
-                    )");
-                }
-                
-                // Check and create ItemMaster table
-                var itemTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "ItemMaster" });
-                if (itemTableInfo.Rows.Count == 0)
-                {
-                    // Create ItemMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE ItemMaster (
-                        ItemID COUNTER PRIMARY KEY,
-                        ItemName TEXT(255),
-                        Unit TEXT(50),
-                        Rate CURRENCY,
-                        Charges CURRENCY,
-                        StockQuantity DOUBLE,
-                        CompanyID INTEGER
-                    )");
-                }
-                
-                // Check and create BillMaster table
-                var billTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillMaster" });
-                if (billTableInfo.Rows.Count == 0)
-                {
-                    // Create BillMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE BillMaster (
-                        BillID COUNTER PRIMARY KEY,
-                        BillNo TEXT(50),
-                        BillDate DATETIME,
-                        DueDate DATETIME,
-                        PartyID INTEGER,
-                        PartyName TEXT(255),
-                        BrokerID INTEGER,
-                        BrokerName TEXT(255),
-                        TotalAmount CURRENCY,
-                        TotalCharges CURRENCY,
-                        NetAmount CURRENCY,
-                        ChequeAmountFirm1 CURRENCY DEFAULT 0,
-                        ChequeAmountFirm2 CURRENCY DEFAULT 0,
-                        Notes MEMO,
-                        CompanyID INTEGER
-                    )");
-                }
-                
-                // Check and create BillDetails table
-                var billDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "BillDetails" });
-                if (billDetailsTableInfo.Rows.Count == 0)
-                {
-                    // Create BillDetails table
-                    ExecuteNonQuery(conn, @"CREATE TABLE BillDetails (
-                        BillDetailID COUNTER PRIMARY KEY,
-                        BillID INTEGER,
-                        ItemID INTEGER,
-                        ItemName TEXT(255),
-                        Quantity DOUBLE,
-                        Rate CURRENCY,
-                        Amount CURRENCY,
-                        Charges CURRENCY,
-                        TotalAmount CURRENCY
-                    )");
-                }
-                
-                // Check and create PaymentMaster table
-                var paymentTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentMaster" });
-                if (paymentTableInfo.Rows.Count == 0)
-                {
-                    // Create PaymentMaster table
-                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
-                        PaymentID COUNTER PRIMARY KEY,
-                        PaymentDate DATETIME,
-                        PaymentAmount CURRENCY,
-                        PaymentMethod TEXT(50),
-                        Reference TEXT(100),
-                        Notes MEMO,
-                        CompanyID INTEGER
-                    )");
-                }
-                
-                // Check and create PaymentDetails table
-                var paymentDetailsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "PaymentDetails" });
-                if (paymentDetailsTableInfo.Rows.Count == 0)
-                {
-                    // Create PaymentDetails table
-                    ExecuteNonQuery(conn, @"CREATE TABLE PaymentDetails (
-                        PaymentDetailID COUNTER PRIMARY KEY,
-                        PaymentID INTEGER,
-                        BillID INTEGER,
-                        PreviousPaid CURRENCY,
-                        BalanceBefore CURRENCY,
-                        AllocatedAmount CURRENCY,
-                        BalanceAfter CURRENCY
-                    )");
-                }
 
-                // Check and create Settings table
-                var settingsTableInfo = GetSchema(conn, "Tables", new string[] { null, null, "Settings" });
-                if (settingsTableInfo.Rows.Count == 0)
-                {
-                    // Create Settings table
-                    ExecuteNonQuery(conn, @"CREATE TABLE Settings (
-                        SettingID COUNTER PRIMARY KEY,
-                        SettingKey TEXT(100) UNIQUE,
-                        SettingValue TEXT(255),
-                        Description TEXT(255)
-                    )");
-
-                    // Insert default settings
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('InterestRate', '12.0', 'Annual interest rate percentage for overdue bills')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('DiscountRate', '1.0', 'Discount rate percentage for early payment')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('DefaultCreditDays', 'Your Company Name', 'Company name for reports')");
-                    ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES 
-                        ('CompanyAddress', 'Your Company Address', 'Company address for reports')");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Windows.Forms.MessageBox.Show($"Error creating database tables: {ex.Message}", "Database Error",
-                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (shouldCloseConn && conn.State == ConnectionState.Open)
-                {
-                    conn.Close();
-                }
-            }
-        }
 
         // Get database schema information
         private static DataTable GetSchema(OleDbConnection conn, string collectionName, string[] restrictionValues)
@@ -877,156 +783,168 @@ namespace SaleBillSystem.NET.Data
         /// </summary>
         /// <param name="backupPath">Optional custom backup path. If null, uses default backup directory.</param>
         /// <returns>True if backup was successful, false otherwise</returns>
-        public static bool BackupDatabase(string backupPath = null)
-        {
-            try
-            {
-                // Get current database path
-                string currentDbPath = CustomDatabasePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
-                
-                if (!File.Exists(currentDbPath))
-                {
-                    throw new FileNotFoundException("Current database file not found.", currentDbPath);
-                }
-
-                // Determine backup path
-                if (string.IsNullOrEmpty(backupPath))
-                {
-                    // Create backup directory in user's documents folder
-                    string backupDir = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                        "SaleBillSystem",
-                        "Backups"
-                    );
-                    
-                    if (!Directory.Exists(backupDir))
-                    {
-                        Directory.CreateDirectory(backupDir);
-                    }
-
-                    // Generate backup filename with timestamp
-                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    string backupFileName = $"SaleSystem_Backup_{timestamp}.accdb";
-                    backupPath = Path.Combine(backupDir, backupFileName);
-                }
-
-                // Ensure backup directory exists
-                string backupDirPath = Path.GetDirectoryName(backupPath);
-                if (!Directory.Exists(backupDirPath))
-                {
-                    Directory.CreateDirectory(backupDirPath);
-                }
-
-                // Close any existing connections to the database
-                // This is important for Access databases to ensure no locks
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-                // Copy the database file
-                File.Copy(currentDbPath, backupPath, true);
-
-                // Verify the backup was created successfully
-                if (!File.Exists(backupPath))
-                {
-                    throw new Exception("Backup file was not created successfully.");
-                }
-
-                // Test the backup by trying to open it
-                string backupConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={backupPath};Persist Security Info=False;";
-                using (OleDbConnection testConn = new OleDbConnection(backupConnectionString))
-                {
-                    testConn.Open();
-                    // If we can open the connection, the backup is valid
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Backup failed: {ex.Message}", ex);
-            }
-        }
 
         /// <summary>
         /// Gets a list of available backups
         /// </summary>
         /// <returns>List of backup file paths</returns>
-        public static List<string> GetAvailableBackups()
-        {
-            List<string> backups = new List<string>();
-            
-            try
-            {
-                string backupDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "SaleBillSystem",
-                    "Backups"
-                );
 
-                if (Directory.Exists(backupDir))
-                {
-                    string[] backupFiles = Directory.GetFiles(backupDir, "SaleSystem_Backup_*.accdb");
-                    backups.AddRange(backupFiles.OrderByDescending(f => File.GetLastWriteTime(f)));
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error getting backup list: {ex.Message}", ex);
-            }
-
-            return backups;
-        }
 
         /// <summary>
         /// Restores a database from a backup file
         /// </summary>
         /// <param name="backupPath">Path to the backup file</param>
         /// <returns>True if restore was successful, false otherwise</returns>
-        public static bool RestoreDatabase(string backupPath)
+
+        /// <summary>
+        /// Updates all existing records in various tables to set CompanyID = 1.
+        /// This is useful for migrating older data that doesn't have proper CompanyID values.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool UpdateAllCompanyIDsToOne()
         {
             try
             {
-                if (!File.Exists(backupPath))
+                using (OleDbConnection conn = GetConnection())
                 {
-                    throw new FileNotFoundException("Backup file not found.", backupPath);
+                    conn.Open();
+                    
+                    // List of tables to update
+                    var tablesToUpdate = new[]
+                    {
+                        "BrokerMaster",
+                        "PartyMaster", 
+                        "ItemMaster",
+                        "BillMaster",
+                        "BillDetails",
+                        "PaymentMaster",
+                        "TransactionLedger"
+                    };
+                    
+                    int totalRowsUpdated = 0;
+                    
+                    foreach (string tableName in tablesToUpdate)
+                    {
+                        try
+                        {
+                            // Check if table exists and has CompanyID column
+                            DataTable columns = conn.GetSchema("Columns", new string[] { null, null, tableName, "CompanyID" });
+                            if (columns.Rows.Count == 0)
+                            {
+                                // Table doesn't have CompanyID column, skip it
+                                continue;
+                            }
+                            
+                            // Update CompanyID to 1 where it's 0 or NULL
+                            string updateSql = $"UPDATE {tableName} SET CompanyID = 1 WHERE CompanyID = 0 OR CompanyID IS NULL";
+                            using (OleDbCommand cmd = new OleDbCommand(updateSql, conn))
+                            {
+                                int rowsAffected = cmd.ExecuteNonQuery();
+                                totalRowsUpdated += rowsAffected;
+                                
+                                // Log the update
+                                System.Diagnostics.Debug.WriteLine($"Updated {rowsAffected} rows in {tableName}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error but continue with other tables
+                            System.Diagnostics.Debug.WriteLine($"Error updating {tableName}: {ex.Message}");
+                        }
+                    }
+                    
+                    System.Windows.Forms.MessageBox.Show(
+                        $"Successfully updated CompanyID fields in {tablesToUpdate.Length} tables.\nTotal rows updated: {totalRowsUpdated}", 
+                        "CompanyID Update Complete", 
+                        System.Windows.Forms.MessageBoxButtons.OK, 
+                        System.Windows.Forms.MessageBoxIcon.Information);
+                    
+                    return true;
                 }
-
-                // Get current database path
-                string currentDbPath = CustomDatabasePath ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
-
-                // Test the backup file first
-                string backupConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={backupPath};Persist Security Info=False;";
-                using (OleDbConnection testConn = new OleDbConnection(backupConnectionString))
-                {
-                    testConn.Open();
-                    // If we can open the connection, the backup is valid
-                }
-
-                // Close any existing connections
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-                // Create a backup of the current database before restoring
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string preRestoreBackup = currentDbPath.Replace(".accdb", $"_BeforeRestore_{timestamp}.accdb");
-                
-                if (File.Exists(currentDbPath))
-                {
-                    File.Copy(currentDbPath, preRestoreBackup, true);
-                }
-
-                // Copy the backup to the current database location
-                File.Copy(backupPath, currentDbPath, true);
-
-                // Update the connection string to use the restored database
-                _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={currentDbPath};Persist Security Info=False;";
-
-                return true;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Restore failed: {ex.Message}", ex);
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error updating CompanyID fields: {ex.Message}", 
+                    "Database Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
             }
+        }
+
+        /// <summary>
+        /// Gets a summary of CompanyID values across all tables for diagnostic purposes.
+        /// </summary>
+        /// <returns>Dictionary with table names and their CompanyID distribution</returns>
+        public static Dictionary<string, Dictionary<int, int>> GetCompanyIDSummary()
+        {
+            var summary = new Dictionary<string, Dictionary<int, int>>();
+            
+            try
+            {
+                using (OleDbConnection conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    var tablesToCheck = new[]
+                    {
+                        "BrokerMaster",
+                        "PartyMaster", 
+                        "ItemMaster",
+                        "BillMaster",
+                        "BillDetails",
+                        "PaymentMaster",
+                        "TransactionLedger"
+                    };
+                    
+                    foreach (string tableName in tablesToCheck)
+                    {
+                        try
+                        {
+                            // Check if table exists and has CompanyID column
+                            DataTable columns = conn.GetSchema("Columns", new string[] { null, null, tableName, "CompanyID" });
+                            if (columns.Rows.Count == 0)
+                            {
+                                continue;
+                            }
+                            
+                            // Get CompanyID distribution
+                            string countSql = $"SELECT CompanyID, COUNT(*) as Count FROM {tableName} GROUP BY CompanyID";
+                            using (OleDbCommand cmd = new OleDbCommand(countSql, conn))
+                            {
+                                using (OleDbDataReader reader = cmd.ExecuteReader())
+                                {
+                                    var tableSummary = new Dictionary<int, int>();
+                                    
+                                    while (reader.Read())
+                                    {
+                                        int companyId = Convert.ToInt32(reader["CompanyID"]);
+                                        int count = Convert.ToInt32(reader["Count"]);
+                                        tableSummary[companyId] = count;
+                                    }
+                                    
+                                    summary[tableName] = tableSummary;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error checking {tableName}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error getting CompanyID summary: {ex.Message}", 
+                    "Database Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Error);
+            }
+            
+            return summary;
         }
     }
 } 

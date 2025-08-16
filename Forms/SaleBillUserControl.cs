@@ -110,7 +110,10 @@ namespace SaleBillSystem.NET.Forms
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "Quantity", HeaderText = "Quantity", DataPropertyName = "Quantity", Width = 80, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } });
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "Rate", HeaderText = "Rate", DataPropertyName = "Rate", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 100 });
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "Amount", HeaderText = "Amount", DataPropertyName = "Amount", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray }, Width = 120, ReadOnly = true });
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "SubQuantity", HeaderText = "Sub-Qty", DataPropertyName = "SubQuantity", DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 80 });
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "SubQuantityUnit", HeaderText = "Unit Type", DataPropertyName = "SubQuantityUnit", Width = 80, ReadOnly = true });
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "Charges", HeaderText = "Charges", DataPropertyName = "Charges", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }, Width = 80 });
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "TotalCharges", HeaderText = "Total Charges", DataPropertyName = "TotalCharges", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray }, Width = 120, ReadOnly = true });
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn { Name = "TotalAmount", HeaderText = "Total", DataPropertyName = "TotalAmount", DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightGray }, AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true });
         }
 
@@ -752,6 +755,8 @@ private void DeleteCurrentRow()
                         billItem.ItemName = selectedItem.ItemName;
                         billItem.Rate = selectedItem.DefaultRate;
                         billItem.Charges = selectedItem.Charges;
+                        billItem.SubQuantityUnit = selectedItem.SubQuantity; // Copy the text description from Item to BillItem.SubQuantityUnit
+                        billItem.SubQuantity = 1; // Initialize sub-quantity to 1
                         billItem.Quantity = 1;
                         
                         // Refresh the display
@@ -911,8 +916,14 @@ private void MoveToNextCell()
         var billItem = _currentBill.BillItems[rowIndex];
         if (billItem != null)
         {
+            // Calculate amount based on quantity * rate
             billItem.Amount = (decimal)billItem.Quantity * billItem.Rate;
-            billItem.TotalAmount = billItem.Amount + billItem.Charges;
+            
+            // Calculate total charges based on SubQuantity * Charges
+            billItem.TotalCharges = billItem.SubQuantity * billItem.Charges;
+            
+            // Calculate total with amount + totalCharges
+            billItem.TotalAmount = billItem.Amount + billItem.TotalCharges;
             
             // Use BindingSource refresh instead of dgvItems.Refresh()
             if (dgvItems.DataSource is BindingSource bs)
@@ -936,7 +947,7 @@ private void MoveToNextCell()
         private void CalculateTotals()
         {
             decimal totalItemAmount = _currentBill.BillItems.Sum(i => i.Amount);
-            decimal totalItemCharges = _currentBill.BillItems.Sum(i => i.Charges);
+            decimal totalItemCharges = _currentBill.BillItems.Sum(i => i.TotalCharges);
             decimal.TryParse(txtAdditionalCharges.Text, out decimal oneTimeCharges);
 
             // Update the current bill's OriginalAmount to include item charges

@@ -14,6 +14,10 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
+                // Round the transaction amounts to ensure consistent integer values
+                transaction.DebitAmount = Math.Round(transaction.DebitAmount);
+                transaction.CreditAmount = Math.Round(transaction.CreditAmount);
+                
                 string sql = @"
                     INSERT INTO TransactionLedger 
                     (PartyID, BillID, PaymentID, TransactionDate, TransactionType, Description, DebitAmount, CreditAmount, PaymentMethod, Reference, UserID, CompanyID)
@@ -143,7 +147,7 @@ namespace SaleBillSystem.NET.Data
             // 3. Calculate Final Amount
             decimal finalAmountDue = currentBalance - earnedDiscount + accruedInterest;
             
-            return (Math.Round(accruedInterest, 2), Math.Round(earnedDiscount, 2), Math.Round(finalAmountDue, 2));
+            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0));
         }
 
         private static Transaction MapRowToTransaction(DataRow row)
@@ -167,7 +171,7 @@ namespace SaleBillSystem.NET.Data
 
         public static decimal CalculateBrokerage(Bill bill, decimal brokerageRate)
         {
-            return bill.TotalAmount * (brokerageRate / 100m);
+            return Math.Round(bill.TotalAmount * (brokerageRate / 100m), 0);
         }
 
         public static decimal GetDueAmount(int billId)
@@ -188,8 +192,89 @@ namespace SaleBillSystem.NET.Data
             MessageBox.Show($"Error loading transactions for bill: {ex.Message}", "Database Error", 
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-        return sum;
+        return Math.Round(sum);
     }
+
+/// <summary>
+/// Gets balances for all bills at once using a single database query.
+/// This is much more efficient than calling GetDueAmount for each bill individually.
+/// </summary>
+/// <returns>Dictionary with BillID as key and Balance as value</returns>
+public static Dictionary<int, decimal> GetAllBillBalances()
+{
+    var balances = new Dictionary<int, decimal>();
+    
+    try
+    {
+        // Query that calculates the balance for each bill in a single database operation
+        string sql = @"SELECT BillID, SUM(DebitAmount) - SUM(CreditAmount) AS Balance 
+                      FROM TransactionLedger 
+                      WHERE BillID IS NOT NULL 
+                      GROUP BY BillID";
+        
+        DataTable dt = DatabaseManager.ExecuteQuery(sql);
+        foreach (DataRow row in dt.Rows)
+        {
+            int billId = Convert.ToInt32(row["BillID"]);
+            decimal balance = Convert.ToDecimal(row["Balance"]);
+            balances[billId] = Math.Round(balance);
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading bill balances: {ex.Message}", "Database Error", 
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    
+    return balances;
+}
+
+/// <summary>
+/// Gets all transactions for a list of bill IDs in a single database query.
+/// This is much more efficient than calling GetTransactionsForBill for each bill individually.
+/// </summary>
+/// <param name="billIds">List of bill IDs to get transactions for</param>
+/// <returns>Dictionary with BillID as key and list of transactions as value</returns>
+public static Dictionary<int, List<Transaction>> GetTransactionsForBills(List<int> billIds)
+{
+    var result = new Dictionary<int, List<Transaction>>();
+    
+    // Initialize empty lists for all requested bill IDs
+    foreach (var billId in billIds)
+    {
+        result[billId] = new List<Transaction>();
+    }
+    
+    if (billIds.Count == 0) return result;
+    
+    try
+    {
+        // Build a query with all bill IDs in an IN clause
+        string billIdList = string.Join(",", billIds);
+        string sql = $"SELECT * FROM TransactionLedger WHERE BillID IN ({billIdList}) ORDER BY BillID, TransactionDate, TransactionID";
+        
+        DataTable dt = DatabaseManager.ExecuteQuery(sql);
+        foreach (DataRow row in dt.Rows)
+        {
+            var transaction = MapRowToTransaction(row);
+            if (transaction.BillID.HasValue)
+            {
+                int billId = transaction.BillID.Value;
+                if (result.ContainsKey(billId))
+                {
+                    result[billId].Add(transaction);
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading transactions for bills: {ex.Message}", "Database Error", 
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    
+    return result;
+}
    }
 }
 

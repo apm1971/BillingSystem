@@ -28,6 +28,7 @@ namespace SaleBillSystem.NET.Forms
             this.gbLedger = new System.Windows.Forms.GroupBox();
             this.dgvLedger = new System.Windows.Forms.DataGridView();
             this.pnlButtons = new System.Windows.Forms.Panel();
+            this.btnRefresh = new System.Windows.Forms.Button();
             this.btnPrint = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
@@ -160,18 +161,28 @@ namespace SaleBillSystem.NET.Forms
             // 
             // pnlButtons
             // 
+            this.pnlButtons.Controls.Add(this.btnRefresh);
             this.pnlButtons.Controls.Add(this.btnPrint);
             this.pnlButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlButtons.Location = new System.Drawing.Point(10, 501);
+            this.pnlButtons.Location = new System.Drawing.Point(0, 257);
             this.pnlButtons.Name = "pnlButtons";
             this.pnlButtons.Size = new System.Drawing.Size(964, 50);
             this.pnlButtons.TabIndex = 1;
+            // 
+            // btnRefresh
+            // 
+            this.btnRefresh.Location = new System.Drawing.Point(20, 10);
+            this.btnRefresh.Name = "btnRefresh";
+            this.btnRefresh.Size = new System.Drawing.Size(100, 30);
+            this.btnRefresh.TabIndex = 1;
+            this.btnRefresh.Text = "Refresh (F5)";
+            this.btnRefresh.UseVisualStyleBackColor = true;
             // 
             // btnPrint
             // 
             this.btnPrint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnPrint.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnPrint.Location = new System.Drawing.Point(851, 10);
+            this.btnPrint.Location = new System.Drawing.Point(140, 10);
             this.btnPrint.Name = "btnPrint";
             this.btnPrint.Size = new System.Drawing.Size(100, 30);
             this.btnPrint.TabIndex = 0;
@@ -216,6 +227,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.DataGridView dgvLedger;
         private System.Windows.Forms.Panel pnlButtons;
         private System.Windows.Forms.Button btnPrint;
+        private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Label lblLedgerTitle;
     }
 }

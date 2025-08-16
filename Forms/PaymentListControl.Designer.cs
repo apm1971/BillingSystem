@@ -25,8 +25,18 @@ namespace SaleBillSystem.NET.Forms
             this.txtSearch = new System.Windows.Forms.TextBox();
             this.lblSearch = new System.Windows.Forms.Label();
             this.dgvPayments = new System.Windows.Forms.DataGridView();
+            this.pnlDateFilter = new System.Windows.Forms.Panel();
+            this.btnApplyDateFilter = new System.Windows.Forms.Button();
+            this.dtpToDate = new System.Windows.Forms.DateTimePicker();
+            this.lblToDate = new System.Windows.Forms.Label();
+            this.dtpFromDate = new System.Windows.Forms.DateTimePicker();
+            this.lblFromDate = new System.Windows.Forms.Label();
+            this.statusStrip = new System.Windows.Forms.StatusStrip();
+            this.lblPaymentCount = new System.Windows.Forms.ToolStripStatusLabel();
             this.pnlTop.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPayments)).BeginInit();
+            this.pnlDateFilter.SuspendLayout();
+            this.statusStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlTop
@@ -106,17 +116,91 @@ namespace SaleBillSystem.NET.Forms
             this.dgvPayments.AllowUserToDeleteRows = false;
             this.dgvPayments.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvPayments.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvPayments.Location = new System.Drawing.Point(10, 60);
+            this.dgvPayments.Location = new System.Drawing.Point(10, 100);
             this.dgvPayments.Name = "dgvPayments";
             this.dgvPayments.ReadOnly = true;
-            this.dgvPayments.Size = new System.Drawing.Size(964, 491);
+            this.dgvPayments.Size = new System.Drawing.Size(964, 451);
             this.dgvPayments.TabIndex = 1;
+            // 
+            // pnlDateFilter
+            // 
+            this.pnlDateFilter.Controls.Add(this.btnApplyDateFilter);
+            this.pnlDateFilter.Controls.Add(this.dtpToDate);
+            this.pnlDateFilter.Controls.Add(this.lblToDate);
+            this.pnlDateFilter.Controls.Add(this.dtpFromDate);
+            this.pnlDateFilter.Controls.Add(this.lblFromDate);
+            this.pnlDateFilter.Dock = System.Windows.Forms.DockStyle.Top;
+            this.pnlDateFilter.Location = new System.Drawing.Point(10, 60);
+            this.pnlDateFilter.Name = "pnlDateFilter";
+            this.pnlDateFilter.Size = new System.Drawing.Size(964, 40);
+            this.pnlDateFilter.TabIndex = 2;
+            // 
+            // lblFromDate
+            // 
+            this.lblFromDate.AutoSize = true;
+            this.lblFromDate.Location = new System.Drawing.Point(3, 12);
+            this.lblFromDate.Name = "lblFromDate";
+            this.lblFromDate.Size = new System.Drawing.Size(62, 13);
+            this.lblFromDate.TabIndex = 0;
+            this.lblFromDate.Text = "From Date:";
+            // 
+            // dtpFromDate
+            // 
+            this.dtpFromDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpFromDate.Location = new System.Drawing.Point(71, 10);
+            this.dtpFromDate.Name = "dtpFromDate";
+            this.dtpFromDate.Size = new System.Drawing.Size(100, 20);
+            this.dtpFromDate.TabIndex = 1;
+            // 
+            // lblToDate
+            // 
+            this.lblToDate.AutoSize = true;
+            this.lblToDate.Location = new System.Drawing.Point(190, 12);
+            this.lblToDate.Name = "lblToDate";
+            this.lblToDate.Size = new System.Drawing.Size(52, 13);
+            this.lblToDate.TabIndex = 2;
+            this.lblToDate.Text = "To Date:";
+            // 
+            // dtpToDate
+            // 
+            this.dtpToDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpToDate.Location = new System.Drawing.Point(248, 10);
+            this.dtpToDate.Name = "dtpToDate";
+            this.dtpToDate.Size = new System.Drawing.Size(100, 20);
+            this.dtpToDate.TabIndex = 3;
+            // 
+            // btnApplyDateFilter
+            // 
+            this.btnApplyDateFilter.Location = new System.Drawing.Point(365, 8);
+            this.btnApplyDateFilter.Name = "btnApplyDateFilter";
+            this.btnApplyDateFilter.Size = new System.Drawing.Size(100, 25);
+            this.btnApplyDateFilter.TabIndex = 4;
+            this.btnApplyDateFilter.Text = "Apply Filter";
+            this.btnApplyDateFilter.UseVisualStyleBackColor = true;
+            // 
+            // statusStrip
+            // 
+            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.lblPaymentCount});
+            this.statusStrip.Location = new System.Drawing.Point(10, 551);
+            this.statusStrip.Name = "statusStrip";
+            this.statusStrip.Size = new System.Drawing.Size(964, 22);
+            this.statusStrip.TabIndex = 3;
+            this.statusStrip.Text = "statusStrip";
+            // 
+            // lblPaymentCount
+            // 
+            this.lblPaymentCount.Name = "lblPaymentCount";
+            this.lblPaymentCount.Size = new System.Drawing.Size(120, 17);
+            this.lblPaymentCount.Text = "Payment Count: 0";
             // 
             // PaymentListControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.dgvPayments);
+            this.Controls.Add(this.pnlDateFilter);
             this.Controls.Add(this.pnlTop);
             this.Name = "PaymentListControl";
             this.Padding = new System.Windows.Forms.Padding(10);
@@ -125,6 +209,10 @@ namespace SaleBillSystem.NET.Forms
             this.pnlTop.ResumeLayout(false);
             this.pnlTop.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPayments)).EndInit();
+            this.pnlDateFilter.ResumeLayout(false);
+            this.pnlDateFilter.PerformLayout();
+            this.statusStrip.ResumeLayout(false);
+            this.statusStrip.PerformLayout();
             this.ResumeLayout(false);
         }
 
@@ -138,5 +226,13 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Button btnViewTrace;
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.DataGridView dgvPayments;
+        private System.Windows.Forms.Panel pnlDateFilter;
+        private System.Windows.Forms.Button btnApplyDateFilter;
+        private System.Windows.Forms.DateTimePicker dtpToDate;
+        private System.Windows.Forms.Label lblToDate;
+        private System.Windows.Forms.DateTimePicker dtpFromDate;
+        private System.Windows.Forms.Label lblFromDate;
+        private System.Windows.Forms.StatusStrip statusStrip;
+        private System.Windows.Forms.ToolStripStatusLabel lblPaymentCount;
     }
 }

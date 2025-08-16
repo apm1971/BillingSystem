@@ -28,259 +28,280 @@ namespace SaleBillSystem.NET.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.txtSearch = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.dgvItems = new System.Windows.Forms.DataGridView();
-            this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.txtCharges = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.txtDefaultRate = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.txtUnit = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.txtItemName = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.panel1 = new System.Windows.Forms.Panel();
-            this.btnDelete = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.btnNew = new System.Windows.Forms.Button();
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.lblTotalItems = new System.Windows.Forms.ToolStripStatusLabel();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvItems)).BeginInit();
-            this.groupBox3.SuspendLayout();
-            this.panel1.SuspendLayout();
-            this.statusStrip1.SuspendLayout();
-            this.SuspendLayout();
+            groupBox1 = new GroupBox();
+            txtSearch = new TextBox();
+            label1 = new Label();
+            groupBox2 = new GroupBox();
+            dgvItems = new DataGridView();
+            groupBox3 = new GroupBox();
+            txtSubQuantity = new TextBox();
+            label7 = new Label();
+            txtCharges = new TextBox();
+            label6 = new Label();
+            txtDefaultRate = new TextBox();
+            label5 = new Label();
+            txtUnit = new TextBox();
+            label4 = new Label();
+            txtItemName = new TextBox();
+            label3 = new Label();
+            panel1 = new Panel();
+            btnDelete = new Button();
+            btnSave = new Button();
+            btnNew = new Button();
+            statusStrip1 = new StatusStrip();
+            lblTotalItems = new ToolStripStatusLabel();
+            groupBox1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvItems).BeginInit();
+            groupBox3.SuspendLayout();
+            panel1.SuspendLayout();
+            statusStrip1.SuspendLayout();
+            SuspendLayout();
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.txtSearch);
-            this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
-            this.groupBox1.Location = new System.Drawing.Point(0, 0);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(1200, 60);
-            this.groupBox1.TabIndex = 0;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Search";
+            groupBox1.Controls.Add(txtSearch);
+            groupBox1.Controls.Add(label1);
+            groupBox1.Dock = DockStyle.Top;
+            groupBox1.Location = new Point(0, 0);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(1200, 60);
+            groupBox1.TabIndex = 0;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Search";
             // 
             // txtSearch
             // 
-            this.txtSearch.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtSearch.Location = new System.Drawing.Point(100, 25);
-            this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Size = new System.Drawing.Size(300, 23);
-            this.txtSearch.TabIndex = 1;
+            txtSearch.Font = new Font("Microsoft Sans Serif", 10F);
+            txtSearch.Location = new Point(100, 25);
+            txtSearch.Name = "txtSearch";
+            txtSearch.Size = new Size(300, 23);
+            txtSearch.TabIndex = 1;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label1.Location = new System.Drawing.Point(20, 28);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(53, 17);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Search:";
+            label1.AutoSize = true;
+            label1.Font = new Font("Microsoft Sans Serif", 10F);
+            label1.Location = new Point(20, 28);
+            label1.Name = "label1";
+            label1.Size = new Size(57, 17);
+            label1.TabIndex = 0;
+            label1.Text = "Search:";
             // 
             // groupBox2
             // 
-            this.groupBox2.Controls.Add(this.dgvItems);
-            this.groupBox2.Dock = System.Windows.Forms.DockStyle.Left;
-            this.groupBox2.Location = new System.Drawing.Point(0, 60);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(750, 540);
-            this.groupBox2.TabIndex = 1;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Items List";
+            groupBox2.Controls.Add(dgvItems);
+            groupBox2.Dock = DockStyle.Left;
+            groupBox2.Location = new Point(0, 60);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(750, 540);
+            groupBox2.TabIndex = 1;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Items List";
             // 
             // dgvItems
             // 
-            this.dgvItems.BackgroundColor = System.Drawing.SystemColors.Window;
-            this.dgvItems.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvItems.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvItems.Location = new System.Drawing.Point(3, 19);
-            this.dgvItems.Name = "dgvItems";
-            this.dgvItems.Size = new System.Drawing.Size(744, 518);
-            this.dgvItems.TabIndex = 0;
+            dgvItems.BackgroundColor = SystemColors.Window;
+            dgvItems.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvItems.Dock = DockStyle.Fill;
+            dgvItems.Location = new Point(3, 19);
+            dgvItems.Name = "dgvItems";
+            dgvItems.Size = new Size(744, 518);
+            dgvItems.TabIndex = 0;
             // 
             // groupBox3
             // 
-            this.groupBox3.Controls.Add(this.txtCharges);
-            this.groupBox3.Controls.Add(this.label6);
-            this.groupBox3.Controls.Add(this.txtDefaultRate);
-            this.groupBox3.Controls.Add(this.label5);
-            this.groupBox3.Controls.Add(this.txtUnit);
-            this.groupBox3.Controls.Add(this.label4);
-            this.groupBox3.Controls.Add(this.txtItemName);
-            this.groupBox3.Controls.Add(this.label3);
-            this.groupBox3.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.groupBox3.Location = new System.Drawing.Point(750, 60);
-            this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(450, 450);
-            this.groupBox3.TabIndex = 2;
-            this.groupBox3.TabStop = false;
-            this.groupBox3.Text = "Item Details";
+            groupBox3.Controls.Add(txtSubQuantity);
+            groupBox3.Controls.Add(label7);
+            groupBox3.Controls.Add(txtCharges);
+            groupBox3.Controls.Add(label6);
+            groupBox3.Controls.Add(txtDefaultRate);
+            groupBox3.Controls.Add(label5);
+            groupBox3.Controls.Add(txtUnit);
+            groupBox3.Controls.Add(label4);
+            groupBox3.Controls.Add(txtItemName);
+            groupBox3.Controls.Add(label3);
+            groupBox3.Dock = DockStyle.Fill;
+            groupBox3.Location = new Point(750, 60);
+            groupBox3.Name = "groupBox3";
+            groupBox3.Size = new Size(450, 450);
+            groupBox3.TabIndex = 2;
+            groupBox3.TabStop = false;
+            groupBox3.Text = "Item Details";
+            // 
+            // txtSubQuantity
+            // 
+            txtSubQuantity.Font = new Font("Microsoft Sans Serif", 10F);
+            txtSubQuantity.Location = new Point(150, 191);
+            txtSubQuantity.Name = "txtSubQuantity";
+            txtSubQuantity.Size = new Size(150, 23);
+            txtSubQuantity.TabIndex = 11;
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.Font = new Font("Microsoft Sans Serif", 10F);
+            label7.Location = new Point(20, 191);
+            label7.Name = "label7";
+            label7.Size = new Size(124, 17);
+            label7.TabIndex = 10;
+            label7.Text = "Sub-Quantity Unit:";
             // 
             // txtCharges
             // 
-            this.txtCharges.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtCharges.Location = new System.Drawing.Point(150, 185);
-            this.txtCharges.Name = "txtCharges";
-            this.txtCharges.Size = new System.Drawing.Size(150, 23);
-            this.txtCharges.TabIndex = 9;
+            txtCharges.Font = new Font("Microsoft Sans Serif", 10F);
+            txtCharges.Location = new Point(150, 231);
+            txtCharges.Name = "txtCharges";
+            txtCharges.Size = new Size(150, 23);
+            txtCharges.TabIndex = 9;
             // 
             // label6
             // 
-            this.label6.AutoSize = true;
-            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label6.Location = new System.Drawing.Point(20, 188);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(52, 17);
-            this.label6.TabIndex = 8;
-            this.label6.Text = "Charges:";
+            label6.AutoSize = true;
+            label6.Font = new Font("Microsoft Sans Serif", 10F);
+            label6.Location = new Point(20, 231);
+            label6.Name = "label6";
+            label6.Size = new Size(65, 17);
+            label6.TabIndex = 8;
+            label6.Text = "Charges:";
             // 
             // txtDefaultRate
             // 
-            this.txtDefaultRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtDefaultRate.Location = new System.Drawing.Point(150, 150);
-            this.txtDefaultRate.Name = "txtDefaultRate";
-            this.txtDefaultRate.Size = new System.Drawing.Size(150, 23);
-            this.txtDefaultRate.TabIndex = 7;
+            txtDefaultRate.Font = new Font("Microsoft Sans Serif", 10F);
+            txtDefaultRate.Location = new Point(150, 150);
+            txtDefaultRate.Name = "txtDefaultRate";
+            txtDefaultRate.Size = new Size(150, 23);
+            txtDefaultRate.TabIndex = 7;
             // 
             // label5
             // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label5.Location = new System.Drawing.Point(20, 153);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(40, 17);
-            this.label5.TabIndex = 6;
-            this.label5.Text = "Default Rate:";
+            label5.AutoSize = true;
+            label5.Font = new Font("Microsoft Sans Serif", 10F);
+            label5.Location = new Point(20, 153);
+            label5.Name = "label5";
+            label5.Size = new Size(91, 17);
+            label5.TabIndex = 6;
+            label5.Text = "Default Rate:";
             // 
             // txtUnit
             // 
-            this.txtUnit.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtUnit.Location = new System.Drawing.Point(150, 115);
-            this.txtUnit.Name = "txtUnit";
-            this.txtUnit.Size = new System.Drawing.Size(150, 23);
-            this.txtUnit.TabIndex = 5;
+            txtUnit.Font = new Font("Microsoft Sans Serif", 10F);
+            txtUnit.Location = new Point(150, 115);
+            txtUnit.Name = "txtUnit";
+            txtUnit.Size = new Size(150, 23);
+            txtUnit.TabIndex = 5;
             // 
             // label4
             // 
-            this.label4.AutoSize = true;
-            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label4.Location = new System.Drawing.Point(20, 118);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(35, 17);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "Unit:";
+            label4.AutoSize = true;
+            label4.Font = new Font("Microsoft Sans Serif", 10F);
+            label4.Location = new Point(20, 118);
+            label4.Name = "label4";
+            label4.Size = new Size(37, 17);
+            label4.TabIndex = 4;
+            label4.Text = "Unit:";
             // 
             // txtItemName
             // 
-            this.txtItemName.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.txtItemName.Location = new System.Drawing.Point(150, 80);
-            this.txtItemName.Name = "txtItemName";
-            this.txtItemName.Size = new System.Drawing.Size(280, 23);
-            this.txtItemName.TabIndex = 3;
+            txtItemName.Font = new Font("Microsoft Sans Serif", 10F);
+            txtItemName.Location = new Point(150, 80);
+            txtItemName.Name = "txtItemName";
+            txtItemName.Size = new Size(150, 23);
+            txtItemName.TabIndex = 3;
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label3.Location = new System.Drawing.Point(20, 83);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(79, 17);
-            this.label3.TabIndex = 2;
-            this.label3.Text = "Item Name:";
+            label3.AutoSize = true;
+            label3.Font = new Font("Microsoft Sans Serif", 10F);
+            label3.Location = new Point(20, 83);
+            label3.Name = "label3";
+            label3.Size = new Size(79, 17);
+            label3.TabIndex = 2;
+            label3.Text = "Item Name:";
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.btnDelete);
-            this.panel1.Controls.Add(this.btnSave);
-            this.panel1.Controls.Add(this.btnNew);
-            this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panel1.Location = new System.Drawing.Point(750, 510);
-            this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(450, 90);
-            this.panel1.TabIndex = 3;
+            panel1.Controls.Add(btnDelete);
+            panel1.Controls.Add(btnSave);
+            panel1.Controls.Add(btnNew);
+            panel1.Dock = DockStyle.Bottom;
+            panel1.Location = new Point(750, 510);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(450, 90);
+            panel1.TabIndex = 3;
             // 
             // btnDelete
             // 
-            this.btnDelete.BackColor = System.Drawing.Color.LightCoral;
-            this.btnDelete.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnDelete.Location = new System.Drawing.Point(230, 20);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(90, 40);
-            this.btnDelete.TabIndex = 2;
-            this.btnDelete.Text = "Delete";
-            this.btnDelete.UseVisualStyleBackColor = false;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            btnDelete.BackColor = Color.LightCoral;
+            btnDelete.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            btnDelete.Location = new Point(230, 20);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(90, 40);
+            btnDelete.TabIndex = 2;
+            btnDelete.Text = "Delete";
+            btnDelete.UseVisualStyleBackColor = false;
+            btnDelete.Click += btnDelete_Click;
             // 
             // btnSave
             // 
-            this.btnSave.BackColor = System.Drawing.Color.LightGreen;
-            this.btnSave.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnSave.Location = new System.Drawing.Point(120, 20);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(90, 40);
-            this.btnSave.TabIndex = 1;
-            this.btnSave.Text = "Save";
-            this.btnSave.UseVisualStyleBackColor = false;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            btnSave.BackColor = Color.LightGreen;
+            btnSave.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            btnSave.Location = new Point(120, 20);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(90, 40);
+            btnSave.TabIndex = 1;
+            btnSave.Text = "Save";
+            btnSave.UseVisualStyleBackColor = false;
+            btnSave.Click += btnSave_Click;
             // 
             // btnNew
             // 
-            this.btnNew.BackColor = System.Drawing.Color.LightBlue;
-            this.btnNew.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnNew.Location = new System.Drawing.Point(20, 20);
-            this.btnNew.Name = "btnNew";
-            this.btnNew.Size = new System.Drawing.Size(90, 40);
-            this.btnNew.TabIndex = 0;
-            this.btnNew.Text = "New";
-            this.btnNew.UseVisualStyleBackColor = false;
-            this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
+            btnNew.BackColor = Color.LightBlue;
+            btnNew.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            btnNew.Location = new Point(20, 20);
+            btnNew.Name = "btnNew";
+            btnNew.Size = new Size(90, 40);
+            btnNew.TabIndex = 0;
+            btnNew.Text = "New";
+            btnNew.UseVisualStyleBackColor = false;
+            btnNew.Click += btnNew_Click;
             // 
             // statusStrip1
             // 
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.lblTotalItems});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 600);
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1200, 22);
-            this.statusStrip1.TabIndex = 4;
-            this.statusStrip1.Text = "statusStrip1";
+            statusStrip1.Items.AddRange(new ToolStripItem[] { lblTotalItems });
+            statusStrip1.Location = new Point(0, 600);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(1200, 22);
+            statusStrip1.TabIndex = 4;
+            statusStrip1.Text = "statusStrip1";
             // 
             // lblTotalItems
             // 
-            this.lblTotalItems.Name = "lblTotalItems";
-            this.lblTotalItems.Size = new System.Drawing.Size(70, 17);
-            this.lblTotalItems.Text = "Total Items: 0";
+            lblTotalItems.Name = "lblTotalItems";
+            lblTotalItems.Size = new Size(76, 17);
+            lblTotalItems.Text = "Total Items: 0";
             // 
             // ItemMasterUserControl
             // 
-            this.Controls.Add(this.groupBox3);
-            this.Controls.Add(this.panel1);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.statusStrip1);
-            this.Name = "ItemMasterUserControl";
-            this.Size = new System.Drawing.Size(1200, 622);
-            this.Load += new System.EventHandler(this.ItemMasterUserControl_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            this.groupBox2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvItems)).EndInit();
-            this.groupBox3.ResumeLayout(false);
-            this.groupBox3.PerformLayout();
-            this.panel1.ResumeLayout(false);
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            Controls.Add(groupBox3);
+            Controls.Add(panel1);
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox1);
+            Controls.Add(statusStrip1);
+            Name = "ItemMasterUserControl";
+            Size = new Size(1200, 622);
+            Load += ItemMasterUserControl_Load;
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
+            groupBox2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvItems).EndInit();
+            groupBox3.ResumeLayout(false);
+            groupBox3.PerformLayout();
+            panel1.ResumeLayout(false);
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
@@ -291,6 +312,8 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.DataGridView dgvItems;
         private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.TextBox txtSubQuantity;
+        private System.Windows.Forms.Label label7;
         private System.Windows.Forms.TextBox txtCharges;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.TextBox txtDefaultRate;

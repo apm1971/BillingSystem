@@ -226,11 +226,85 @@ namespace SaleBillSystem.NET.Forms
                 var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
                 brokerList.AddRange(brokers);
 
+                // First ensure DropDownStyle is set to DropDown (not DropDownList) 
+                // before setting AutoComplete properties
+                cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
+                
+                // Set up autocomplete for the broker combo box
+                cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+                cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
+                
+                // Then set the data source
                 cmbBroker.DataSource = brokerList;
                 cmbBroker.DisplayMember = "BrokerName";
                 cmbBroker.ValueMember = "BrokerID";
                 cmbBroker.SelectedValue = 0; // Default to "No Broker"
+                
+                // Add button for quickly adding a new broker next to the broker combo box
+                var btnQuickAddBroker = new Button
+                {
+                    Text = "+",
+                    Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold),
+                    Size = new System.Drawing.Size(30, 21),
+                    Location = new System.Drawing.Point(cmbBroker.Right + 5, cmbBroker.Top),
+                    TabIndex = cmbBroker.TabIndex + 1
+                };
+                btnQuickAddBroker.Click += BtnQuickAddBroker_Click;
+                this.Controls.Add(btnQuickAddBroker);
             }
+        }
+
+        private void BtnQuickAddBroker_Click(object sender, EventArgs e)
+        {
+            using (var quickAddBrokerForm = new QuickAddBrokerForm())
+            {
+                if (quickAddBrokerForm.ShowDialog() == DialogResult.OK)
+                {
+                    // Refresh brokers list and select the newly added broker
+                    ReloadBrokers(quickAddBrokerForm.NewBroker?.BrokerID);
+                }
+            }
+        }
+
+        private void ReloadBrokers(int? selectBrokerId = null)
+        {
+            // Store current selection if we're not selecting a specific broker
+            int? currentBrokerId = selectBrokerId;
+            if (!currentBrokerId.HasValue && cmbBroker.SelectedValue is int selectedBrokerId)
+            {
+                currentBrokerId = selectedBrokerId;
+            }
+            
+            // Reload brokers
+            brokers = BrokerService.GetAllBrokers();
+            
+            // Temporarily clear AutoComplete settings to avoid errors when changing DataSource
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.None;
+            
+            // Reset data source
+            cmbBroker.DataSource = null;
+            
+            // Create a list with an empty option
+            var brokerList = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "-- No Broker --" } };
+            brokerList.AddRange(brokers);
+            
+            // Make sure DropDownStyle is correct
+            cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
+            
+            // Set the data source
+            cmbBroker.DataSource = brokerList;
+            cmbBroker.DisplayMember = "BrokerName";
+            cmbBroker.ValueMember = "BrokerID";
+            
+            // Restore selected item if possible
+            if (currentBrokerId.HasValue)
+            {
+                cmbBroker.SelectedValue = currentBrokerId.Value;
+            }
+            
+            // Restore AutoComplete settings
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
         }
 
         private void ClearForm()

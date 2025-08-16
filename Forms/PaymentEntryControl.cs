@@ -103,18 +103,68 @@ namespace SaleBillSystem.NET.Forms
                 _parties = PartyService.GetAllParties();
                 _brokers = BrokerService.GetAllBrokers();
 
-                cmbParty.DataSource = _parties;
-                cmbParty.DisplayMember = "PartyName";
-                cmbParty.ValueMember = "PartyID";
-
-                cmbBroker.DataSource = _brokers;
-                cmbBroker.DisplayMember = "BrokerName";
-                cmbBroker.ValueMember = "BrokerID";
+                // Set up autocomplete for comboboxes
+                SetupPartyComboBox();
+                SetupBrokerComboBox();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading initial data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void SetupPartyComboBox()
+        {
+            // Temporarily remove event handler
+            cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+            
+            // Configure combobox for optimal performance
+            cmbParty.BeginUpdate();
+            cmbParty.DropDownStyle = ComboBoxStyle.DropDown;
+            
+            // Use a binding source for better performance
+            var partyBindingSource = new BindingSource();
+            partyBindingSource.DataSource = _parties;
+            
+            cmbParty.DataSource = partyBindingSource;
+            cmbParty.DisplayMember = "PartyName";
+            cmbParty.ValueMember = "PartyID";
+            
+            // Set up autocomplete
+            cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
+            
+            cmbParty.EndUpdate();
+            
+            // Restore event handler
+            cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+        }
+
+        private void SetupBrokerComboBox()
+        {
+            // Temporarily remove event handler
+            cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
+            
+            // Configure combobox for optimal performance
+            cmbBroker.BeginUpdate();
+            cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
+            
+            // Use a binding source for better performance
+            var brokerBindingSource = new BindingSource();
+            brokerBindingSource.DataSource = _brokers;
+            
+            cmbBroker.DataSource = brokerBindingSource;
+            cmbBroker.DisplayMember = "BrokerName";
+            cmbBroker.ValueMember = "BrokerID";
+            
+            // Set up autocomplete
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
+            
+            cmbBroker.EndUpdate();
+            
+            // Restore event handler
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
         }
 
         private void SetupEventHandlers()
@@ -177,14 +227,36 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            LoadBillsBasedOnSelection();
-            UpdateFieldsBasedOnSelection();
+            // When party changes, clear broker selection to avoid cascading events
+            if (cmbBroker.SelectedIndex > 0)
+            {
+                cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
+                cmbBroker.SelectedIndex = 0;
+                cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+            }
+            
+            // Use BeginInvoke to make UI more responsive by moving processing to background
+            this.BeginInvoke(new Action(() => {
+                LoadBillsBasedOnSelection();
+                UpdateFieldsBasedOnSelection();
+            }));
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            LoadBillsBasedOnSelection();
-            UpdateFieldsBasedOnSelection();
+            // When broker changes, clear party selection to avoid cascading events
+            if (cmbParty.SelectedIndex > 0 && cmbBroker.SelectedIndex > 0)
+            {
+                cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+                cmbParty.SelectedIndex = 0;
+                cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            }
+            
+            // Use BeginInvoke to make UI more responsive by moving processing to background
+            this.BeginInvoke(new Action(() => {
+                LoadBillsBasedOnSelection();
+                UpdateFieldsBasedOnSelection();
+            }));
         }
 
         private void LoadBillsBasedOnSelection()
@@ -225,7 +297,9 @@ namespace SaleBillSystem.NET.Forms
             else if (brokerId.HasValue && brokerId.Value > 0)
             {
                 // Broker selected - load broker data and make editable
-                var broker = BrokerService.GetBrokerByID(brokerId.Value);
+                // Use the cached broker list instead of making a database call
+                var broker = _brokers.FirstOrDefault(b => b.BrokerID == brokerId.Value);
+                
                 if (broker != null)
                 {
                     txtInterestDays.Text = broker.InterestDays.ToString();
@@ -261,6 +335,9 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
+                // Show loading indicator or cursor
+                Cursor.Current = Cursors.WaitCursor;
+                
                 var bills = BillService.GetAllBillsForParty(partyId);
 
                 // Filter by broker if specified
@@ -268,21 +345,46 @@ namespace SaleBillSystem.NET.Forms
                 {
                     bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
                 }
-
+                
+                // Get all bill balances in one query rather than individually
+                var allBalances = LedgerService.GetAllBillBalances();
+                
+                // Cache broker data to avoid repeated lookups
+                var brokerCache = new Dictionary<int, string>();
+                
+                // Use efficient mapping with cached data
                 _outstandingBills = bills
-                    .Select(b => new BillViewModel
+                    .Select(b =>
                     {
-                        BillID = b.BillID,
-                        BillNo = b.BillNo,
-                        PartyName = b.PartyName,
-                        BrokerName = b.BrokerID.HasValue ? BrokerService.GetBrokerByID(b.BrokerID.Value)?.BrokerName ?? string.Empty : string.Empty,
-                        BillDate = b.BillDate,
-                        OriginalAmount = b.OriginalAmount,
-                        AdditionalCharges = b.AdditionalCharges,
-                        BalanceDue = BillService.GetBillBalance(b.BillID),
-                        PaymentAllocation = 0,
-                        ChequeAmountFirm1 = b.ChequeAmountFirm1,
-                        ChequeAmountFirm2 = b.ChequeAmountFirm2
+                        // Look up broker name from cache or add it
+                        string brokerName = string.Empty;
+                        if (b.BrokerID.HasValue && b.BrokerID.Value > 0)
+                        {
+                            if (!brokerCache.TryGetValue(b.BrokerID.Value, out brokerName))
+                            {
+                                var broker = _brokers.FirstOrDefault(br => br.BrokerID == b.BrokerID.Value);
+                                brokerName = broker?.BrokerName ?? "Unknown Broker";
+                                brokerCache[b.BrokerID.Value] = brokerName;
+                            }
+                        }
+                        
+                        // Get balance from the pre-fetched dictionary
+                        decimal balance = allBalances.TryGetValue(b.BillID, out decimal dueAmount) ? dueAmount : 0;
+                        
+                        return new BillViewModel
+                        {
+                            BillID = b.BillID,
+                            BillNo = b.BillNo,
+                            PartyName = b.PartyName,
+                            BrokerName = brokerName,
+                            BillDate = b.BillDate,
+                            OriginalAmount = b.OriginalAmount,
+                            AdditionalCharges = b.AdditionalCharges,
+                            BalanceDue = balance,
+                            PaymentAllocation = 0,
+                            ChequeAmountFirm1 = b.ChequeAmountFirm1,
+                            ChequeAmountFirm2 = b.ChequeAmountFirm2
+                        };
                     })
                     .Where(b => b.BalanceDue > 0.01m)
                     .OrderBy(b => b.BillDate)
@@ -295,14 +397,29 @@ namespace SaleBillSystem.NET.Forms
             {
                 MessageBox.Show($"Error loading outstanding bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                // Restore cursor
+                Cursor.Current = Cursors.Default;
+            }
         }
 
         private void LoadOutstandingBillsByBroker(int brokerId)
         {
             try
             {
+                // Show loading indicator or cursor
+                Cursor.Current = Cursors.WaitCursor;
+                
                 var allBills = BillService.GetAllBills();
                 var bills = allBills.Where(b => b.BrokerID == brokerId).ToList();
+                
+                // Get all bill balances in one query rather than individually
+                var allBalances = LedgerService.GetAllBillBalances();
+                
+                // Get broker name once from cache
+                var broker = _brokers.FirstOrDefault(b => b.BrokerID == brokerId);
+                string brokerName = broker?.BrokerName ?? "Unknown Broker";
 
                 _outstandingBills = bills
                     .Select(b => new BillViewModel
@@ -310,11 +427,11 @@ namespace SaleBillSystem.NET.Forms
                         BillID = b.BillID,
                         BillNo = b.BillNo,
                         PartyName = b.PartyName,
-                        BrokerName = b.BrokerID.HasValue ? BrokerService.GetBrokerByID(b.BrokerID.Value)?.BrokerName ?? string.Empty : string.Empty,
+                        BrokerName = brokerName,
                         BillDate = b.BillDate,
                         OriginalAmount = b.OriginalAmount,
                         AdditionalCharges = b.AdditionalCharges,
-                        BalanceDue = BillService.GetBillBalance(b.BillID),
+                        BalanceDue = allBalances.TryGetValue(b.BillID, out decimal balance) ? balance : 0,
                         PaymentAllocation = 0,
                         ChequeAmountFirm1 = b.ChequeAmountFirm1,
                         ChequeAmountFirm2 = b.ChequeAmountFirm2
@@ -329,6 +446,11 @@ namespace SaleBillSystem.NET.Forms
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading outstanding bills by broker: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Restore cursor
+                Cursor.Current = Cursors.Default;
             }
         }
 
@@ -393,12 +515,12 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.Refresh();
 
             // Update payment amount to include brokerage
-            txtPaymentAmount.Text = totalAmountDue.ToString("F2");
+            txtPaymentAmount.Text = Math.Round(totalAmountDue).ToString("F0");
 
-            lblDiscountValue.Text = $"Earned Discount: ₹{totalDiscount:N2}";
-            lblInterestValue.Text = $"Accrued Interest: ₹{totalInterest:N2}";
-            lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
-            lblFinalAmount.Text = $"Amount Due: ₹{totalAmountDue:N2}";
+            lblDiscountValue.Text = $"Earned Discount: ₹{Math.Round(totalDiscount):N0}";
+            lblInterestValue.Text = $"Accrued Interest: ₹{Math.Round(totalInterest):N0}";
+            lblBrokerageValue.Text = $"Brokerage: ₹{Math.Round(totalBrokerage):N0}";
+            lblFinalAmount.Text = $"Amount Due: ₹{Math.Round(totalAmountDue):N0}";
         }
 
         private void BtnAutoAllocate_Click(object? sender, EventArgs e)
@@ -473,7 +595,7 @@ namespace SaleBillSystem.NET.Forms
         private void UpdateTotalPaymentFromGrid()
         {
             decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
-            txtPaymentAmount.Text = totalAllocated.ToString("F2");
+            txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
         }
 
         private void ResetGridStyles()
@@ -545,7 +667,7 @@ namespace SaleBillSystem.NET.Forms
                         PartyID = partyId,
                         BrokerID = brokerId,
                         PaymentDate = paymentDate,
-                        TotalAmountPaid = totalPaymentAmount,
+                        TotalAmountPaid = Math.Round(totalPaymentAmount),
                         PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
                         Reference = txtReference.Text,
                         CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
@@ -558,12 +680,12 @@ namespace SaleBillSystem.NET.Forms
                     {
                         if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount))
                         {
-                            paymentMaster.ChequeAmountFirm1 = firm1Amount;
+                            paymentMaster.ChequeAmountFirm1 = Math.Round(firm1Amount);
                         }
                         
                         if (decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
                         {
-                            paymentMaster.ChequeAmountFirm2 = firm2Amount;
+                            paymentMaster.ChequeAmountFirm2 = Math.Round(firm2Amount);
                         }
                         
                         // Validate that the sum matches the total payment amount
@@ -598,7 +720,7 @@ namespace SaleBillSystem.NET.Forms
                                     TransactionDate = paymentDate,
                                     TransactionType = "Interest",
                                     Description = $"Interest on Bill No: {fullBill.BillNo}",
-                                    DebitAmount = interest,
+                                    DebitAmount = Math.Round(interest),
                                     UserID = 1,
                                     CompanyID = 1
                                 };
@@ -615,7 +737,7 @@ namespace SaleBillSystem.NET.Forms
                                     TransactionDate = paymentDate,
                                     TransactionType = "Discount",
                                     Description = $"Discount on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = discount,
+                                    CreditAmount = Math.Round(discount),
                                     UserID = 1,
                                     CompanyID = 1
                                 };
@@ -631,7 +753,7 @@ namespace SaleBillSystem.NET.Forms
                                     TransactionDate = paymentDate,
                                     TransactionType = "Brokerage",
                                     Description = $"Brokerage on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = brokerageAmount,
+                                    CreditAmount = Math.Round(brokerageAmount),
                                     UserID = 1,
                                     CompanyID = 1
                                 };
@@ -647,7 +769,7 @@ namespace SaleBillSystem.NET.Forms
                             TransactionDate = paymentDate,
                             TransactionType = "Payment",
                             Description = $"Payment against Bill No: {fullBill.BillNo}",
-                            CreditAmount = billVm.PaymentAllocation,
+                            CreditAmount = Math.Round(billVm.PaymentAllocation),
                             PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
                             Reference = txtReference.Text,
                             UserID = 1, // Replace with Program.CurrentUser.UserID
@@ -711,7 +833,7 @@ namespace SaleBillSystem.NET.Forms
                             {
                                 newStatus = "Paid";
                             }
-                            else if (dueAmount >= billVm.TotalAmount)
+                            else if (Math.Round(dueAmount) >= Math.Round(billVm.TotalAmount))
                             {
                                 newStatus = "Unpaid";
                             }

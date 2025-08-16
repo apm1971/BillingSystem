@@ -30,7 +30,8 @@ namespace SaleBillSystem.NET.Data
                     Unit = row["Unit"].ToString(),
                     DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
                     Charges = Convert.ToDecimal(row["Charges"]),
-                    CompanyID = Convert.ToInt32(row["CompanyID"])
+                    CompanyID = Convert.ToInt32(row["CompanyID"]),
+                    SubQuantity = row["SubQuantity"] != DBNull.Value ? row["SubQuantity"].ToString() : ""
                 };
                 
                 items.Add(item);
@@ -64,7 +65,8 @@ namespace SaleBillSystem.NET.Data
                     Unit = row["Unit"].ToString(),
                     DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
                     Charges = Convert.ToDecimal(row["Charges"]),
-                    CompanyID = Convert.ToInt32(row["CompanyID"])
+                    CompanyID = Convert.ToInt32(row["CompanyID"]),
+                    SubQuantity = row["SubQuantity"] != DBNull.Value ? row["SubQuantity"].ToString() : ""
                 };
                 
                 return item;
@@ -102,15 +104,16 @@ namespace SaleBillSystem.NET.Data
             // Get the active company ID
             int companyID = Program.ActiveCompany?.CompanyID ?? 0;
             
-            string sql = @"INSERT INTO ItemMaster (ItemName, Unit, DefaultRate, Charges, CompanyID) 
-                         VALUES (?, ?, ?, ?, ?)";
+            string sql = @"INSERT INTO ItemMaster (ItemName, Unit, DefaultRate, Charges, CompanyID, SubQuantity) 
+                         VALUES (?, ?, ?, ?, ?, ?)";
             
             OleDbParameter[] parameters = {
                 new OleDbParameter("ItemName", OleDbType.VarChar) { Value = item.ItemName },
                 new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
                 new OleDbParameter("DefaultRate", OleDbType.Decimal) { Value = item.DefaultRate },
                 new OleDbParameter("Charges", OleDbType.Decimal) { Value = item.Charges },
-                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
+                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID },
+                new OleDbParameter("SubQuantity", OleDbType.VarChar) { Value = string.IsNullOrWhiteSpace(item.SubQuantity) ? DBNull.Value : (object)item.SubQuantity }
             };
             
             int result = DatabaseManager.ExecuteNonQuery(sql, parameters);
@@ -127,7 +130,7 @@ namespace SaleBillSystem.NET.Data
                 int companyID = Program.ActiveCompany?.CompanyID ?? 0;
                 
                 string sql = @"UPDATE ItemMaster SET 
-                             ItemName = ?, Unit = ?, DefaultRate = ?, Charges = ? 
+                             ItemName = ?, Unit = ?, DefaultRate = ?, Charges = ?, SubQuantity = ? 
                              WHERE ItemID = ? AND CompanyID = ?";
                 
                 OleDbParameter[] parameters = {
@@ -135,6 +138,7 @@ namespace SaleBillSystem.NET.Data
                     new OleDbParameter("Unit", OleDbType.VarChar) { Value = item.Unit },
                     new OleDbParameter("DefaultRate", OleDbType.Decimal) { Value = item.DefaultRate },
                     new OleDbParameter("Charges", OleDbType.Decimal) { Value = item.Charges },
+                    new OleDbParameter("SubQuantity", OleDbType.VarChar) { Value = string.IsNullOrWhiteSpace(item.SubQuantity) ? DBNull.Value : (object)item.SubQuantity },
                     new OleDbParameter("ItemID", OleDbType.Integer) { Value = item.ItemID },
                     new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyID }
                 };
@@ -195,7 +199,8 @@ namespace SaleBillSystem.NET.Data
                 Unit = row["Unit"].ToString(),
                 DefaultRate = Convert.ToDecimal(row["DefaultRate"]),
                 Charges = Convert.ToDecimal(row["Charges"]),
-                CompanyID = Convert.ToInt32(row["CompanyID"])
+                CompanyID = Convert.ToInt32(row["CompanyID"]),
+                SubQuantity = row["SubQuantity"] != DBNull.Value ? row["SubQuantity"].ToString() : ""
             };
         }
         

@@ -41,17 +41,20 @@ namespace SaleBillSystem.NET.Forms
             txtUnit.TabIndex = 2;
             txtDefaultRate.TabIndex = 3;
             txtCharges.TabIndex = 4;
-            btnSave.TabIndex = 5;
-            btnNew.TabIndex = 6;
-            btnDelete.TabIndex = 7;
+            txtSubQuantity.TabIndex = 5;
+            btnSave.TabIndex = 6;
+            btnNew.TabIndex = 7;
+            btnDelete.TabIndex = 8;
             
             // Set up text fields to use uppercase
             txtItemName.CharacterCasing = CharacterCasing.Upper;
             txtUnit.CharacterCasing = CharacterCasing.Upper;
+            txtSubQuantity.CharacterCasing = CharacterCasing.Upper;
 
             // Configure text boxes
             txtItemName.MaxLength = 100;
             txtUnit.MaxLength = 20;
+            txtSubQuantity.MaxLength = 50;
             txtDefaultRate.TextAlign = HorizontalAlignment.Right;
             txtCharges.TextAlign = HorizontalAlignment.Right;
 
@@ -68,6 +71,7 @@ namespace SaleBillSystem.NET.Forms
             txtUnit.KeyDown += Control_KeyDown;
             txtDefaultRate.KeyDown += Control_KeyDown;
             txtCharges.KeyDown += Control_KeyDown;
+            txtSubQuantity.KeyDown += Control_KeyDown;
             dgvItems.KeyDown += Control_KeyDown;
             
             // Set up form controls
@@ -75,7 +79,8 @@ namespace SaleBillSystem.NET.Forms
             txtItemName.PlaceholderText = "Enter item name";
             txtUnit.PlaceholderText = "Enter unit (e.g., KG, PCS)";
             txtDefaultRate.PlaceholderText = "Enter default rate";
-            txtCharges.PlaceholderText = "Enter charges";
+            txtCharges.PlaceholderText = "Enter charges per sub-quantity";
+            txtSubQuantity.PlaceholderText = "Enter sub-quantity unit (e.g., BAG, BOX)";
             
             // Set up button styles with shortcuts
             SetupButtonStyle(btnSave, System.Drawing.Color.FromArgb(0, 122, 204));
@@ -94,6 +99,8 @@ namespace SaleBillSystem.NET.Forms
             toolTip.SetToolTip(btnDelete, "Delete the selected item (F8)");
             toolTip.SetToolTip(txtSearch, "Search items by name (F3)");
             toolTip.SetToolTip(txtItemName, "Enter item name (F2)");
+            toolTip.SetToolTip(txtSubQuantity, "Enter the sub-quantity unit (e.g., BAG, BOX)");
+            toolTip.SetToolTip(txtCharges, "Enter charges per sub-quantity unit");
         }
 
         private void SetupButtonStyle(Button button, System.Drawing.Color baseColor)
@@ -160,8 +167,8 @@ namespace SaleBillSystem.NET.Forms
             {
                 DataPropertyName = "ItemName",
                 HeaderText = "Item Name",
-                Width = 250,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+                Width = 200,
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.None
             });
 
             dgvItems.Columns.Add(new DataGridViewTextBoxColumn
@@ -186,6 +193,14 @@ namespace SaleBillSystem.NET.Forms
                 HeaderText = "Charges",
                 Width = 100,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight }
+            });
+
+            dgvItems.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "SubQuantity",
+                HeaderText = "Sub-Quantity",
+                Width = 120,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft }
             });
 
             // Enable double buffering for smooth scrolling
@@ -224,6 +239,7 @@ namespace SaleBillSystem.NET.Forms
             txtUnit.Text = string.Empty;
             txtDefaultRate.Text = "0.00";
             txtCharges.Text = "0.00";
+            txtSubQuantity.Text = string.Empty;
 
             txtItemName.Focus();
             btnDelete.Enabled = false;
@@ -238,6 +254,7 @@ namespace SaleBillSystem.NET.Forms
             txtUnit.Text = item.Unit;
             txtDefaultRate.Text = item.DefaultRate.ToString("N2");
             txtCharges.Text = item.Charges.ToString("N2");
+            txtSubQuantity.Text = item.SubQuantity;
 
             btnDelete.Enabled = true;
         }
@@ -251,6 +268,7 @@ namespace SaleBillSystem.NET.Forms
                 Unit = txtUnit.Text.Trim(),
                 DefaultRate = Convert.ToDecimal(txtDefaultRate.Text),
                 Charges = Convert.ToDecimal(txtCharges.Text),
+                SubQuantity = txtSubQuantity.Text.Trim(),
                 CompanyID = Program.ActiveCompany?.CompanyID ?? 1
             };
 

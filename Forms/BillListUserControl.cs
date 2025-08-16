@@ -16,11 +16,107 @@ namespace SaleBillSystem.NET.Forms
         private List<Broker> _brokers;
         private DataGridViewColumn _sortedColumn;
         private SortOrder _sortOrder = SortOrder.None;
-
+        
+        // Pagination properties
+        private int _pageSize = 100;
+        private int _currentPage = 1;
+        private List<Bill> _filteredBills;
+        private Button btnPrevPage;
+        private Button btnNextPage;
+        private Label lblPageInfo;
 
         public BillListUserControl()
         {
             InitializeComponent();
+            InitializePaginationControls();
+        }
+
+        private void InitializePaginationControls()
+        {
+            // Create pagination panel at the bottom
+            Panel paginationPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 40
+            };
+
+            // Create Previous Page button
+            btnPrevPage = new Button
+            {
+                Text = "< Previous",
+                Width = 100,
+                Location = new Point(10, 7),
+                Enabled = false
+            };
+            btnPrevPage.Click += BtnPrevPage_Click;
+
+            // Create Next Page button
+            btnNextPage = new Button
+            {
+                Text = "Next >",
+                Width = 100,
+                Location = new Point(paginationPanel.Width - 110, 7),
+                Anchor = AnchorStyles.Right
+            };
+            btnNextPage.Click += BtnNextPage_Click;
+
+            // Create page info label
+            lblPageInfo = new Label
+            {
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                Text = "Page 1"
+            };
+
+            // Add controls to panel
+            paginationPanel.Controls.Add(btnPrevPage);
+            paginationPanel.Controls.Add(btnNextPage);
+            paginationPanel.Controls.Add(lblPageInfo);
+
+            // Add panel to form
+            this.Controls.Add(paginationPanel);
+        }
+
+        private void BtnPrevPage_Click(object sender, EventArgs e)
+        {
+            if (_currentPage > 1)
+            {
+                _currentPage--;
+                DisplayCurrentPage();
+            }
+        }
+
+        private void BtnNextPage_Click(object sender, EventArgs e)
+        {
+            int totalPages = GetTotalPages();
+            if (_currentPage < totalPages)
+            {
+                _currentPage++;
+                DisplayCurrentPage();
+            }
+        }
+
+        private int GetTotalPages()
+        {
+            if (_filteredBills == null) return 1;
+            return (int)Math.Ceiling(_filteredBills.Count / (double)_pageSize);
+        }
+
+        private void DisplayCurrentPage()
+        {
+            if (_filteredBills == null) return;
+
+            int startIndex = (_currentPage - 1) * _pageSize;
+            var currentPageItems = _filteredBills.Skip(startIndex).Take(_pageSize).ToList();
+
+            // Update data source with just the current page of items
+            dgvBills.DataSource = null;
+            dgvBills.DataSource = currentPageItems;
+
+            // Update pagination controls
+            btnPrevPage.Enabled = _currentPage > 1;
+            btnNextPage.Enabled = _currentPage < GetTotalPages();
+            lblPageInfo.Text = $"Page {_currentPage} of {GetTotalPages()} ({_filteredBills.Count} items)";
         }
 
         private void BillListUserControl_Load(object sender, EventArgs e)
@@ -38,11 +134,14 @@ namespace SaleBillSystem.NET.Forms
                 _parties = PartyService.GetAllParties();
                 _brokers = BrokerService.GetAllBrokers();
 
+                // Get all bill balances in one database query instead of querying individually
+                var allBillBalances = LedgerService.GetAllBillBalances();
+
                 // Update status for each bill based on due amount and populate broker names from broker ID
                 foreach (var bill in _allBills)
                 {
-                    // Calculate balance from transaction ledger
-                    decimal dueAmount = LedgerService.GetDueAmount(bill.BillID);
+                    // Use pre-calculated balance from the dictionary
+                    decimal dueAmount = allBillBalances.ContainsKey(bill.BillID) ? allBillBalances[bill.BillID] : 0m;
                     bill.Balance = dueAmount;
 
                     // Look up broker name from broker ID
@@ -160,6 +259,7 @@ namespace SaleBillSystem.NET.Forms
 
         private void RefreshGrid()
         {
+            // Apply filters, which now handles pagination as well
             ApplyFilters();
         }
 
@@ -222,39 +322,29 @@ namespace SaleBillSystem.NET.Forms
         private void ApplyFilters()
         {
             string searchText = txtSearch.Text.ToLower().Trim();
-            List<Bill> filteredBills = _allBills;
+            
+            // Use more efficient LINQ query that creates a single filtered list
+            _filteredBills = _allBills
+                .Where(b => 
+                    // Date filter
+                    b.BillDate >= dtpStartDate.Value.Date && 
+                    b.BillDate <= dtpEndDate.Value.Date.AddDays(1).AddSeconds(-1) && 
+                    // Status filter
+                    (cmbStatus.SelectedItem.ToString() == "All" || b.Status == cmbStatus.SelectedItem.ToString()) &&
+                    // Text search
+                    (string.IsNullOrWhiteSpace(searchText) || 
+                     b.BillNo.ToLower().Contains(searchText) || 
+                     b.PartyName.ToLower().Contains(searchText) || 
+                     (b.BrokerName?.ToLower().Contains(searchText) ?? false))
+                )
+                .ToList();
 
-            // Apply date filter
-            DateTime startDate = dtpStartDate.Value.Date;
-            DateTime endDate = dtpEndDate.Value.Date.AddDays(1).AddSeconds(-1); // Include entire end date
+            // Reset to first page and display
+            _currentPage = 1;
+            DisplayCurrentPage();
 
-            filteredBills = filteredBills.Where(b =>
-                b.BillDate >= startDate &&
-                b.BillDate <= endDate
-            ).ToList();
-
-            // Apply status filter if not "All"
-            string selectedStatus = cmbStatus.SelectedItem.ToString();
-            if (selectedStatus != "All")
-            {
-                filteredBills = filteredBills.Where(b => b.Status == selectedStatus).ToList();
-            }
-
-            // Apply text filter if specified
-            if (!string.IsNullOrWhiteSpace(searchText))
-            {
-                filteredBills = filteredBills.Where(b =>
-                    b.BillNo.ToLower().Contains(searchText) ||
-                    b.PartyName.ToLower().Contains(searchText) ||
-                    (b.BrokerName?.ToLower().Contains(searchText) ?? false)
-                ).ToList();
-            }
-
-            dgvBills.DataSource = null;
-            dgvBills.DataSource = filteredBills;
-
-            // Calculate and display totals
-            UpdateTotals(filteredBills);
+            // Calculate and display totals using all filtered bills
+            UpdateTotals(_filteredBills);
         }
 
         private void UpdateTotals(List<Bill> bills)
@@ -311,35 +401,38 @@ namespace SaleBillSystem.NET.Forms
 
             _sortedColumn = column;
 
-            // Sort the data based on the column's DataPropertyName
+            // Sort the filtered data based on the column's DataPropertyName
             switch (column.DataPropertyName)
             {
                 case "BillNo":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.BillNo).ToList() : _allBills.OrderByDescending(b => b.BillNo).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.BillNo).ToList() : _filteredBills.OrderByDescending(b => b.BillNo).ToList();
                     break;
                 case "BillDate":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.BillDate).ToList() : _allBills.OrderByDescending(b => b.BillDate).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.BillDate).ToList() : _filteredBills.OrderByDescending(b => b.BillDate).ToList();
                     break;
                 case "PartyName":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.PartyName).ToList() : _allBills.OrderByDescending(b => b.PartyName).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.PartyName).ToList() : _filteredBills.OrderByDescending(b => b.PartyName).ToList();
                     break;
                 case "BrokerName":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.BrokerName).ToList() : _allBills.OrderByDescending(b => b.BrokerName).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.BrokerName).ToList() : _filteredBills.OrderByDescending(b => b.BrokerName).ToList();
                     break;
                 case "OriginalAmount":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.OriginalAmount).ToList() : _allBills.OrderByDescending(b => b.OriginalAmount).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.OriginalAmount).ToList() : _filteredBills.OrderByDescending(b => b.OriginalAmount).ToList();
                     break;
                 case "Balance":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.Balance).ToList() : _allBills.OrderByDescending(b => b.Balance).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.Balance).ToList() : _filteredBills.OrderByDescending(b => b.Balance).ToList();
                     break;
                 case "Status":
-                    _allBills = (_sortOrder == SortOrder.Ascending) ? _allBills.OrderBy(b => b.Status).ToList() : _allBills.OrderByDescending(b => b.Status).ToList();
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.Status).ToList() : _filteredBills.OrderByDescending(b => b.Status).ToList();
                     break;
             }
 
             // Update the sort glyph on the header cell
             column.HeaderCell.SortGlyphDirection = _sortOrder;
-            RefreshGrid();
+            
+            // Reset to first page when sorting changes
+            _currentPage = 1;
+            DisplayCurrentPage();
         }
 
         #endregion

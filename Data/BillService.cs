@@ -87,8 +87,8 @@ namespace SaleBillSystem.NET.Data
                     {
                         // Use the correct schema that matches the database table definition
                         string detailSql = @"
-                            INSERT INTO BillDetails (BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, TotalAmount, CompanyID) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            INSERT INTO BillDetails (BillID, ItemID, ItemName, Quantity, Rate, Amount, Charges, SubQuantity, SubQuantityUnit, TotalCharges, TotalAmount, CompanyID) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         
                         var itemParams = new OleDbParameter[]
                         {
@@ -99,6 +99,9 @@ namespace SaleBillSystem.NET.Data
                             new OleDbParameter("Rate", item.Rate),
                             new OleDbParameter("Amount", item.Amount),
                             new OleDbParameter("Charges", item.Charges),
+                            new OleDbParameter("SubQuantity", item.SubQuantity),
+                            new OleDbParameter("SubQuantityUnit", string.IsNullOrWhiteSpace(item.SubQuantityUnit) ? DBNull.Value : (object)item.SubQuantityUnit),
+                            new OleDbParameter("TotalCharges", item.TotalCharges),
                             new OleDbParameter("TotalAmount", item.TotalAmount),
                             new OleDbParameter("CompanyID", bill.CompanyID)
                         };
@@ -156,6 +159,8 @@ namespace SaleBillSystem.NET.Data
 
         /// <summary>
         /// Gets a single bill by its ID, including its line items.
+        /// Note: Party and broker names are not populated here. Use the respective services
+        /// (PartyService.GetPartyByID, BrokerService.GetBrokerByID) to resolve names by ID.
         /// </summary>
         public static Bill GetBillByID(int billId)
         {
@@ -174,6 +179,8 @@ namespace SaleBillSystem.NET.Data
 
         /// <summary>
         /// Gets all bills for a specific party.
+        /// Note: Party and broker names are not populated here. Use the respective services
+        /// (PartyService.GetPartyByID, BrokerService.GetBrokerByID) to resolve names by ID.
         /// </summary>
         public static List<Bill> GetAllBillsForParty(int partyId)
         {
@@ -191,22 +198,23 @@ namespace SaleBillSystem.NET.Data
 
         /// <summary>
         /// Gets all bills with their related party information.
+        /// Note: Party and broker names are not populated here. Use the respective services
+        /// (PartyService.GetPartyByID, BrokerService.GetBrokerByID) to resolve names by ID.
         /// </summary>
         public static List<Bill> GetAllBills()
         {
             var bills = new List<Bill>();
-            string sql = @"
-                SELECT b.*, p.PartyName 
-                FROM BillMaster b 
-                LEFT JOIN PartyMaster p ON b.PartyID = p.PartyID 
-                ORDER BY b.BillDate DESC";
+            string sql = @"SELECT b.*, p.PartyName 
+                  FROM BillMaster b 
+                  LEFT JOIN PartyMaster p ON b.PartyID = p.PartyID 
+                  ORDER BY b.BillDate DESC";
 
             DataTable dt = DatabaseManager.ExecuteQuery(sql);
             foreach (DataRow row in dt.Rows)
             {
                 var bill = MapRowToBill(row);
-                // Set the party name from the joined query
-                bill.PartyName = row["PartyName"]?.ToString() ?? "";
+                // Now we can directly set the party name from our query
+                bill.PartyName = row["PartyName"].ToString();
                 bills.Add(bill);
             }
             return bills;
@@ -240,7 +248,7 @@ namespace SaleBillSystem.NET.Data
             string sql = "SELECT SUM(DebitAmount) - SUM(CreditAmount) FROM TransactionLedger WHERE BillID = ?";
             var param = new OleDbParameter("BillID", billId);
             object result = DatabaseManager.ExecuteScalar(sql, param);
-            return result != DBNull.Value ? Convert.ToDecimal(result) : 0m;
+            return result != DBNull.Value ? Math.Round(Convert.ToDecimal(result)) : 0m;
         }
 
         /// <summary>
@@ -384,7 +392,7 @@ namespace SaleBillSystem.NET.Data
                 // Handle Charges field (may not exist in older database schemas)
                 if (dt.Columns.Contains("Charges"))
                 {
-                    billItem.Charges = Convert.ToDecimal(row["Charges"] ?? 0);
+                    billItem.Charges = row["Charges"] != DBNull.Value ? Convert.ToDecimal(row["Charges"]) : 0m;
                 }
                 else
                 {
@@ -394,12 +402,33 @@ namespace SaleBillSystem.NET.Data
                 // Handle TotalAmount field (may not exist in older database schemas)
                 if (dt.Columns.Contains("TotalAmount"))
                 {
-                    billItem.TotalAmount = Convert.ToDecimal(row["TotalAmount"] ?? 0);
+                    billItem.TotalAmount = row["TotalAmount"] != DBNull.Value ? Convert.ToDecimal(row["TotalAmount"]) : 0m;
                 }
                 else
                 {
-                    // Calculate TotalAmount if not in database
                     billItem.TotalAmount = billItem.Amount + billItem.Charges;
+                }
+
+                // Handle SubQuantity field (may not exist in older database schemas)
+                if (dt.Columns.Contains("SubQuantity"))
+                {
+                    billItem.SubQuantity = row["SubQuantity"] != DBNull.Value ? Convert.ToDecimal(row["SubQuantity"]) : 0;
+                }
+
+                // Handle SubQuantityUnit field (may not exist in older database schemas)
+                if (dt.Columns.Contains("SubQuantityUnit"))
+                {
+                    billItem.SubQuantityUnit = row["SubQuantityUnit"] != DBNull.Value ? row["SubQuantityUnit"].ToString() : "";
+                }
+
+                // Handle TotalCharges field (may not exist in older database schemas)
+                if (dt.Columns.Contains("TotalCharges"))
+                {
+                    billItem.TotalCharges = row["TotalCharges"] != DBNull.Value ? Convert.ToDecimal(row["TotalCharges"]) : 0m;
+                }
+                else
+                {
+                    billItem.TotalCharges = billItem.SubQuantity * billItem.Charges;
                 }
                 
                 items.Add(billItem);
@@ -421,18 +450,18 @@ namespace SaleBillSystem.NET.Data
             return new Bill
             {
                 BillID = Convert.ToInt32(row["BillID"]),
-                BillNo = row["BillNo"].ToString(),
+                BillNo = row["BillNo"]?.ToString() ?? "",
                 BillDate = Convert.ToDateTime(row["BillDate"]),
                 PartyID = Convert.ToInt32(row["PartyID"]),
                 BrokerID = row["BrokerID"] == DBNull.Value ? (int?)null : Convert.ToInt32(row["BrokerID"]),
-                BrokerName = row["BrokerName"].ToString(),
-                OriginalAmount = Convert.ToDecimal(row["OriginalAmount"]),
-                AdditionalCharges = Convert.ToDecimal(row["AdditionalCharges"]),
+                BrokerName = row["BrokerName"] == DBNull.Value ? "" : row["BrokerName"].ToString(),
+                OriginalAmount = row["OriginalAmount"] == DBNull.Value ? 0m : Convert.ToDecimal(row["OriginalAmount"]),
+                AdditionalCharges = row["AdditionalCharges"] == DBNull.Value ? 0m : Convert.ToDecimal(row["AdditionalCharges"]),
                 ChequeAmountFirm1 = row["ChequeAmountFirm1"] == DBNull.Value ? 0m : Convert.ToDecimal(row["ChequeAmountFirm1"]),
                 ChequeAmountFirm2 = row["ChequeAmountFirm2"] == DBNull.Value ? 0m : Convert.ToDecimal(row["ChequeAmountFirm2"]),
-                Status = row["Status"].ToString(),
-                Notes = row["Notes"].ToString(),
-                CompanyID = Convert.ToInt32(row["CompanyID"])
+                Status = row["Status"] == DBNull.Value ? "" : row["Status"].ToString(),
+                Notes = row["Notes"] == DBNull.Value ? "" : row["Notes"].ToString(),
+                CompanyID = row["CompanyID"] == DBNull.Value ? 1 : Convert.ToInt32(row["CompanyID"])
             };
         }
 

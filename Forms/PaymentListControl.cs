@@ -58,7 +58,12 @@ namespace SaleBillSystem.NET.Forms
             btnViewTrace.Click += BtnViewTrace_Click;
             btnRefresh.Click += BtnRefresh_Click;
             dgvPayments.CellDoubleClick += DgvPayments_CellDoubleClick;
+            btnApplyDateFilter.Click += BtnApplyDateFilter_Click;
             this.KeyDown += PaymentListControl_KeyDown;
+            
+            // Initialize date pickers
+            dtpFromDate.Value = DateTime.Now.AddMonths(-1); // Default to 1 month back
+            dtpToDate.Value = DateTime.Now;                // Default to today
         }
 
         #endregion
@@ -76,6 +81,20 @@ namespace SaleBillSystem.NET.Forms
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading payments: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void LoadPaymentsWithDateFilter()
+        {
+            try
+            {
+                int companyId = 1; // Replace with Program.ActiveCompany.CompanyID
+                _allPayments = PaymentService.GetPaymentsInDateRange(companyId, dtpFromDate.Value.Date, dtpToDate.Value.Date);
+                FilterAndBindPayments();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading payments with date filter: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -97,6 +116,9 @@ namespace SaleBillSystem.NET.Forms
                     .ToList();
             }
             dgvPayments.DataSource = filteredList;
+            
+            // Update status label with count
+            lblPaymentCount.Text = $"Total Payments: {filteredList.Count}";
         }
 
         #endregion
@@ -139,6 +161,19 @@ namespace SaleBillSystem.NET.Forms
         private void BtnRefresh_Click(object? sender, EventArgs e)
         {
             LoadPayments();
+        }
+
+        private void BtnApplyDateFilter_Click(object? sender, EventArgs e)
+        {
+            // Validate date range
+            if (dtpFromDate.Value > dtpToDate.Value)
+            {
+                MessageBox.Show("From Date cannot be later than To Date", "Invalid Date Range", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            LoadPaymentsWithDateFilter();
         }
 
         private void DgvPayments_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
@@ -199,7 +234,12 @@ namespace SaleBillSystem.NET.Forms
             }
             else if (e.KeyCode == Keys.F5)
             {
-                LoadPayments();
+                LoadPayments(); // Refresh with no date filters
+            }
+            else if (e.KeyCode == Keys.F6)
+            {
+                // Apply date filters
+                BtnApplyDateFilter_Click(sender, e);
             }
         }
 

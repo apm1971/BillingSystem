@@ -117,6 +117,66 @@ namespace SaleBillSystem.NET.Data
     return payments;
 }
 
+/// <summary>
+/// Gets a list of payments within the specified date range.
+/// </summary>
+public static List<PaymentViewModel> GetPaymentsInDateRange(int companyId, DateTime fromDate, DateTime toDate)
+{
+    var payments = new List<PaymentViewModel>();
+    
+    // Adjust toDate to include the entire day
+    toDate = toDate.Date.AddDays(1).AddSeconds(-1);
+    
+    string sql = @"
+        SELECT PaymentID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, PartyID, BrokerID, ChequeAmountFirm1, ChequeAmountFirm2
+        FROM PaymentMaster
+        WHERE CompanyID = ? AND PaymentDate >= ? AND PaymentDate <= ?
+        ORDER BY PaymentDate DESC";
+    
+    var parameters = new OleDbParameter[] {
+        new OleDbParameter("CompanyID", companyId),
+        new OleDbParameter("FromDate", fromDate.Date),
+        new OleDbParameter("ToDate", toDate)
+    };
+    
+    try
+    {
+        DataTable dt = DatabaseManager.ExecuteQuery(sql, parameters);
+        foreach (DataRow row in dt.Rows)
+        {
+            int partyId = Convert.ToInt32(row["PartyID"]);
+            string partyName = PartyService.GetPartyByID(partyId)?.PartyName ?? string.Empty;
+            
+            string brokerName = string.Empty;
+            if (row["BrokerID"] != DBNull.Value)
+            {
+                var broker = BrokerService.GetBrokerByID(Convert.ToInt32(row["BrokerID"]));
+                brokerName = broker?.BrokerName ?? string.Empty;
+            }
+            
+            payments.Add(new PaymentViewModel
+            {
+                PaymentID = Convert.ToInt32(row["PaymentID"]),
+                PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
+                TotalAmountPaid = Convert.ToDecimal(row["TotalAmountPaid"]),
+                PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
+                Reference = row["Reference"]?.ToString() ?? string.Empty,
+                PartyID = partyId,
+                PartyName = partyName,
+                BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
+                BrokerName = brokerName,
+                ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0,
+                ChequeAmountFirm2 = row["ChequeAmountFirm2"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm2"]) : 0
+            });
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error loading payments: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    return payments;
+}
+
 public static PaymentViewModel? GetPaymentById(int paymentId)
 {
     try
@@ -355,7 +415,7 @@ public static PaymentViewModel? GetPaymentById(int paymentId)
                             {
                                 newStatus = "Paid";
                             }
-                            else if (dueAmount >= totalAmount)
+                            else if (Math.Round(dueAmount) >= Math.Round(totalAmount))
                             {
                                 newStatus = "Unpaid";
                             }

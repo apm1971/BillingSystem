@@ -946,5 +946,86 @@ namespace SaleBillSystem.NET.Data
             
             return summary;
         }
+
+        /// <summary>
+        /// Updates existing bill details to set default values for newly added fields:
+        /// - SubQuantity = 1
+        /// - SubQuantityUnit = 'BOX'
+        /// - TotalCharges = Charges
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool UpdateBillDetailsWithDefaultValues()
+        {
+            try
+            {
+                using (OleDbConnection conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // First, check if the required columns exist
+                    var columns = conn.GetSchema("Columns", new string[] { null, null, "BillDetails" });
+                    bool hasSubQuantity = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "SubQuantity");
+                    bool hasSubQuantityUnit = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "SubQuantityUnit");
+                    bool hasTotalCharges = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "TotalCharges");
+                    bool hasCharges = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "Charges");
+                    
+                    if (!hasSubQuantity || !hasSubQuantityUnit || !hasTotalCharges)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Required columns do not exist. Please run UpdateDatabaseSchema first.");
+                        return false;
+                    }
+                    
+                    // Update all bill details with default values
+                    string updateSql = @"
+                        UPDATE BillDetails 
+                        SET SubQuantity = 1,
+                            SubQuantityUnit = 'BOX',
+                            TotalCharges = IIF(Charges IS NULL, 0, Charges)
+                        WHERE SubQuantity IS NULL 
+                           OR SubQuantityUnit IS NULL 
+                           OR TotalCharges IS NULL";
+                    
+                    using (OleDbCommand cmd = new OleDbCommand(updateSql, conn))
+                    {
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        
+                        System.Diagnostics.Debug.WriteLine($"Updated {rowsAffected} bill detail records with default values.");
+                        
+                        if (rowsAffected > 0)
+                        {
+                            System.Windows.Forms.MessageBox.Show(
+                                $"Successfully updated {rowsAffected} bill detail records with default values:\n" +
+                                "• SubQuantity = 1\n" +
+                                "• SubQuantityUnit = 'BOX'\n" +
+                                "• TotalCharges = Charges",
+                                "Bill Details Update Complete",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            System.Windows.Forms.MessageBox.Show(
+                                "No bill detail records needed updating. All records already have the required values.",
+                                "Bill Details Update Complete",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                        
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error updating bill details with default values: {ex.Message}",
+                    "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                
+                System.Diagnostics.Debug.WriteLine($"Error updating bill details: {ex.Message}");
+                return false;
+            }
+        }
     }
 } 

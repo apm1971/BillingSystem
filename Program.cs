@@ -29,6 +29,17 @@ namespace SaleBillSystem.NET
             // Update database schema to add any missing columns
             // DatabaseManager.UpdateDatabaseSchema();
 
+            // Update existing bill details with default values for new fields
+            // try
+            // {
+            //     DatabaseManager.UpdateBillDetailsWithDefaultValues();
+            // }
+            // catch (Exception ex)
+            // {
+            //     // Log the error but don't stop the application from starting
+            //     System.Diagnostics.Debug.WriteLine($"Warning: Could not update bill details with default values: {ex.Message}");
+            // }
+
             // Fix CompanyID issues for existing data (runs automatically at startup)
             // try
             // {

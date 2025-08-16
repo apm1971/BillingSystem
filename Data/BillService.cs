@@ -221,6 +221,70 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
+        /// Gets multiple bills by their IDs using individual queries for safety and proper broker name resolution.
+        /// </summary>
+        public static List<Bill> GetBillsByIDs(List<int> billIds)
+        {
+            var bills = new List<Bill>();
+            
+            if (billIds == null || !billIds.Any())
+                return bills;
+                
+            try
+            {
+                // Process each bill individually to avoid SQL injection and handle errors gracefully
+                foreach (var billId in billIds.Distinct()) // Remove duplicates
+                {
+                    try
+                    {
+                        string sql = @"SELECT b.*, p.PartyName, bm.BrokerName 
+                               FROM (BillMaster b 
+                               LEFT JOIN PartyMaster p ON b.PartyID = p.PartyID)
+                               LEFT JOIN BrokerMaster bm ON b.BrokerID = bm.BrokerID
+                               WHERE b.BillID = ?";
+
+                        var parameter = new OleDbParameter("BillID", billId);
+                        DataTable dt = DatabaseManager.ExecuteQuery(sql, parameter);
+                        
+                        if (dt.Rows.Count > 0)
+                        {
+                            var bill = MapRowToBill(dt.Rows[0]);
+                            // Set the party and broker names from our query
+                            bill.PartyName = dt.Rows[0]["PartyName"]?.ToString() ?? "";
+                            bill.BrokerName = dt.Rows[0]["BrokerName"]?.ToString() ?? "";
+                            bills.Add(bill);
+                        }
+                    }
+                    catch (Exception billEx)
+                    {
+                        // Handle individual bill errors gracefully
+                        System.Diagnostics.Debug.WriteLine($"Error loading bill {billId}: {billEx.Message}");
+                        
+                        // Try fallback to individual bill lookup without joins
+                        try
+                        {
+                            var fallbackBill = GetBillByID(billId);
+                            if (fallbackBill != null)
+                            {
+                                bills.Add(fallbackBill);
+                            }
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Fallback also failed for bill {billId}: {fallbackEx.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading bills by IDs: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            
+            return bills;
+        }
+
+        /// <summary>
         /// Checks if a party has any bills linked to it.
         /// </summary>
         /// <param name="partyId">The ID of the party to check</param>

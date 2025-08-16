@@ -235,11 +235,9 @@ namespace SaleBillSystem.NET.Forms
                 cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             }
             
-            // Use BeginInvoke to make UI more responsive by moving processing to background
-            this.BeginInvoke(new Action(() => {
-                LoadBillsBasedOnSelection();
-                UpdateFieldsBasedOnSelection();
-            }));
+            // Use background worker for bill loading to prevent UI hanging
+            LoadBillsBasedOnSelectionAsync();
+            UpdateFieldsBasedOnSelection();
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
@@ -252,11 +250,9 @@ namespace SaleBillSystem.NET.Forms
                 cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
             }
             
-            // Use BeginInvoke to make UI more responsive by moving processing to background
-            this.BeginInvoke(new Action(() => {
-                LoadBillsBasedOnSelection();
-                UpdateFieldsBasedOnSelection();
-            }));
+            // Use background worker for bill loading to prevent UI hanging
+            LoadBillsBasedOnSelectionAsync();
+            UpdateFieldsBasedOnSelection();
         }
 
         private void LoadBillsBasedOnSelection()
@@ -276,6 +272,134 @@ namespace SaleBillSystem.NET.Forms
             {
                 dgvOutstandingBills.DataSource = null;
                 _outstandingBills.Clear();
+            }
+        }
+
+        private void LoadBillsBasedOnSelectionAsync()
+        {
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
+
+            // Show loading cursor
+            Cursor.Current = Cursors.WaitCursor;
+            
+            if (!partyId.HasValue || partyId.Value <= 0)
+            {
+                if (!brokerId.HasValue || brokerId.Value <= 0)
+                {
+                    // No selection - clear grid immediately
+                    Cursor.Current = Cursors.Default;
+                    dgvOutstandingBills.DataSource = null;
+                    _outstandingBills.Clear();
+                    return;
+                }
+            }
+
+            var backgroundWorker = new System.ComponentModel.BackgroundWorker();
+            backgroundWorker.DoWork += (sender, e) =>
+            {
+                try
+                {
+                    if (partyId.HasValue && partyId.Value > 0)
+                    {
+                        var bills = BillService.GetAllBillsForParty(partyId.Value);
+                        if (brokerId.HasValue && brokerId.Value > 0)
+                        {
+                            bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
+                        }
+                        e.Result = new { Success = true, Bills = bills, IsPartySelection = true, PartyId = partyId.Value, BrokerId = brokerId };
+                    }
+                    else if (brokerId.HasValue && brokerId.Value > 0)
+                    {
+                        var allBills = BillService.GetAllBills();
+                        var bills = allBills.Where(b => b.BrokerID == brokerId.Value).ToList();
+                        e.Result = new { Success = true, Bills = bills, IsPartySelection = false, BrokerId = brokerId.Value };
+                    }
+                    else
+                    {
+                        e.Result = new { Success = true, Bills = new List<Bill>(), IsPartySelection = false };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    e.Result = new { Success = false, Error = ex.Message };
+                }
+            };
+
+            backgroundWorker.RunWorkerCompleted += (sender, e) =>
+            {
+                Cursor.Current = Cursors.Default;
+                
+                dynamic result = e.Result;
+                if (result.Success)
+                {
+                    ProcessLoadedBills(result.Bills, result.IsPartySelection);
+                }
+                else
+                {
+                    MessageBox.Show($"Error loading bills: {result.Error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    dgvOutstandingBills.DataSource = null;
+                    _outstandingBills.Clear();
+                }
+            };
+
+            backgroundWorker.RunWorkerAsync();
+        }
+
+        private void ProcessLoadedBills(List<Bill> bills, bool isPartySelection)
+        {
+            try
+            {
+                // Get all bill balances in one query rather than individually
+                var allBalances = LedgerService.GetAllBillBalances();
+                
+                // Cache broker data to avoid repeated lookups
+                var brokerCache = new Dictionary<int, string>();
+                
+                // Use efficient mapping with cached data
+                _outstandingBills = bills
+                    .Select(b =>
+                    {
+                        // Look up broker name from cache or add it
+                        string brokerName = string.Empty;
+                        if (b.BrokerID.HasValue && b.BrokerID.Value > 0)
+                        {
+                            if (!brokerCache.TryGetValue(b.BrokerID.Value, out brokerName))
+                            {
+                                var broker = _brokers.FirstOrDefault(br => br.BrokerID == b.BrokerID.Value);
+                                brokerName = broker?.BrokerName ?? "Unknown Broker";
+                                brokerCache[b.BrokerID.Value] = brokerName;
+                            }
+                        }
+                        
+                        // Get balance from the pre-fetched dictionary
+                        decimal balance = allBalances.TryGetValue(b.BillID, out decimal dueAmount) ? dueAmount : 0;
+                        
+                        return new BillViewModel
+                        {
+                            BillID = b.BillID,
+                            BillNo = b.BillNo,
+                            PartyName = b.PartyName,
+                            BrokerName = brokerName,
+                            BillDate = b.BillDate,
+                            OriginalAmount = b.OriginalAmount,
+                            AdditionalCharges = b.AdditionalCharges,
+                            BalanceDue = balance,
+                            PaymentAllocation = 0,
+                            ChequeAmountFirm1 = b.ChequeAmountFirm1,
+                            ChequeAmountFirm2 = b.ChequeAmountFirm2
+                        };
+                    })
+                    .Where(b => b.BalanceDue > 0.01m)
+                    .OrderBy(b => b.BillDate)
+                    .ToList();
+
+                dgvOutstandingBills.DataSource = _outstandingBills;
+                ResetGridStyles();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error processing bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -481,10 +605,20 @@ namespace SaleBillSystem.NET.Forms
 
             dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
             ResetGridStyles();
+            // OPTIMIZATION: Get all bill details in one query instead of individual calls
+            var billIds = billsToProcess.Select(b => b.BillID).ToList();
+            var billDetails = BillService.GetBillsByIDs(billIds);
+
             foreach (var billVm in billsToProcess)
             {
-                var fullBill = BillService.GetBillByID(billVm.BillID);
-                if (fullBill == null) continue;
+                // Use cached bill data instead of individual database calls
+                var fullBill = billDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
+                if (fullBill == null) 
+                {
+                    // Fallback to individual call if batch didn't work
+                    fullBill = BillService.GetBillByID(billVm.BillID);
+                    if (fullBill == null) continue;
+                }
 
                 var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
                 var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
@@ -555,6 +689,10 @@ namespace SaleBillSystem.NET.Forms
             // Subtract brokerage from payment amount for allocation
             decimal remainingAmount = paymentAmount;
 
+            // OPTIMIZATION: Get all bill details in one query instead of individual calls
+            var billIds = billsToProcess.Select(b => b.BillID).ToList();
+            var billDetails = BillService.GetBillsByIDs(billIds);
+
             foreach (var billVm in billsToProcess.OrderBy(b => b.BillDate)) // Ensure FIFO on selected bills
             {
                 if (remainingAmount <= 0)
@@ -563,8 +701,14 @@ namespace SaleBillSystem.NET.Forms
                     continue;
                 }
 
-                var fullBill = BillService.GetBillByID(billVm.BillID);
-                if (fullBill == null) continue;
+                // Use cached bill data instead of individual database calls
+                var fullBill = billDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
+                if (fullBill == null) 
+                {
+                    // Fallback to individual call if batch didn't work
+                    fullBill = BillService.GetBillByID(billVm.BillID);
+                    if (fullBill == null) continue;
+                }
 
                 // Calculate the true amount needed to settle this bill
                 var (_, _, settlementAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
@@ -618,6 +762,92 @@ namespace SaleBillSystem.NET.Forms
                 return;
             }
 
+            // CRITICAL FIX: Capture all UI values BEFORE starting background thread
+            var paymentData = new PaymentSaveData
+            {
+                PaymentsToSave = paymentsToSave,
+                TotalPaymentAmount = totalPaymentAmount,
+                PaymentDate = paymentDate,
+                InterestDays = interestDays,
+                DiscountDays = discountDays,
+                DiscountRate = discountRate,
+                InterestRate = interestRate,
+                BrokerageRate = brokerageRate,
+                SelectedPartyId = cmbParty.SelectedValue as int?,
+                SelectedBrokerId = cmbBroker.SelectedValue as int?,
+                PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
+                Reference = txtReference.Text,
+                ChequeAmountFirm1Text = txtChequeAmountFirm1.Text,
+                ChequeAmountFirm2Text = txtChequeAmountFirm2.Text
+            };
+
+            // Show loading indicator and disable save button to prevent double-clicking
+            Cursor.Current = Cursors.WaitCursor;
+            btnSave.Enabled = false;
+            btnSave.Text = "Saving...";
+            
+            // Use background worker for the save operation
+            var backgroundWorker = new System.ComponentModel.BackgroundWorker();
+            backgroundWorker.DoWork += (sender, e) =>
+            {
+                try
+                {
+                    int paymentId = SavePaymentInBackground(paymentData);
+                    e.Result = new { Success = true, PaymentId = paymentId };
+                }
+                catch (Exception ex)
+                {
+                    e.Result = new { Success = false, Error = ex.Message };
+                }
+            };
+
+            backgroundWorker.RunWorkerCompleted += (sender, e) =>
+            {
+                // Restore UI state
+                Cursor.Current = Cursors.Default;
+                btnSave.Enabled = true;
+                btnSave.Text = "Save";
+                
+                dynamic result = e.Result;
+                if (result.Success)
+                {
+                    MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Show payment trace with print option
+                    ShowPaymentTraceAfterSave(result.PaymentId);
+                    
+                    ClearForm();
+                }
+                else
+                {
+                    MessageBox.Show($"Failed to save payment: {result.Error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            backgroundWorker.RunWorkerAsync();
+        }
+
+        // Helper class to pass data to background thread without UI access
+        private class PaymentSaveData
+        {
+            public List<BillViewModel> PaymentsToSave { get; set; }
+            public decimal TotalPaymentAmount { get; set; }
+            public DateTime PaymentDate { get; set; }
+            public int InterestDays { get; set; }
+            public int DiscountDays { get; set; }
+            public decimal DiscountRate { get; set; }
+            public decimal InterestRate { get; set; }
+            public decimal BrokerageRate { get; set; }
+            public int? SelectedPartyId { get; set; }
+            public int? SelectedBrokerId { get; set; }
+            public string PaymentMethod { get; set; }
+            public string Reference { get; set; }
+            public string ChequeAmountFirm1Text { get; set; }
+            public string ChequeAmountFirm2Text { get; set; }
+        }
+
+        private int SavePaymentInBackground(PaymentSaveData data)
+        {
             using (var conn = DatabaseManager.GetConnection())
             {
                 conn.Open();
@@ -626,50 +856,47 @@ namespace SaleBillSystem.NET.Forms
                 {
                     // Determine the party ID for the payment master record
                     int partyId;
-                    if (cmbParty.SelectedValue != null && (int)cmbParty.SelectedValue > 0)
+                    if (data.SelectedPartyId.HasValue && data.SelectedPartyId.Value > 0)
                     {
                         // Party is directly selected
-                        partyId = (int)cmbParty.SelectedValue;
+                        partyId = data.SelectedPartyId.Value;
                     }
                     else
                     {
                         // Only broker is selected, get party from the first bill being paid
-                        var firstBill = BillService.GetBillByID(paymentsToSave.First().BillID);
+                        var firstBill = BillService.GetBillByID(data.PaymentsToSave.First().BillID);
                         if (firstBill == null)
                         {
-                            MessageBox.Show("Unable to determine party for payment. Please select a party.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            return;
+                            throw new Exception("Unable to determine party for payment. Please select a party.");
                         }
                         partyId = firstBill.PartyID;
                     }
 
                     // Determine the broker ID for the payment
                     int? brokerId = null;
-                    if (cmbBroker.SelectedValue != null && (int)cmbBroker.SelectedValue > 0)
+                    if (data.SelectedBrokerId.HasValue && data.SelectedBrokerId.Value > 0)
                     {
-                        brokerId = (int)cmbBroker.SelectedValue;
+                        brokerId = data.SelectedBrokerId.Value;
                     }
-                    else if (paymentsToSave.Any())
+                    else if (data.PaymentsToSave.Any())
                     {
                         // Get broker ID from the first bill being paid
-                        var firstBill = BillService.GetBillByID(paymentsToSave.First().BillID);
+                        var firstBill = BillService.GetBillByID(data.PaymentsToSave.First().BillID);
                         if (firstBill?.BrokerID.HasValue == true)
                         {
                             brokerId = firstBill.BrokerID.Value;
                         }
                     }
 
-
-
                     // Create a single master record for this payment event
                     var paymentMaster = new PaymentMaster
                     {
                         PartyID = partyId,
                         BrokerID = brokerId,
-                        PaymentDate = paymentDate,
-                        TotalAmountPaid = Math.Round(totalPaymentAmount),
-                        PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
-                        Reference = txtReference.Text,
+                        PaymentDate = data.PaymentDate,
+                        TotalAmountPaid = Math.Round(data.TotalPaymentAmount),
+                        PaymentMethod = data.PaymentMethod,
+                        Reference = data.Reference,
                         CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
                         ChequeAmountFirm1 = 0,
                         ChequeAmountFirm2 = 0
@@ -678,34 +905,41 @@ namespace SaleBillSystem.NET.Forms
                     // If payment method is Cheque, get the firm amounts
                     if (paymentMaster.PaymentMethod == "Cheque")
                     {
-                        if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount))
+                        if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount))
                         {
                             paymentMaster.ChequeAmountFirm1 = Math.Round(firm1Amount);
                         }
                         
-                        if (decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+                        if (decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
                         {
                             paymentMaster.ChequeAmountFirm2 = Math.Round(firm2Amount);
                         }
                         
                         // Validate that the sum matches the total payment amount
-                        if (Math.Abs((paymentMaster.ChequeAmountFirm1 + paymentMaster.ChequeAmountFirm2) - totalPaymentAmount) > 0.01m)
+                        if (Math.Abs((paymentMaster.ChequeAmountFirm1 + paymentMaster.ChequeAmountFirm2) - data.TotalPaymentAmount) > 0.01m)
                         {
-                            MessageBox.Show("The sum of Firm 1 and Firm 2 amounts must equal the total payment amount.", 
-                                "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
+                            throw new Exception("The sum of Firm 1 and Firm 2 amounts must equal the total payment amount.");
                         }
                     }
                     int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
 
+                    // OPTIMIZATION: Get all bill details in one query instead of individual calls
+                    var billIds = data.PaymentsToSave.Select(b => b.BillID).ToList();
+                    var billDetails = BillService.GetBillsByIDs(billIds);
 
-                    foreach (var billVm in paymentsToSave)
+                    foreach (var billVm in data.PaymentsToSave)
                     {
-                        var fullBill = BillService.GetBillByID(billVm.BillID);
-                        if (fullBill == null) continue;
+                        // Use cached bill data instead of individual database calls
+                        var fullBill = billDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
+                        if (fullBill == null) 
+                        {
+                            // Fallback to individual call if batch didn't work
+                            fullBill = BillService.GetBillByID(billVm.BillID);
+                            if (fullBill == null) continue;
+                        }
 
-                        var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, brokerageRate);
-                        var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, interestDays, interestRate, discountDays, discountRate, paymentDate);
+                        var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, data.BrokerageRate);
+                        var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, data.InterestDays, data.InterestRate, data.DiscountDays, data.DiscountRate, data.PaymentDate);
                         bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount - brokerageAmount);
 
                         if (isFinalSettlement)
@@ -717,7 +951,7 @@ namespace SaleBillSystem.NET.Forms
                                     PaymentID = paymentId,
                                     PartyID = fullBill.PartyID,
                                     BillID = fullBill.BillID,
-                                    TransactionDate = paymentDate,
+                                    TransactionDate = data.PaymentDate,
                                     TransactionType = "Interest",
                                     Description = $"Interest on Bill No: {fullBill.BillNo}",
                                     DebitAmount = Math.Round(interest),
@@ -734,7 +968,7 @@ namespace SaleBillSystem.NET.Forms
                                     PaymentID = paymentId,
                                     PartyID = fullBill.PartyID,
                                     BillID = fullBill.BillID,
-                                    TransactionDate = paymentDate,
+                                    TransactionDate = data.PaymentDate,
                                     TransactionType = "Discount",
                                     Description = $"Discount on Bill No: {fullBill.BillNo}",
                                     CreditAmount = Math.Round(discount),
@@ -750,7 +984,7 @@ namespace SaleBillSystem.NET.Forms
                                     PaymentID = paymentId,
                                     PartyID = fullBill.PartyID,
                                     BillID = fullBill.BillID,
-                                    TransactionDate = paymentDate,
+                                    TransactionDate = data.PaymentDate,
                                     TransactionType = "Brokerage",
                                     Description = $"Brokerage on Bill No: {fullBill.BillNo}",
                                     CreditAmount = Math.Round(brokerageAmount),
@@ -766,12 +1000,12 @@ namespace SaleBillSystem.NET.Forms
                             PartyID = fullBill.PartyID,
                             BillID = fullBill.BillID,
                             PaymentID = paymentId,
-                            TransactionDate = paymentDate,
+                            TransactionDate = data.PaymentDate,
                             TransactionType = "Payment",
                             Description = $"Payment against Bill No: {fullBill.BillNo}",
                             CreditAmount = Math.Round(billVm.PaymentAllocation),
-                            PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
-                            Reference = txtReference.Text,
+                            PaymentMethod = data.PaymentMethod,
+                            Reference = data.Reference,
                             UserID = 1, // Replace with Program.CurrentUser.UserID
                             CompanyID = 1 // Replace with Program.ActiveCompany.CompanyID
                         };
@@ -782,19 +1016,21 @@ namespace SaleBillSystem.NET.Forms
                     dbTransaction.Commit();
 
                     // Now update bill statuses in a new transaction
-                    UpdateBillStatuses(paymentsToSave);
+                    UpdateBillStatuses(data.PaymentsToSave);
 
-                    MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // Show payment trace with print option
-                    ShowPaymentTraceAfterSave(paymentId);
-
-                    ClearForm();
+                    return paymentId; // Return the payment ID for success handling
                 }
                 catch (Exception ex)
                 {
-                    dbTransaction.Rollback();
-                    MessageBox.Show($"Failed to save payment: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    try
+                    {
+                        dbTransaction.Rollback();
+                    }
+                    catch
+                    {
+                        // Ignore rollback errors
+                    }
+                    throw; // Re-throw to be caught by background worker
                 }
             }
         }
@@ -809,58 +1045,71 @@ namespace SaleBillSystem.NET.Forms
         #region Bill Status Update
 
         /// <summary>
-        /// Updates the status of bills after payment transactions are saved
+        /// Updates the status of bills after payment transactions are saved - OPTIMIZED
         /// </summary>
         private void UpdateBillStatuses(List<BillViewModel> paidBills)
         {
+            if (paidBills == null || !paidBills.Any())
+                return;
+                
             try
             {
                 using (var conn = DatabaseManager.GetConnection())
                 {
                     conn.Open();
-                    var trans = conn.BeginTransaction();
-
-                    try
+                    using (var trans = conn.BeginTransaction())
                     {
-                        foreach (var billVm in paidBills)
+                        try
                         {
-                            // Calculate current balance after payment (now ledger transactions are committed)
-                            decimal dueAmount = LedgerService.GetDueAmount(billVm.BillID);
+                            // OPTIMIZATION: Get all due amounts in one query instead of individual calls
+                            var billIds = paidBills.Select(b => b.BillID).ToList();
+                            var currentBalances = LedgerService.GetAllBillBalances();
 
-                            // Determine new status based on balance
-                            string newStatus;
-                            if (dueAmount <= 0)
+                            foreach (var billVm in paidBills)
                             {
-                                newStatus = "Paid";
-                            }
-                            else if (Math.Round(dueAmount) >= Math.Round(billVm.TotalAmount))
-                            {
-                                newStatus = "Unpaid";
-                            }
-                            else
-                            {
-                                newStatus = "Partial";
+                                // Use pre-calculated balance from the batch query
+                                decimal dueAmount = currentBalances.ContainsKey(billVm.BillID) ? currentBalances[billVm.BillID] : 0;
+
+                                // Determine new status based on balance
+                                string newStatus;
+                                if (dueAmount <= 0)
+                                {
+                                    newStatus = "Paid";
+                                }
+                                else if (Math.Round(dueAmount) >= Math.Round(billVm.TotalAmount))
+                                {
+                                    newStatus = "Unpaid";
+                                }
+                                else
+                                {
+                                    newStatus = "Partial";
+                                }
+
+                                // Update the bill status in the database
+                                string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
+                                using (var cmd = new OleDbCommand(updateSql, conn, trans))
+                                {
+                                    cmd.CommandTimeout = 30; // Add timeout
+                                    cmd.Parameters.Add(new OleDbParameter("Status", newStatus));
+                                    cmd.Parameters.Add(new OleDbParameter("BillID", billVm.BillID));
+                                    cmd.ExecuteNonQuery();
+                                }
                             }
 
-                            // Update the bill status in the database
-                            string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
-                            var statusParam = new OleDbParameter("Status", newStatus);
-                            var billIdParam = new OleDbParameter("BillID", billVm.BillID);
-
-                            using (var cmd = new OleDbCommand(updateSql, conn, trans))
-                            {
-                                cmd.Parameters.Add(statusParam);
-                                cmd.Parameters.Add(billIdParam);
-                                cmd.ExecuteNonQuery();
-                            }
+                            trans.Commit();
                         }
-
-                        trans.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        trans.Rollback();
-                        throw;
+                        catch (Exception ex)
+                        {
+                            try
+                            {
+                                trans.Rollback();
+                            }
+                            catch
+                            {
+                                // Ignore rollback errors
+                            }
+                            throw;
+                        }
                     }
                 }
             }
@@ -1002,23 +1251,7 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
-                // Get the payment details
-                var payment = PaymentService.GetPaymentById(paymentId);
-                if (payment == null)
-                {
-                    MessageBox.Show("Could not retrieve payment details for printing.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Get the payment trace
-                var paymentTrace = PaymentService.GetPaymentTrace(paymentId);
-                if (!paymentTrace.Any())
-                {
-                    MessageBox.Show("No transaction details found for printing.", "No Details", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Ask user if they want to print
+                // Ask user if they want to print BEFORE loading data
                 var result = MessageBox.Show(
                     "Payment saved successfully! Would you like to print the payment slip?",
                     "Print Payment Slip",
@@ -1027,15 +1260,64 @@ namespace SaleBillSystem.NET.Forms
 
                 if (result == DialogResult.Yes)
                 {
-                    // Create and show the payment trace form
-                    var traceForm = new PaymentTraceForm(payment, paymentTrace);
-                    // Auto-print the payment slip
-                    traceForm.AutoPrint();
-                    traceForm.ShowDialog();
+                    // Show loading cursor
+                    Cursor.Current = Cursors.WaitCursor;
+                    
+                    // Load data on background thread to prevent UI hanging
+                    var backgroundWorker = new System.ComponentModel.BackgroundWorker();
+                    backgroundWorker.DoWork += (sender, e) =>
+                    {
+                        try
+                        {
+                            // Get the payment details
+                            var payment = PaymentService.GetPaymentById(paymentId);
+                            if (payment == null)
+                            {
+                                e.Result = new { Success = false, Message = "Could not retrieve payment details for printing." };
+                                return;
+                            }
+
+                            // Get the payment trace
+                            var paymentTrace = PaymentService.GetPaymentTrace(paymentId);
+                            if (!paymentTrace.Any())
+                            {
+                                e.Result = new { Success = false, Message = "No transaction details found for printing." };
+                                return;
+                            }
+
+                            e.Result = new { Success = true, Payment = payment, PaymentTrace = paymentTrace };
+                        }
+                        catch (Exception ex)
+                        {
+                            e.Result = new { Success = false, Message = ex.Message };
+                        }
+                    };
+
+                    backgroundWorker.RunWorkerCompleted += (sender, e) =>
+                    {
+                        Cursor.Current = Cursors.Default;
+                        
+                        dynamic result_data = e.Result;
+                        if (result_data.Success)
+                        {
+                            // Create and show the payment trace form
+                            var traceForm = new PaymentTraceForm(result_data.Payment, result_data.PaymentTrace);
+                            // Auto-print the payment slip
+                            traceForm.AutoPrint();
+                            traceForm.ShowDialog();
+                        }
+                        else
+                        {
+                            MessageBox.Show(result_data.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    };
+
+                    backgroundWorker.RunWorkerAsync();
                 }
             }
             catch (Exception ex)
             {
+                Cursor.Current = Cursors.Default;
                 MessageBox.Show($"Error showing payment trace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

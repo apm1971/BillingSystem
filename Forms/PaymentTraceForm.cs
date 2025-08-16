@@ -171,23 +171,63 @@ namespace SaleBillSystem.NET.Forms
 
             try
             {
-                bool areAllBillsPaid = CheckIfAllBillsPaid(_paymentTrace);
+                // Show loading cursor immediately
+                Cursor.Current = Cursors.WaitCursor;
                 
-                if (!areAllBillsPaid)
+                // Use background worker to prevent UI hanging
+                var backgroundWorker = new System.ComponentModel.BackgroundWorker();
+                backgroundWorker.DoWork += (sender, e) =>
                 {
-                    MessageBox.Show("Enhanced payment report is only available when all selected bills are fully paid.", 
-                        "Partial Payment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                
-                string htmlContent = GenerateHtmlReport(_payment, _paymentTrace);
-                string tempFilePath = Path.Combine(Path.GetTempPath(), $"PaymentTrace_{_payment.PaymentID}.html");
-                File.WriteAllText(tempFilePath, htmlContent);
+                    try
+                    {
+                        bool areAllBillsPaid = CheckIfAllBillsPaid(_paymentTrace);
+                        
+                        if (!areAllBillsPaid)
+                        {
+                            e.Result = new { Success = false, Message = "Enhanced payment report is only available when all selected bills are fully paid.", IsPartialPayment = true };
+                            return;
+                        }
+                        
+                        string htmlContent = GenerateHtmlReport(_payment, _paymentTrace);
+                        string tempFilePath = Path.Combine(Path.GetTempPath(), $"PaymentTrace_{_payment.PaymentID}.html");
+                        File.WriteAllText(tempFilePath, htmlContent);
 
-                // Open the file in the default web browser
-                Process.Start(new ProcessStartInfo(tempFilePath) { UseShellExecute = true });
+                        e.Result = new { Success = true, FilePath = tempFilePath };
+                    }
+                    catch (Exception ex)
+                    {
+                        e.Result = new { Success = false, Message = ex.Message, IsPartialPayment = false };
+                    }
+                };
+
+                backgroundWorker.RunWorkerCompleted += (sender, e) =>
+                {
+                    Cursor.Current = Cursors.Default;
+                    
+                    dynamic result = e.Result;
+                    if (result.Success)
+                    {
+                        // Open the file in the default web browser
+                        Process.Start(new ProcessStartInfo(result.FilePath) { UseShellExecute = true });
+                    }
+                    else
+                    {
+                        if (result.IsPartialPayment)
+                        {
+                            MessageBox.Show(result.Message, "Partial Payment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show($"Could not generate or open the report: {result.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                };
+
+                backgroundWorker.RunWorkerAsync();
             }
             catch (Exception ex)
             {
+                Cursor.Current = Cursors.Default;
                 MessageBox.Show($"Could not generate or open the report: {ex.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -655,7 +695,7 @@ namespace SaleBillSystem.NET.Forms
             return true;
         }
 
-        // Helper method to verify bill statuses directly from the database
+        // Helper method to verify bill statuses directly from the database - SAFE
         private bool AreBillStatusesPaid(List<PaymentTraceViewModel> paymentTrace)
         {
             var billIds = paymentTrace
@@ -669,22 +709,34 @@ namespace SaleBillSystem.NET.Forms
                 
             try
             {
+                int paidCount = 0;
+                
+                // Check each bill status individually to avoid SQL injection
                 foreach (var billId in billIds)
                 {
-                    string sql = "SELECT Status FROM BillMaster WHERE BillID = ?";
-                    var parameter = new OleDbParameter("BillID", billId);
-                    
-                    object result = DatabaseManager.ExecuteScalar(sql, parameter);
-                    string status = result?.ToString() ?? "";
-                    
-                    if (status != "Paid")
+                    try
                     {
-                        return false;
+                        string sql = "SELECT Status FROM BillMaster WHERE BillID = ?";
+                        var parameter = new OleDbParameter("BillID", billId);
+                        
+                        object result = DatabaseManager.ExecuteScalar(sql, parameter);
+                        string status = result?.ToString() ?? "";
+                        
+                        if (status == "Paid")
+                        {
+                            paidCount++;
+                        }
+                    }
+                    catch (Exception billEx)
+                    {
+                        // Handle individual bill errors gracefully
+                        System.Diagnostics.Debug.WriteLine($"Error checking status for bill {billId}: {billEx.Message}");
+                        // Assume not paid if we can't check
                     }
                 }
                 
-                // All bills have "Paid" status
-                return true;
+                // Return true only if all bills are paid
+                return paidCount == billIds.Count;
             }
             catch (Exception ex)
             {
@@ -693,7 +745,7 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        // Helper method to get previous payments for each bill
+        // Helper method to get previous payments for each bill - SAFE with individual queries
         private Dictionary<int, Dictionary<string, List<PreviousPaymentInfo>>> GetPreviousPayments(List<PaymentTraceViewModel> currentPaymentTrace, int currentPaymentId)
         {
             var result = new Dictionary<int, Dictionary<string, List<PreviousPaymentInfo>>>();
@@ -710,48 +762,63 @@ namespace SaleBillSystem.NET.Forms
             
             try
             {
+                // Process each bill individually to avoid SQL injection and handle errors gracefully
                 foreach (var billId in billIds)
                 {
-                    // Get all transactions for this bill
-                    string sql = @"
-                        SELECT TransactionID, PaymentID, TransactionType, DebitAmount, CreditAmount, PaymentMethod, TransactionDate 
-                        FROM TransactionLedger 
-                        WHERE BillID = ? AND TransactionType = 'Payment' AND PaymentID <> ?
-                        ORDER BY TransactionDate";
-                    
-                    var parameters = new OleDbParameter[]
+                    // Initialize empty collections for this bill
+                    result[billId] = new Dictionary<string, List<PreviousPaymentInfo>>
                     {
-                        new OleDbParameter("BillID", billId),
-                        new OleDbParameter("PaymentID", currentPaymentId)
+                        ["Cash"] = new List<PreviousPaymentInfo>(),
+                        ["Cheque"] = new List<PreviousPaymentInfo>()
                     };
                     
-                    DataTable dt = DatabaseManager.ExecuteQuery(sql, parameters);
-                    
-                    Dictionary<string, List<PreviousPaymentInfo>> paymentsByMethod = new Dictionary<string, List<PreviousPaymentInfo>>();
-                    // Initialize with empty lists for both payment methods
-                    paymentsByMethod["Cash"] = new List<PreviousPaymentInfo>();
-                    paymentsByMethod["Cheque"] = new List<PreviousPaymentInfo>();
-                    
-                    foreach (DataRow row in dt.Rows)
+                    try
                     {
-                        string paymentMethod = row["PaymentMethod"] != DBNull.Value ? row["PaymentMethod"].ToString() : "Cash";
-                        decimal amount = Convert.ToDecimal(row["CreditAmount"]);
-                        DateTime paymentDate = Convert.ToDateTime(row["TransactionDate"]);
+                        string sql = @"
+                            SELECT BillID, TransactionID, PaymentID, TransactionType, DebitAmount, CreditAmount, PaymentMethod, TransactionDate 
+                            FROM TransactionLedger 
+                            WHERE BillID = ? AND TransactionType = 'Payment' AND PaymentID <> ?
+                            ORDER BY TransactionDate";
                         
-                        // Default to "Cash" for empty payment methods
-                        if (string.IsNullOrWhiteSpace(paymentMethod))
-                            paymentMethod = "Cash";
-                        
-                        var paymentInfo = new PreviousPaymentInfo
+                        var parameters = new OleDbParameter[]
                         {
-                            Amount = amount,
-                            PaymentDate = paymentDate
+                            new OleDbParameter("BillID", billId),
+                            new OleDbParameter("PaymentID", currentPaymentId)
                         };
                         
-                        paymentsByMethod[paymentMethod].Add(paymentInfo);
+                        DataTable dt = DatabaseManager.ExecuteQuery(sql, parameters);
+                        
+                        foreach (DataRow row in dt.Rows)
+                        {
+                            string paymentMethod = row["PaymentMethod"] != DBNull.Value ? row["PaymentMethod"].ToString() : "Cash";
+                            decimal amount = Convert.ToDecimal(row["CreditAmount"]);
+                            DateTime paymentDate = Convert.ToDateTime(row["TransactionDate"]);
+                            
+                            // Default to "Cash" for empty payment methods
+                            if (string.IsNullOrWhiteSpace(paymentMethod))
+                                paymentMethod = "Cash";
+                            
+                            var paymentInfo = new PreviousPaymentInfo
+                            {
+                                Amount = amount,
+                                PaymentDate = paymentDate
+                            };
+                            
+                            // Ensure the payment method exists in the dictionary
+                            if (!result[billId].ContainsKey(paymentMethod))
+                            {
+                                result[billId][paymentMethod] = new List<PreviousPaymentInfo>();
+                            }
+                            
+                            result[billId][paymentMethod].Add(paymentInfo);
+                        }
                     }
-                    
-                    result[billId] = paymentsByMethod;
+                    catch (Exception billEx)
+                    {
+                        // Handle individual bill errors gracefully
+                        System.Diagnostics.Debug.WriteLine($"Error fetching previous payments for bill {billId}: {billEx.Message}");
+                        // Keep the empty collections for this bill
+                    }
                 }
             }
             catch (Exception ex)
@@ -782,63 +849,65 @@ namespace SaleBillSystem.NET.Forms
         {
             var result = new Dictionary<int, BillDetail>();
             
-            if (billIds.Count == 0)
+            if (billIds == null || billIds.Count == 0)
                 return result;
             
             try
             {
-                using (var conn = DatabaseManager.GetConnection())
+                // Process bills individually to avoid SQL injection and handle errors gracefully
+                foreach (var billId in billIds.Distinct()) // Remove duplicates
                 {
-                    conn.Open();
-                    
-                    foreach (var billId in billIds)
+                    try
                     {
-                        // First fetch bill and party information
                         string sql = @"
-                            SELECT b.BillID, b.PartyID, b.BrokerID, p.PartyName
-                            FROM BillMaster b 
-                            LEFT JOIN PartyMaster p ON b.PartyID = p.PartyID
+                            SELECT b.BillID, b.PartyID, b.BrokerID, p.PartyName, bm.BrokerName
+                            FROM (BillMaster b 
+                            LEFT JOIN PartyMaster p ON b.PartyID = p.PartyID)
+                            LEFT JOIN BrokerMaster bm ON b.BrokerID = bm.BrokerID
                             WHERE b.BillID = ?";
                         
                         var parameter = new OleDbParameter("BillID", billId);
+                        DataTable dt = DatabaseManager.ExecuteQuery(sql, parameter);
                         
-                        var detail = new BillDetail();
-                        bool foundBill = false;
-                        
-                        using (var cmd = new OleDbCommand(sql, conn))
+                        if (dt.Rows.Count > 0)
                         {
-                            cmd.Parameters.Add(parameter);
+                            DataRow row = dt.Rows[0];
                             
-                            using (var reader = cmd.ExecuteReader())
+                            var detail = new BillDetail
                             {
-                                if (reader.Read())
-                                {
-                                    foundBill = true;
-                                    detail.PartyID = Convert.ToInt32(reader["PartyID"]);
-                                    detail.PartyName = reader["PartyName"] != DBNull.Value ? reader["PartyName"].ToString() : "Unknown";
-                                    detail.BrokerID = reader["BrokerID"] != DBNull.Value ? Convert.ToInt32(reader["BrokerID"]) : (int?)null;
-                                }
-                            }
-                        }
-
-                        // If we found a bill and it has a broker ID, fetch the broker name
-                        if (foundBill && detail.BrokerID.HasValue)
-                        {
-                            string brokerSql = "SELECT BrokerName FROM BrokerMaster WHERE BrokerID = ?";
-                            var brokerParam = new OleDbParameter("BrokerID", detail.BrokerID.Value);
+                                PartyID = Convert.ToInt32(row["PartyID"]),
+                                PartyName = row["PartyName"] != DBNull.Value ? row["PartyName"].ToString() : "Unknown",
+                                BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : (int?)null,
+                                BrokerName = row["BrokerName"] != DBNull.Value ? row["BrokerName"].ToString() : ""
+                            };
                             
-                            using (var cmd = new OleDbCommand(brokerSql, conn))
-                            {
-                                cmd.Parameters.Add(brokerParam);
-                                var brokerName = cmd.ExecuteScalar();
-                                detail.BrokerName = brokerName != null && brokerName != DBNull.Value ? brokerName.ToString() : "";
-                            }
-                        }
-                        
-                        if (foundBill)
-                        {
                             result[billId] = detail;
                         }
+                        else
+                        {
+                            // Bill not found, create default entry
+                            result[billId] = new BillDetail
+                            {
+                                PartyID = 0,
+                                PartyName = "Unknown",
+                                BrokerID = null,
+                                BrokerName = ""
+                            };
+                        }
+                    }
+                    catch (Exception billEx)
+                    {
+                        // Handle individual bill errors gracefully
+                        System.Diagnostics.Debug.WriteLine($"Error fetching details for bill {billId}: {billEx.Message}");
+                        
+                        // Create default entry for this bill
+                        result[billId] = new BillDetail
+                        {
+                            PartyID = 0,
+                            PartyName = "Unknown",
+                            BrokerID = null,
+                            BrokerName = ""
+                        };
                     }
                 }
             }

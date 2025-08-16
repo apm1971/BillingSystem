@@ -149,12 +149,46 @@ namespace SaleBillSystem.NET.Forms
 
             if (MessageBox.Show($"Are you sure you want to delete Payment ID {selectedPayment.PaymentID}?\nThis will also delete all associated ledger entries and cannot be undone.", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
-                // Call the new, fully implemented delete method
-                if (PaymentService.DeletePayment(selectedPayment.PaymentID))
+                // Show loading cursor and disable controls to prevent double-clicking
+                Cursor.Current = Cursors.WaitCursor;
+                btnDelete.Enabled = false;
+                dgvPayments.Enabled = false;
+                
+                // Use background worker to prevent UI hanging during deletion
+                var backgroundWorker = new System.ComponentModel.BackgroundWorker();
+                backgroundWorker.DoWork += (sender, e) =>
                 {
-                    MessageBox.Show("Payment deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    LoadPayments(); // Refresh the list
-                }
+                    try
+                    {
+                        bool success = PaymentService.DeletePayment(selectedPayment.PaymentID);
+                        e.Result = new { Success = success, PaymentID = selectedPayment.PaymentID };
+                    }
+                    catch (Exception ex)
+                    {
+                        e.Result = new { Success = false, Error = ex.Message, PaymentID = selectedPayment.PaymentID };
+                    }
+                };
+
+                backgroundWorker.RunWorkerCompleted += (sender, e) =>
+                {
+                    // Restore cursor and re-enable controls
+                    Cursor.Current = Cursors.Default;
+                    btnDelete.Enabled = true;
+                    dgvPayments.Enabled = true;
+                    
+                    dynamic result = e.Result;
+                    if (result.Success)
+                    {
+                        MessageBox.Show("Payment deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        LoadPayments(); // Refresh the list
+                    }
+                    else if (result.Error != null)
+                    {
+                        MessageBox.Show($"Error deleting payment: {result.Error}", "Delete Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                backgroundWorker.RunWorkerAsync();
             }
         }
 

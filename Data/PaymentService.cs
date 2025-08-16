@@ -309,46 +309,66 @@ public static PaymentViewModel? GetPaymentById(int paymentId)
 
         public static bool DeletePayment(int paymentId)
         {
-            using (var conn = DatabaseManager.GetConnection())
+            try
             {
-                conn.Open();
-                var transaction = conn.BeginTransaction();
-                try
+                using (var conn = DatabaseManager.GetConnection())
                 {
-                    var param = new OleDbParameter("PaymentID", paymentId);
-
-                    // First, get the bills that were affected by this payment before deleting transactions
-                    var affectedBills = GetBillsAffectedByPayment(paymentId, conn, transaction);
-
-                    // Delete all ledger entries associated with this payment
-                    using (var cmd = new OleDbCommand("DELETE FROM TransactionLedger WHERE PaymentID = ?", conn, transaction))
-                    {
-                        cmd.Parameters.Add(param);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    // Then, delete the master payment record
-                    using (var cmd = new OleDbCommand("DELETE FROM PaymentMaster WHERE PaymentID = ?", conn, transaction))
-                    {
-                        // Re-add the parameter as it was used in the previous command
-                        cmd.Parameters.Add(new OleDbParameter("PaymentID", paymentId));
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    // Commit the deletion transaction
-                    transaction.Commit();
+                    conn.Open();
                     
-                    // Now update bill statuses in a new transaction
-                    UpdateBillStatusesAfterDeletion(affectedBills);
-                    
-                    return true;
+                    // Set command timeout to prevent hanging
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            var param = new OleDbParameter("PaymentID", paymentId);
+
+                            // First, get the bills that were affected by this payment before deleting transactions
+                            var affectedBills = GetBillsAffectedByPayment(paymentId, conn, transaction);
+
+                            // Delete all ledger entries associated with this payment
+                            using (var cmd = new OleDbCommand("DELETE FROM TransactionLedger WHERE PaymentID = ?", conn, transaction))
+                            {
+                                cmd.CommandTimeout = 30; // Set timeout to 30 seconds
+                                cmd.Parameters.Add(param);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Then, delete the master payment record
+                            using (var cmd = new OleDbCommand("DELETE FROM PaymentMaster WHERE PaymentID = ?", conn, transaction))
+                            {
+                                cmd.CommandTimeout = 30; // Set timeout to 30 seconds
+                                // Re-add the parameter as it was used in the previous command
+                                cmd.Parameters.Add(new OleDbParameter("PaymentID", paymentId));
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Commit the deletion transaction
+                            transaction.Commit();
+                            
+                            // Now update bill statuses in a new transaction
+                            UpdateBillStatusesAfterDeletion(affectedBills);
+                            
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            try
+                            {
+                                transaction.Rollback();
+                            }
+                            catch
+                            {
+                                // Ignore rollback errors
+                            }
+                            throw; // Re-throw to be caught by outer try-catch
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    MessageBox.Show($"Error deleting payment: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting payment: {ex.Message}", "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
@@ -376,73 +396,96 @@ public static PaymentViewModel? GetPaymentById(int paymentId)
         }
 
         /// <summary>
-        /// Updates the status of bills after payment deletion using the same logic as payment entry save
+        /// Updates the status of bills after payment deletion using the same logic as payment entry save - OPTIMIZED
         /// </summary>
         private static void UpdateBillStatusesAfterDeletion(List<int> affectedBillIds)
         {
+            if (affectedBillIds == null || !affectedBillIds.Any())
+                return;
+                
             try
             {
                 using (var conn = DatabaseManager.GetConnection())
                 {
                     conn.Open();
-                    var trans = conn.BeginTransaction();
-                    
-                    try
+                    using (var trans = conn.BeginTransaction())
                     {
-                        foreach (var billId in affectedBillIds)
+                        try
                         {
-                            // Get the bill details to calculate total amount
-                            string billSql = "SELECT (OriginalAmount + AdditionalCharges) as TotalAmount FROM BillMaster WHERE BillID = ?";
-                            var billParam = new OleDbParameter("BillID", billId);
-                            decimal totalAmount = 0;
+                            // Batch process bill status updates for better performance
+                            string billIdList = string.Join(",", affectedBillIds);
+                            
+                            // Get all bill details in a single query
+                            string billSql = $"SELECT BillID, (OriginalAmount + AdditionalCharges) as TotalAmount FROM BillMaster WHERE BillID IN ({billIdList})";
+                            var billData = new Dictionary<int, decimal>();
                             
                             using (var cmd = new OleDbCommand(billSql, conn, trans))
                             {
-                                cmd.Parameters.Add(billParam);
-                                var result = cmd.ExecuteScalar();
-                                if (result != null && result != DBNull.Value)
+                                cmd.CommandTimeout = 30;
+                                using (var reader = cmd.ExecuteReader())
                                 {
-                                    totalAmount = Convert.ToDecimal(result);
+                                    while (reader.Read())
+                                    {
+                                        int billId = Convert.ToInt32(reader["BillID"]);
+                                        decimal totalAmount = reader["TotalAmount"] != DBNull.Value ? Convert.ToDecimal(reader["TotalAmount"]) : 0;
+                                        billData[billId] = totalAmount;
+                                    }
                                 }
                             }
+                            
+                            // OPTIMIZATION: Get all due amounts in one query instead of individual calls
+                            var currentBalances = LedgerService.GetAllBillBalances();
+                            
+                            foreach (var billId in affectedBillIds)
+                            {
+                                if (!billData.ContainsKey(billId))
+                                    continue;
+                                    
+                                decimal totalAmount = billData[billId];
 
-                            // Calculate current balance after payment deletion (ledger transactions are now deleted)
-                            decimal dueAmount = LedgerService.GetDueAmount(billId);
+                                // Use pre-calculated balance from the batch query
+                                decimal dueAmount = currentBalances.ContainsKey(billId) ? currentBalances[billId] : 0;
+                                
+                                // Determine new status based on balance using the same logic as payment entry save
+                                string newStatus;
+                                if (dueAmount <= 0)
+                                {
+                                    newStatus = "Paid";
+                                }
+                                else if (Math.Round(dueAmount) >= Math.Round(totalAmount))
+                                {
+                                    newStatus = "Unpaid";
+                                }
+                                else
+                                {
+                                    newStatus = "Partial";
+                                }
+                                
+                                // Update the bill status in the database
+                                string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
+                                using (var cmd = new OleDbCommand(updateSql, conn, trans))
+                                {
+                                    cmd.CommandTimeout = 30;
+                                    cmd.Parameters.Add(new OleDbParameter("Status", newStatus));
+                                    cmd.Parameters.Add(new OleDbParameter("BillID", billId));
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
                             
-                            // Determine new status based on balance using the same logic as payment entry save
-                            string newStatus;
-                            if (dueAmount <= 0)
-                            {
-                                newStatus = "Paid";
-                            }
-                            else if (Math.Round(dueAmount) >= Math.Round(totalAmount))
-                            {
-                                newStatus = "Unpaid";
-                            }
-                            else
-                            {
-                                newStatus = "Partial";
-                            }
-                            
-                            // Update the bill status in the database
-                            string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
-                            var statusParam = new OleDbParameter("Status", newStatus);
-                            var billIdParam = new OleDbParameter("BillID", billId);
-                            
-                            using (var cmd = new OleDbCommand(updateSql, conn, trans))
-                            {
-                                cmd.Parameters.Add(statusParam);
-                                cmd.Parameters.Add(billIdParam);
-                                cmd.ExecuteNonQuery();
-                            }
+                            trans.Commit();
                         }
-                        
-                        trans.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        trans.Rollback();
-                        throw;
+                        catch (Exception ex)
+                        {
+                            try
+                            {
+                                trans.Rollback();
+                            }
+                            catch
+                            {
+                                // Ignore rollback errors
+                            }
+                            throw;
+                        }
                     }
                 }
             }

@@ -27,18 +27,18 @@ namespace SaleBillSystem.NET
             }
 
             // Update database schema to add any missing columns
-            DatabaseManager.UpdateDatabaseSchema();
+            // DatabaseManager.UpdateDatabaseSchema();
 
             // Fix CompanyID issues for existing data (runs automatically at startup)
-            try
-            {
-                DatabaseManager.UpdateAllCompanyIDsToOne();
-            }
-            catch (Exception ex)
-            {
-                // Log the error but don't stop the application from starting
-                System.Diagnostics.Debug.WriteLine($"Warning: Could not update CompanyID fields: {ex.Message}");
-            }
+            // try
+            // {
+            //     DatabaseManager.UpdateAllCompanyIDsToOne();
+            // }
+            // catch (Exception ex)
+            // {
+            //     // Log the error but don't stop the application from starting
+            //     System.Diagnostics.Debug.WriteLine($"Warning: Could not update CompanyID fields: {ex.Message}");
+            // }
 
             // Set the active company to CompanyID = 1 so all services can find the data
             try

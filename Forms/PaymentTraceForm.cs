@@ -180,13 +180,13 @@ namespace SaleBillSystem.NET.Forms
                 {
                     try
                     {
-                        bool areAllBillsPaid = CheckIfAllBillsPaid(_paymentTrace);
+                        // bool areAllBillsPaid = CheckIfAllBillsPaid(_paymentTrace);
                         
-                        if (!areAllBillsPaid)
-                        {
-                            e.Result = new { Success = false, Message = "Enhanced payment report is only available when all selected bills are fully paid.", IsPartialPayment = true };
-                            return;
-                        }
+                        // if (!areAllBillsPaid)
+                        // {
+                        //     e.Result = new { Success = false, Message = "Enhanced payment report is only available when all selected bills are fully paid.", IsPartialPayment = true };
+                        //     return;
+                        // }
                         
                         string htmlContent = GenerateHtmlReport(_payment, _paymentTrace);
                         string tempFilePath = Path.Combine(Path.GetTempPath(), $"PaymentTrace_{_payment.PaymentID}.html");
@@ -212,14 +212,15 @@ namespace SaleBillSystem.NET.Forms
                     }
                     else
                     {
-                        if (result.IsPartialPayment)
-                        {
-                            MessageBox.Show(result.Message, "Partial Payment", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show($"Could not generate or open the report: {result.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        // if (result.IsPartialPayment)
+                        // {
+                        //     MessageBox.Show(result.Message, "Partial Payment", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        // }
+                        // else
+                        // {
+                        //     MessageBox.Show($"Could not generate or open the report: {result.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        // }
+                         MessageBox.Show($"Could not generate or open the report: {result.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 };
 
@@ -320,7 +321,7 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine("<div class='section'>");
             sb.AppendLine("<h3>Bill Details</h3>");
             sb.AppendLine("<table>");
-            sb.AppendLine("<tr><th>Broker</th><th>Party</th><th>Date</th><th class='text-right'>Amount (₹)</th></tr>");
+            sb.AppendLine("<tr><th>Broker</th><th>Party</th><th>Date</th><th class='text-right'>Amount (₹)</th><th>Status</th></tr>");
             
             decimal totalBillAmount = 0;
             decimal totalPreviousCash = 0;
@@ -361,16 +362,20 @@ namespace SaleBillSystem.NET.Forms
                 // Format date to be more compact
                 string dateStr = bill.BillDate?.ToString("dd-MMM-yy") ?? "N/A";
                 
+                // Get bill status from database
+                string billStatus = GetBillStatus(bill.BillID.Value);
+                
                 sb.AppendLine("<tr>");
                 sb.AppendLine($"<td>{brokerName}</td>");
                 sb.AppendLine($"<td>{partyName}</td>");
                 sb.AppendLine($"<td>{dateStr}</td>");
                 sb.AppendLine($"<td class='text-right'>{Math.Round(bill.BillAmount):N0}</td>");
+                sb.AppendLine($"<td>{billStatus}</td>");
                 sb.AppendLine("</tr>");
             }
             
             sb.AppendLine("<tr class='total-row'>");
-            sb.AppendLine("<td colspan='3'><strong>Total</strong></td>");
+            sb.AppendLine("<td colspan='4'><strong>Total</strong></td>");
             sb.AppendLine($"<td class='text-right'><strong>₹{Math.Round(totalBillAmount):N0}</strong></td>");
             sb.AppendLine("</tr>");
             sb.AppendLine("</table>");
@@ -572,8 +577,7 @@ namespace SaleBillSystem.NET.Forms
             // sb.AppendLine("</div>");
             
             // Show Summary Calculation only if this is the final payment for all bills
-            if (showFinalSettlement)
-            {
+            
                 decimal totalPreviousPayments = Math.Round(totalPreviousCash + totalPreviousCheque);
                 decimal netPayableAmount = Math.Round(totalBillAmount) + Math.Round(totalInterest) - Math.Round(totalDiscount) - Math.Round(totalBrokerage) - totalPreviousPayments;
                 
@@ -621,8 +625,8 @@ namespace SaleBillSystem.NET.Forms
                 {
                     sb.AppendLine("<p style='color: red; font-size: 7pt; margin: 2px 0;'>⚠ Payment differs from net amount</p>");
                 }
-                sb.AppendLine("</div>");
-            }
+            sb.AppendLine("</div>");
+            
             
             // --- Footer ---
             sb.AppendLine("<div style='margin-top: 10px; text-align: center; color: #666; font-size: 7pt;'>");
@@ -957,6 +961,24 @@ namespace SaleBillSystem.NET.Forms
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error getting cheque amounts by firm: {ex.Message}");
+            }
+        }
+        
+        // Helper method to get bill status from database
+        private string GetBillStatus(int billId)
+        {
+            try
+            {
+                string sql = "SELECT Status FROM BillMaster WHERE BillID = ?";
+                var parameter = new System.Data.OleDb.OleDbParameter("BillID", billId);
+                
+                object result = DatabaseManager.ExecuteScalar(sql, parameter);
+                return result?.ToString() ?? "Unknown";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting bill status for bill {billId}: {ex.Message}");
+                return "Unknown";
             }
         }
     }

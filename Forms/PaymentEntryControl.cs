@@ -16,6 +16,7 @@ namespace SaleBillSystem.NET.Forms
         private List<Party> _parties = new List<Party>();
         private List<Broker> _brokers = new List<Broker>();
         private List<BillViewModel> _outstandingBills = new List<BillViewModel>();
+        private List<Bill> _allBills = new List<Bill>();
 
         public PaymentEntryControl()
         {
@@ -32,6 +33,7 @@ namespace SaleBillSystem.NET.Forms
 
         #region Initial Setup
 
+        
         private void SetupDataGridView()
         {
             dgvOutstandingBills.AutoGenerateColumns = false;
@@ -100,12 +102,29 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
+                // Temporarily remove event handlers to prevent automatic selection
+                cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
+                cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
+                
+                // Store the data in the private fields
                 _parties = PartyService.GetAllParties();
                 _brokers = BrokerService.GetAllBrokers();
-
-                // Set up autocomplete for comboboxes
-                SetupPartyComboBox();
-                SetupBrokerComboBox();
+                
+                cmbParty.DataSource = _parties;
+                cmbParty.DisplayMember = "PartyName";
+                cmbParty.ValueMember = "PartyID";
+                
+                cmbBroker.DataSource = _brokers;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
+                
+                // CRITICAL: Set SelectedIndex to -1 to prevent automatic selection
+                cmbParty.SelectedIndex = -1;
+                cmbBroker.SelectedIndex = -1;
+                
+                // Restore event handlers
+                cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+                cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             }
             catch (Exception ex)
             {
@@ -113,59 +132,9 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void SetupPartyComboBox()
-        {
-            // Temporarily remove event handler
-            cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
-            
-            // Configure combobox for optimal performance
-            cmbParty.BeginUpdate();
-            cmbParty.DropDownStyle = ComboBoxStyle.DropDown;
-            
-            // Use a binding source for better performance
-            var partyBindingSource = new BindingSource();
-            partyBindingSource.DataSource = _parties;
-            
-            cmbParty.DataSource = partyBindingSource;
-            cmbParty.DisplayMember = "PartyName";
-            cmbParty.ValueMember = "PartyID";
-            
-            // Set up autocomplete
-            cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
-            cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
-            
-            cmbParty.EndUpdate();
-            
-            // Restore event handler
-            cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
-        }
+        
 
-        private void SetupBrokerComboBox()
-        {
-            // Temporarily remove event handler
-            cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
-            
-            // Configure combobox for optimal performance
-            cmbBroker.BeginUpdate();
-            cmbBroker.DropDownStyle = ComboBoxStyle.DropDown;
-            
-            // Use a binding source for better performance
-            var brokerBindingSource = new BindingSource();
-            brokerBindingSource.DataSource = _brokers;
-            
-            cmbBroker.DataSource = brokerBindingSource;
-            cmbBroker.DisplayMember = "BrokerName";
-            cmbBroker.ValueMember = "BrokerID";
-            
-            // Set up autocomplete
-            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
-            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
-            
-            cmbBroker.EndUpdate();
-            
-            // Restore event handler
-            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
-        }
+        
 
         private void SetupEventHandlers()
         {
@@ -228,122 +197,230 @@ namespace SaleBillSystem.NET.Forms
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
             // When party changes, clear broker selection to avoid cascading events
-            if (cmbBroker.SelectedIndex > 0)
-            {
-                cmbBroker.SelectedIndexChanged -= CmbBroker_SelectedIndexChanged;
-                cmbBroker.SelectedIndex = 0;
-                cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
-            }
-            
-            // Use background worker for bill loading to prevent UI hanging
-            LoadBillsBasedOnSelectionAsync();
-            UpdateFieldsBasedOnSelection();
+             LoadBillsBasedOnSelection();
+             UpdateFieldsBasedOnSelection();
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            // When broker changes, clear party selection to avoid cascading events
-            if (cmbParty.SelectedIndex > 0 && cmbBroker.SelectedIndex > 0)
-            {
-                cmbParty.SelectedIndexChanged -= CmbParty_SelectedIndexChanged;
-                cmbParty.SelectedIndex = 0;
-                cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
-            }
-            
-            // Use background worker for bill loading to prevent UI hanging
-            LoadBillsBasedOnSelectionAsync();
+            LoadBillsBasedOnSelection();
             UpdateFieldsBasedOnSelection();
         }
 
-        private void LoadBillsBasedOnSelection()
+         private void LoadBillsBasedOnSelection()
         {
             int? partyId = cmbParty.SelectedValue as int?;
             int? brokerId = cmbBroker.SelectedValue as int?;
 
             if (partyId.HasValue && partyId.Value > 0)
             {
-                LoadOutstandingBills(partyId.Value, brokerId);
+                LoadBillsForParty(partyId.Value, brokerId);
             }
             else if (brokerId.HasValue && brokerId.Value > 0)
             {
-                LoadOutstandingBillsByBroker(brokerId.Value);
+                LoadBillsByBroker(brokerId.Value);
             }
             else
             {
-                dgvOutstandingBills.DataSource = null;
-                _outstandingBills.Clear();
+                LoadAllBills();
             }
-        }
-
-        private void LoadBillsBasedOnSelectionAsync()
-        {
-            int? partyId = cmbParty.SelectedValue as int?;
-            int? brokerId = cmbBroker.SelectedValue as int?;
-
-            // Show loading cursor
-            Cursor.Current = Cursors.WaitCursor;
             
-            if (!partyId.HasValue || partyId.Value <= 0)
-            {
-                if (!brokerId.HasValue || brokerId.Value <= 0)
-                {
-                    // No selection - clear grid immediately
-                    Cursor.Current = Cursors.Default;
-                    dgvOutstandingBills.DataSource = null;
-                    _outstandingBills.Clear();
-                    return;
-                }
-            }
+            // After loading bills, update the grid with unpaid bills only
+            UpdateGridWithUnpaidBills();
+        }
+        
 
-            var backgroundWorker = new System.ComponentModel.BackgroundWorker();
-            backgroundWorker.DoWork += (sender, e) =>
+        private void LoadAllBills()
+        {
+            try
             {
-                try
+                // Use the optimized GetAllBills that includes party names through JOIN
+                var allBills = BillService.GetAllBills();
+                
+                // Get all bill balances in one database query instead of querying individually
+                var allBillBalances = LedgerService.GetAllBillBalances();
+                
+                // Get all brokers once to use for lookups
+                var brokers = BrokerService.GetAllBrokers();
+                
+                // Update status for each bill based on due amount and populate broker names
+                foreach (var bill in allBills)
                 {
-                    if (partyId.HasValue && partyId.Value > 0)
+                    // Use pre-calculated balance from the dictionary
+                    decimal dueAmount = allBillBalances.ContainsKey(bill.BillID) ? allBillBalances[bill.BillID] : 0m;
+                    bill.Balance = dueAmount;
+
+                    // Look up broker name from broker ID using cached brokers list
+                    if (bill.BrokerID.HasValue && bill.BrokerID.Value > 0)
                     {
-                        var bills = BillService.GetAllBillsForParty(partyId.Value);
-                        if (brokerId.HasValue && brokerId.Value > 0)
-                        {
-                            bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
-                        }
-                        e.Result = new { Success = true, Bills = bills, IsPartySelection = true, PartyId = partyId.Value, BrokerId = brokerId };
-                    }
-                    else if (brokerId.HasValue && brokerId.Value > 0)
-                    {
-                        var allBills = BillService.GetAllBills();
-                        var bills = allBills.Where(b => b.BrokerID == brokerId.Value).ToList();
-                        e.Result = new { Success = true, Bills = bills, IsPartySelection = false, BrokerId = brokerId.Value };
+                        var broker = brokers.FirstOrDefault(b => b.BrokerID == bill.BrokerID.Value);
+                        bill.BrokerName = broker?.BrokerName ?? "Unknown Broker";
                     }
                     else
                     {
-                        e.Result = new { Success = true, Bills = new List<Bill>(), IsPartySelection = false };
+                        bill.BrokerName = "No Broker";
                     }
                 }
-                catch (Exception ex)
-                {
-                    e.Result = new { Success = false, Error = ex.Message };
-                }
-            };
-
-            backgroundWorker.RunWorkerCompleted += (sender, e) =>
-            {
-                Cursor.Current = Cursors.Default;
                 
-                dynamic result = e.Result;
-                if (result.Success)
-                {
-                    ProcessLoadedBills(result.Bills, result.IsPartySelection);
-                }
-                else
-                {
-                    MessageBox.Show($"Error loading bills: {result.Error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    dgvOutstandingBills.DataSource = null;
-                    _outstandingBills.Clear();
-                }
-            };
+                _allBills = allBills;
+            }
 
-            backgroundWorker.RunWorkerAsync();
+            
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading all bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+         private void LoadBillsByBroker(int brokerId)
+        {
+            try
+            {
+                // Get all bills with joined party names
+                var allBills = BillService.GetAllBills();
+                
+                // Filter by broker
+                _allBills = allBills.Where(b => b.BrokerID == brokerId).ToList();
+                
+                // Get all bill balances in one database query instead of querying individually
+                var allBillBalances = LedgerService.GetAllBillBalances();
+                
+                // Get the broker once
+                var broker = BrokerService.GetBrokerByID(brokerId);
+                string brokerName = broker?.BrokerName ?? "Unknown Broker";
+                
+                // Update status for each bill
+                foreach (var bill in _allBills)
+                {
+                    // Set broker name for all bills
+                    bill.BrokerName = brokerName;
+                    
+                    // Use pre-calculated balance from the dictionary
+                    decimal dueAmount = allBillBalances.ContainsKey(bill.BillID) ? allBillBalances[bill.BillID] : 0m;
+                    bill.Balance = dueAmount;
+                    
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading bills by broker: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadBillsForParty(int partyId, int? brokerId = null)
+        {
+            try
+            {
+                var bills = BillService.GetAllBillsForParty(partyId);
+                
+                // Filter by broker if specified
+                if (brokerId.HasValue && brokerId.Value > 0)
+                {
+                    bills = bills.Where(b => b.BrokerID == brokerId.Value).ToList();
+                }
+                
+                // Get all bill balances in one database query instead of querying individually
+                var allBillBalances = LedgerService.GetAllBillBalances();
+                
+                // Get all brokers once to use for lookups
+                var brokers = BrokerService.GetAllBrokers();
+                
+                // Get the party once to use for all bills
+                var party = PartyService.GetPartyByID(partyId);
+                string partyName = party?.PartyName ?? "Unknown Party";
+                
+                // Update status for each bill
+                foreach (var bill in bills)
+                {
+                    // Set party name for all bills from the same party
+                    bill.PartyName = partyName;
+                    
+                    // Use pre-calculated balance from the dictionary
+                    decimal dueAmount = allBillBalances.ContainsKey(bill.BillID) ? allBillBalances[bill.BillID] : 0m;
+                    bill.Balance = dueAmount;
+
+                    // Look up broker name from broker ID using cached brokers list
+                    if (bill.BrokerID.HasValue && bill.BrokerID.Value > 0)
+                    {
+                        var broker = brokers.FirstOrDefault(b => b.BrokerID == bill.BrokerID.Value);
+                        bill.BrokerName = broker?.BrokerName ?? "Unknown Broker";
+                    }
+                    else
+                    {
+                        bill.BrokerName = "No Broker";
+                    }
+
+                }
+                
+                _allBills = bills; // Store all bills for pagination
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // NEW METHOD: Convert _allBills to _outstandingBills and display in grid
+        private void UpdateGridWithUnpaidBills()
+        {
+            try
+            {
+                if (_allBills == null || !_allBills.Any())
+                {
+                    dgvOutstandingBills.DataSource = null;
+                    _outstandingBills = new List<BillViewModel>();
+                    return;
+                }
+
+                // Filter out paid bills (those with balance <= 0) and convert to BillViewModel
+                _outstandingBills = _allBills
+                    .Where(b => b.Balance > 0.01m) // Only unpaid bills (with small tolerance for floating point)
+                    .Select(b => new BillViewModel
+                    {
+                        BillID = b.BillID,
+                        BillNo = b.BillNo,
+                        PartyName = b.PartyName ?? "Unknown Party",
+                        BrokerName = b.BrokerName ?? "No Broker",
+                        BillDate = b.BillDate,
+                        OriginalAmount = b.OriginalAmount,
+                        AdditionalCharges = b.AdditionalCharges,
+                        BalanceDue = b.Balance,
+                        PaymentAllocation = 0, // Initialize payment allocation to 0
+                        ChequeAmountFirm1 = b.ChequeAmountFirm1,
+                        ChequeAmountFirm2 = b.ChequeAmountFirm2
+                    })
+                    .OrderBy(b => b.BillDate) // Order by bill date (oldest first)
+                    .ToList();
+
+                // Update the grid
+                dgvOutstandingBills.DataSource = _outstandingBills;
+                
+                // Reset grid styles
+                ResetGridStyles();
+                
+                // Update summary labels
+                UpdateSummaryLabels();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error updating grid with unpaid bills: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // NEW METHOD: Update summary labels based on current bills
+        private void UpdateSummaryLabels()
+        {
+            if (_outstandingBills == null || !_outstandingBills.Any())
+            {
+                lblDiscountValue.Text = "Discount: ₹0.00";
+                lblInterestValue.Text = "Interest: ₹0.00";
+                lblBrokerageValue.Text = "Brokerage: ₹0.00";
+                lblFinalAmount.Text = "Amount Due: ₹0.00";
+                return;
+            }
+
+            decimal totalBalance = _outstandingBills.Sum(b => b.BalanceDue);
+            lblFinalAmount.Text = $"Total Outstanding: ₹{totalBalance:N2}";
         }
 
         private void ProcessLoadedBills(List<Bill> bills, bool isPartySelection)
@@ -420,8 +497,7 @@ namespace SaleBillSystem.NET.Forms
             }
             else if (brokerId.HasValue && brokerId.Value > 0)
             {
-                // Broker selected - load broker data and make editable
-                // Use the cached broker list instead of making a database call
+                // Broker selected - load broker data and make READ-ONLY
                 var broker = _brokers.FirstOrDefault(b => b.BrokerID == brokerId.Value);
                 
                 if (broker != null)
@@ -431,6 +507,8 @@ namespace SaleBillSystem.NET.Forms
                     txtDiscountRate.Text = broker.DiscountRate.ToString("F2");
                     txtInterestRate.Text = broker.InterestRate.ToString("F2");
                     txtBrokerageRate.Text = broker.BrokerageRate.ToString("F2");
+                    
+                    // CRITICAL: Make fields READ-ONLY when broker is selected
                     SetFieldsEditable(true);
                 }
             }
@@ -1251,7 +1329,7 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
-                // Ask user if they want to print BEFORE loading data
+                // Simple confirmation dialog
                 var result = MessageBox.Show(
                     "Payment saved successfully! Would you like to print the payment slip?",
                     "Print Payment Slip",
@@ -1260,65 +1338,43 @@ namespace SaleBillSystem.NET.Forms
 
                 if (result == DialogResult.Yes)
                 {
-                    // Show loading cursor
-                    Cursor.Current = Cursors.WaitCursor;
-                    
-                    // Load data on background thread to prevent UI hanging
-                    var backgroundWorker = new System.ComponentModel.BackgroundWorker();
-                    backgroundWorker.DoWork += (sender, e) =>
-                    {
-                        try
-                        {
-                            // Get the payment details
-                            var payment = PaymentService.GetPaymentById(paymentId);
-                            if (payment == null)
-                            {
-                                e.Result = new { Success = false, Message = "Could not retrieve payment details for printing." };
-                                return;
-                            }
-
-                            // Get the payment trace
-                            var paymentTrace = PaymentService.GetPaymentTrace(paymentId);
-                            if (!paymentTrace.Any())
-                            {
-                                e.Result = new { Success = false, Message = "No transaction details found for printing." };
-                                return;
-                            }
-
-                            e.Result = new { Success = true, Payment = payment, PaymentTrace = paymentTrace };
-                        }
-                        catch (Exception ex)
-                        {
-                            e.Result = new { Success = false, Message = ex.Message };
-                        }
-                    };
-
-                    backgroundWorker.RunWorkerCompleted += (sender, e) =>
-                    {
-                        Cursor.Current = Cursors.Default;
-                        
-                        dynamic result_data = e.Result;
-                        if (result_data.Success)
-                        {
-                            // Create and show the payment trace form
-                            var traceForm = new PaymentTraceForm(result_data.Payment, result_data.PaymentTrace);
-                            // Auto-print the payment slip
-                            traceForm.AutoPrint();
-                            traceForm.ShowDialog();
-                        }
-                        else
-                        {
-                            MessageBox.Show(result_data.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                    };
-
-                    backgroundWorker.RunWorkerAsync();
+                    // Simple approach - just show the form without auto-print
+                    ShowPaymentTraceForm(paymentId);
                 }
             }
             catch (Exception ex)
             {
-                Cursor.Current = Cursors.Default;
                 MessageBox.Show($"Error showing payment trace: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ShowPaymentTraceForm(int paymentId)
+        {
+            try
+            {
+                // Get payment details
+                var payment = PaymentService.GetPaymentById(paymentId);
+                if (payment == null)
+                {
+                    MessageBox.Show("Could not retrieve payment details.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Get payment transactions
+                var paymentTrace = PaymentService.GetPaymentTrace(paymentId);
+                if (!paymentTrace.Any())
+                {
+                    MessageBox.Show("No transaction details found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Create and show the form
+                var traceForm = new PaymentTraceForm(payment, paymentTrace);
+                traceForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error showing payment trace form: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

@@ -159,10 +159,21 @@ namespace SaleBillSystem.NET.Forms
             paymentsMenu.DropDownItems.Add(paymentEntryItem);
             paymentsMenu.DropDownItems.Add(paymentListItem);
 
+            // === UTILITIES MENU ===
+            var utilitiesMenu = new ToolStripMenuItem("&Utilities");
+            utilitiesMenu.Font = menuFont;
+
+            var migrateItem = new ToolStripMenuItem("&Migrate Database");
+            migrateItem.Font = menuFont;
+            migrateItem.Click += (s, e) => { RunDatabaseMigration(); };
+
+            utilitiesMenu.DropDownItems.Add(migrateItem);
+
             // Add all top-level menus to the main menu strip in the correct order
             mainMenuStrip.Items.Add(mastersMenu);
             mainMenuStrip.Items.Add(billsMenu);
             mainMenuStrip.Items.Add(paymentsMenu);
+            mainMenuStrip.Items.Add(utilitiesMenu);
 
             // Add Transactions, Reports, etc. menus here
         }
@@ -185,6 +196,79 @@ namespace SaleBillSystem.NET.Forms
             if (result == DialogResult.No)
             {
                 e.Cancel = true;
+            }
+        }
+
+        #endregion
+
+        #region Database Migration
+
+        /// <summary>
+        /// Runs database migration functions to update CompanyIDs and add default values
+        /// </summary>
+        private void RunDatabaseMigration()
+        {
+            try
+            {
+                // Show confirmation dialog
+                DialogResult result = MessageBox.Show(
+                    "This will run database migration functions:\n\n" +
+                    "1. Update all CompanyIDs to 1\n" +
+                    "2. Add default values to bill details\n" +
+                    "3. Add SubQuantity column to ItemMaster\n\n" +
+                    "This operation may take some time. Continue?",
+                    "Database Migration",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2);
+
+                if (result != DialogResult.Yes)
+                    return;
+
+                // Show progress message
+                using (var progressForm = new Form())
+                {
+                    progressForm.Text = "Database Migration";
+                    progressForm.Size = new Size(400, 150);
+                    progressForm.StartPosition = FormStartPosition.CenterParent;
+                    progressForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                    progressForm.MaximizeBox = false;
+                    progressForm.MinimizeBox = false;
+
+                    var label = new Label
+                    {
+                        Text = "Running database migration...\nPlease wait...",
+                        Location = new Point(20, 20),
+                        Size = new Size(350, 60),
+                        TextAlign = ContentAlignment.MiddleCenter
+                    };
+
+                    progressForm.Controls.Add(label);
+                    progressForm.Show();
+                    progressForm.Refresh();
+
+                    // Run the migration functions
+                    bool companyIdSuccess = DatabaseManager.UpdateAllCompanyIDsToOne();
+                    bool billDetailsSuccess = DatabaseManager.UpdateBillDetailsWithDefaultValues();
+                    bool itemMasterSuccess = DatabaseManager.AddSubQuantityToItemMaster();
+
+                    progressForm.Close();
+
+                    // Show results
+                    string message = "Database migration completed!\n\n";
+                    message += companyIdSuccess ? "✓ CompanyID migration: SUCCESS\n" : "✗ CompanyID migration: FAILED\n";
+                    message += billDetailsSuccess ? "✓ Bill details update: SUCCESS\n" : "✗ Bill details update: FAILED\n";
+                    message += itemMasterSuccess ? "✓ ItemMaster update: SUCCESS" : "✗ ItemMaster update: FAILED";
+
+                    MessageBox.Show(message, "Migration Complete", 
+                        MessageBoxButtons.OK, 
+                        companyIdSuccess && billDetailsSuccess ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error during database migration: {ex.Message}", 
+                    "Migration Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

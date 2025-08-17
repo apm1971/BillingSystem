@@ -952,6 +952,7 @@ namespace SaleBillSystem.NET.Data
         /// - SubQuantity = 1
         /// - SubQuantityUnit = 'BOX'
         /// - TotalCharges = Charges
+        /// First creates the required columns if they don't exist.
         /// </summary>
         /// <returns>True if successful, false otherwise</returns>
         public static bool UpdateBillDetailsWithDefaultValues()
@@ -962,17 +963,30 @@ namespace SaleBillSystem.NET.Data
                 {
                     conn.Open();
                     
-                    // First, check if the required columns exist
+                    // First, check if the required columns exist and create them if they don't
                     var columns = conn.GetSchema("Columns", new string[] { null, null, "BillDetails" });
                     bool hasSubQuantity = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "SubQuantity");
                     bool hasSubQuantityUnit = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "SubQuantityUnit");
                     bool hasTotalCharges = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "TotalCharges");
                     bool hasCharges = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "Charges");
                     
-                    if (!hasSubQuantity || !hasSubQuantityUnit || !hasTotalCharges)
+                    // Create missing columns
+                    if (!hasSubQuantity)
                     {
-                        System.Diagnostics.Debug.WriteLine("Required columns do not exist. Please run UpdateDatabaseSchema first.");
-                        return false;
+                        ExecuteNonQuery(conn, "ALTER TABLE BillDetails ADD COLUMN SubQuantity DOUBLE DEFAULT 1");
+                        System.Diagnostics.Debug.WriteLine("Added SubQuantity column to BillDetails table.");
+                    }
+                    
+                    if (!hasSubQuantityUnit)
+                    {
+                        ExecuteNonQuery(conn, "ALTER TABLE BillDetails ADD COLUMN SubQuantityUnit TEXT(50) DEFAULT 'BOX'");
+                        System.Diagnostics.Debug.WriteLine("Added SubQuantityUnit column to BillDetails table.");
+                    }
+                    
+                    if (!hasTotalCharges)
+                    {
+                        ExecuteNonQuery(conn, "ALTER TABLE BillDetails ADD COLUMN TotalCharges CURRENCY DEFAULT 0");
+                        System.Diagnostics.Debug.WriteLine("Added TotalCharges column to BillDetails table.");
                     }
                     
                     // Update all bill details with default values
@@ -1024,6 +1038,72 @@ namespace SaleBillSystem.NET.Data
                     System.Windows.Forms.MessageBoxIcon.Error);
                 
                 System.Diagnostics.Debug.WriteLine($"Error updating bill details: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Adds SubQuantity column to ItemMaster table with default value 'BOX' if it doesn't exist
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool AddSubQuantityToItemMaster()
+        {
+            try
+            {
+                using (OleDbConnection conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if SubQuantity column already exists
+                    var columns = conn.GetSchema("Columns", new string[] { null, null, "ItemMaster" });
+                    bool hasSubQuantity = columns.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == "SubQuantity");
+                    
+                    if (!hasSubQuantity)
+                    {
+                        // Add SubQuantity column with default value 'BOX'
+                        ExecuteNonQuery(conn, "ALTER TABLE ItemMaster ADD COLUMN SubQuantity TEXT(50) DEFAULT 'BOX'");
+                        
+                        // Update existing records to set SubQuantity = 'BOX'
+                        string updateSql = "UPDATE ItemMaster SET SubQuantity = 'BOX' WHERE SubQuantity IS NULL";
+                        using (OleDbCommand cmd = new OleDbCommand(updateSql, conn))
+                        {
+                            int rowsAffected = cmd.ExecuteNonQuery();
+                            
+                            System.Diagnostics.Debug.WriteLine($"Added SubQuantity column to ItemMaster table and updated {rowsAffected} existing records.");
+                            
+                            System.Windows.Forms.MessageBox.Show(
+                                $"Successfully added SubQuantity column to ItemMaster table:\n" +
+                                "• Column Type: TEXT(50)\n" +
+                                "• Default Value: 'BOX'\n" +
+                                "• Updated {rowsAffected} existing records",
+                                "ItemMaster Update Complete",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                        
+                        return true;
+                    }
+                    else
+                    {
+                        System.Windows.Forms.MessageBox.Show(
+                            "SubQuantity column already exists in ItemMaster table.",
+                            "ItemMaster Update Complete",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Information);
+                        
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error adding SubQuantity column to ItemMaster: {ex.Message}",
+                    "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                
+                System.Diagnostics.Debug.WriteLine($"Error adding SubQuantity to ItemMaster: {ex.Message}");
                 return false;
             }
         }

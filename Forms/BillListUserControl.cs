@@ -6,6 +6,9 @@ using System.Linq;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using System.IO;
+using System.Text;
+using System.Diagnostics;
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -219,6 +222,7 @@ namespace SaleBillSystem.NET.Forms
             btnViewDetails.Click += BtnViewDetails_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
             btnRefresh.Click += BtnRefresh_Click;
+            btnPrint.Click += BtnPrint_Click;
 
             txtSearch.TextChanged += TxtSearch_TextChanged;
             dgvBills.CellDoubleClick += DgvBills_CellDoubleClick;
@@ -241,6 +245,10 @@ namespace SaleBillSystem.NET.Forms
             // Setup status filter
             cmbStatus.SelectedIndex = 0; // Select "All" by default
             cmbStatus.SelectedIndexChanged += CmbStatus_SelectedIndexChanged;
+
+            // Add tooltip for print button
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(btnPrint, "Print Bill List Report (Ctrl+P)");
 
             RefreshGrid();
         }
@@ -468,6 +476,29 @@ namespace SaleBillSystem.NET.Forms
             RefreshGrid();
         }
 
+        private void BtnPrint_Click(object sender, EventArgs e)
+        {
+            if (_filteredBills == null || !_filteredBills.Any())
+            {
+                MessageBox.Show("No bills to print. Please refresh the data first.", "No Data", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string htmlContent = GenerateHtmlReport(_filteredBills);
+                string tempFilePath = Path.Combine(Path.GetTempPath(), $"BillListReport_{DateTime.Now:yyyyMMdd_HHmmss}.html");
+                File.WriteAllText(tempFilePath, htmlContent);
+
+                // Open the file in the default web browser
+                Process.Start(new ProcessStartInfo(tempFilePath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not generate or open the report: {ex.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void DgvBills_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0)
@@ -605,6 +636,11 @@ namespace SaleBillSystem.NET.Forms
                 BtnNewBill_Click(sender, e);
                 e.Handled = true;
             }
+            else if (e.Control && e.KeyCode == Keys.P)
+            {
+                BtnPrint_Click(sender, e);
+                e.Handled = true;
+            }
             else if (e.KeyCode == Keys.F5)
             {
                 BtnRefresh_Click(sender, e);
@@ -638,5 +674,138 @@ namespace SaleBillSystem.NET.Forms
         {
 
         }
+
+        #region Printing and Exporting
+
+        private string GenerateHtmlReport(List<Bill> bills)
+        {
+            var company = Program.ActiveCompany; // Assuming you have this in Program.cs
+            var sb = new StringBuilder();
+
+            // Get filter details for the report header
+            string statusFilter = cmbStatus.SelectedItem?.ToString() ?? "All";
+            string dateRange = $"From: {dtpStartDate.Value:dd/MM/yyyy} To: {dtpEndDate.Value:dd/MM/yyyy}";
+            string searchFilter = !string.IsNullOrWhiteSpace(txtSearch.Text) ? $"Search: {txtSearch.Text}" : "";
+
+            // --- HTML and CSS Styling ---
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html><head><title>Bill List Report</title>");
+            sb.AppendLine("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+            sb.AppendLine("<style>");
+            sb.AppendLine("@page { size: A4; margin: 15mm; }");
+            sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; font-size: 10pt; }");
+            sb.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 20px; }");
+            sb.AppendLine("th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 9pt; }");
+            sb.AppendLine("th { background-color: #f2f2f2; font-weight: bold; }");
+            sb.AppendLine(".header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }");
+            sb.AppendLine(".header-left, .header-right { width: 48%; }");
+            sb.AppendLine(".text-right { text-align: right; }");
+            sb.AppendLine(".total-row { font-weight: bold; background-color: #f8f8f8; }");
+            sb.AppendLine("h1, h2 { margin: 0; color: #333; }");
+            sb.AppendLine(".filter-info { background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd; }");
+            sb.AppendLine(".summary-box { background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd; }");
+            sb.AppendLine(".status-paid { color: #28a745; font-weight: bold; }");
+            sb.AppendLine(".status-partial { color: #007bff; font-weight: bold; }");
+            sb.AppendLine(".status-unpaid { color: #dc3545; font-weight: bold; }");
+            sb.AppendLine("</style></head><body>");
+
+            // --- Report Header ---
+            sb.AppendLine("<div class='header'>");
+            sb.AppendLine("<div class='header-left'>");
+            sb.AppendLine($"<h1>Bill List Report</h1>");
+            sb.AppendLine($"<p><strong>Generated:</strong> {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>");
+            // sb.AppendLine($"<p><strong>Company:</strong> {company?.CompanyName ?? "Your Company"}</p>");
+            // sb.AppendLine($"<p>{company?.Address?.Replace("\n", "<br>")}</p>");
+            sb.AppendLine("</div>");
+            sb.AppendLine("<div class='header-right'>");
+            sb.AppendLine($"<h2>Report Summary</h2>");
+            sb.AppendLine($"<p><strong>Total Bills:</strong> {bills.Count}</p>");
+            sb.AppendLine($"<p><strong>Total Amount:</strong> ₹{bills.Sum(b => b.OriginalAmount):N2}</p>");
+            sb.AppendLine($"<p><strong>Total Balance:</strong> ₹{bills.Sum(b => b.Balance):N2}</p>");
+            sb.AppendLine("</div>");
+            sb.AppendLine("</div>");
+
+            // --- Filter Information ---
+            sb.AppendLine("<div class='filter-info'>");
+            sb.AppendLine("<h3>Filter Details</h3>");
+            sb.AppendLine($"<p><strong>Date Range:</strong> {dateRange}</p>");
+            sb.AppendLine($"<p><strong>Status Filter:</strong> {statusFilter}</p>");
+            if (!string.IsNullOrWhiteSpace(searchFilter))
+            {
+                sb.AppendLine($"<p><strong>{searchFilter}</strong></p>");
+            }
+            sb.AppendLine("</div>");
+
+            // --- Bills Table ---
+            sb.AppendLine("<table>");
+            sb.AppendLine("<tr>");
+            sb.AppendLine("<th>Bill No</th>");
+            sb.AppendLine("<th>Date</th>");
+            sb.AppendLine("<th>Party</th>");
+            sb.AppendLine("<th>Broker</th>");
+            sb.AppendLine("<th class='text-right'>Amount</th>");
+            sb.AppendLine("<th class='text-right'>Charges</th>");
+            sb.AppendLine("<th class='text-right'>Cheque Firm1</th>");
+            sb.AppendLine("<th class='text-right'>Cheque Firm2</th>");
+            sb.AppendLine("<th class='text-right'>Balance</th>");
+            sb.AppendLine("<th>Status</th>");
+            sb.AppendLine("</tr>");
+
+            foreach (var bill in bills)
+            {
+                string statusClass = bill.Status switch
+                {
+                    "Paid" => "status-paid",
+                    "Partial" => "status-partial",
+                    "Unpaid" => "status-unpaid",
+                    _ => ""
+                };
+
+                sb.AppendLine("<tr>");
+                sb.AppendLine($"<td>{bill.BillNo}</td>");
+                sb.AppendLine($"<td>{bill.BillDate:dd/MM/yyyy}</td>");
+                sb.AppendLine($"<td>{bill.PartyName}</td>");
+                sb.AppendLine($"<td>{bill.BrokerName ?? "No Broker"}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.OriginalAmount:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.AdditionalCharges:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm1:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm2:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.Balance:N2}</td>");
+                sb.AppendLine($"<td class='{statusClass}'>{bill.Status}</td>");
+                sb.AppendLine("</tr>");
+            }
+
+            // --- Summary Row ---
+            sb.AppendLine("<tr class='total-row'>");
+            sb.AppendLine("<td colspan='4'><strong>Total</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.OriginalAmount):N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.AdditionalCharges):N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm1):N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm2):N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.Balance):N2}</strong></td>");
+            sb.AppendLine("<td></td>");
+            sb.AppendLine("</tr>");
+            sb.AppendLine("</table>");
+
+            // --- Summary Box ---
+            sb.AppendLine("<div class='summary-box'>");
+            sb.AppendLine("<h3>Summary by Status</h3>");
+            
+            var statusGroups = bills.GroupBy(b => b.Status).OrderBy(g => g.Key);
+            foreach (var group in statusGroups)
+            {
+                decimal groupAmount = group.Sum(b => b.OriginalAmount);
+                decimal groupBalance = group.Sum(b => b.Balance);
+                int groupCount = group.Count();
+                
+                sb.AppendLine($"<p><strong>{group.Key}:</strong> {groupCount} bills, Amount: ₹{groupAmount:N2}, Balance: ₹{groupBalance:N2}</p>");
+            }
+            sb.AppendLine("</div>");
+
+            sb.AppendLine("</body></html>");
+            return sb.ToString();
+        }
+
+        #endregion
     }
 }

@@ -40,6 +40,7 @@ namespace SaleBillSystem.NET.Forms
             btnViewDetails = new Button();
             btnEditBill = new Button();
             btnNewBill = new Button();
+            btnPrint = new Button();
             txtSearch = new TextBox();
             lblSearch = new Label();
             dgvBills = new DataGridView();
@@ -70,12 +71,13 @@ namespace SaleBillSystem.NET.Forms
             panel1.Controls.Add(btnViewDetails);
             panel1.Controls.Add(btnEditBill);
             panel1.Controls.Add(btnNewBill);
+            panel1.Controls.Add(btnPrint);
             panel1.Controls.Add(txtSearch);
             panel1.Controls.Add(lblSearch);
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1314, 60);
+            panel1.Size = new Size(1410, 60);
             panel1.TabIndex = 0;
             // 
             // cmbStatus
@@ -136,7 +138,7 @@ namespace SaleBillSystem.NET.Forms
             btnRefresh.BackColor = Color.FromArgb(0, 122, 204);
             btnRefresh.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
             btnRefresh.ForeColor = Color.White;
-            btnRefresh.Location = new Point(1175, 15);
+            btnRefresh.Location = new Point(1156, 15);
             btnRefresh.Name = "btnRefresh";
             btnRefresh.Size = new Size(100, 30);
             btnRefresh.TabIndex = 5;
@@ -148,7 +150,7 @@ namespace SaleBillSystem.NET.Forms
             btnDeleteBill.BackColor = Color.FromArgb(204, 82, 0);
             btnDeleteBill.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
             btnDeleteBill.ForeColor = Color.White;
-            btnDeleteBill.Location = new Point(1060, 15);
+            btnDeleteBill.Location = new Point(1046, 15);
             btnDeleteBill.Name = "btnDeleteBill";
             btnDeleteBill.Size = new Size(100, 30);
             btnDeleteBill.TabIndex = 4;
@@ -162,9 +164,9 @@ namespace SaleBillSystem.NET.Forms
             btnViewDetails.ForeColor = Color.White;
             btnViewDetails.Location = new Point(840, 15);
             btnViewDetails.Name = "btnViewDetails";
-            btnViewDetails.Size = new Size(100, 30);
+            btnViewDetails.Size = new Size(88, 30);
             btnViewDetails.TabIndex = 6;
-            btnViewDetails.Text = "View Details";
+            btnViewDetails.Text = "View";
             btnViewDetails.UseVisualStyleBackColor = false;
             // 
             // btnEditBill
@@ -172,9 +174,9 @@ namespace SaleBillSystem.NET.Forms
             btnEditBill.BackColor = Color.FromArgb(0, 122, 204);
             btnEditBill.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
             btnEditBill.ForeColor = Color.White;
-            btnEditBill.Location = new Point(950, 15);
+            btnEditBill.Location = new Point(934, 15);
             btnEditBill.Name = "btnEditBill";
-            btnEditBill.Size = new Size(100, 30);
+            btnEditBill.Size = new Size(94, 30);
             btnEditBill.TabIndex = 3;
             btnEditBill.Text = "Edit";
             btnEditBill.UseVisualStyleBackColor = false;
@@ -190,6 +192,18 @@ namespace SaleBillSystem.NET.Forms
             btnNewBill.TabIndex = 2;
             btnNewBill.Text = "New Bill";
             btnNewBill.UseVisualStyleBackColor = false;
+            // 
+            // btnPrint
+            // 
+            btnPrint.BackColor = Color.FromArgb(0, 150, 136);
+            btnPrint.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnPrint.ForeColor = Color.White;
+            btnPrint.Location = new Point(1262, 15);
+            btnPrint.Name = "btnPrint";
+            btnPrint.Size = new Size(82, 30);
+            btnPrint.TabIndex = 13;
+            btnPrint.Text = "Print";
+            btnPrint.UseVisualStyleBackColor = false;
             // 
             // txtSearch
             // 
@@ -215,7 +229,7 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.Location = new Point(0, 60);
             dgvBills.Name = "dgvBills";
             dgvBills.RowHeadersWidth = 51;
-            dgvBills.Size = new Size(1314, 570);
+            dgvBills.Size = new Size(1410, 570);
             dgvBills.TabIndex = 1;
             dgvBills.CellContentClick += dgvBills_CellContentClick;
             // 
@@ -234,7 +248,7 @@ namespace SaleBillSystem.NET.Forms
             panelSummary.Dock = DockStyle.Bottom;
             panelSummary.Location = new Point(0, 630);
             panelSummary.Name = "panelSummary";
-            panelSummary.Size = new Size(1314, 40);
+            panelSummary.Size = new Size(1410, 40);
             panelSummary.TabIndex = 2;
             // 
             // lblChequeFirm2Value
@@ -242,7 +256,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm2Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm2Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblChequeFirm2Value.ForeColor = Color.DarkCyan;
-            lblChequeFirm2Value.Location = new Point(628, 8);
+            lblChequeFirm2Value.Location = new Point(724, 8);
             lblChequeFirm2Value.Name = "lblChequeFirm2Value";
             lblChequeFirm2Value.Size = new Size(147, 23);
             lblChequeFirm2Value.TabIndex = 11;
@@ -254,7 +268,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm2.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm2.AutoSize = true;
             lblChequeFirm2.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblChequeFirm2.Location = new Point(501, 9);
+            lblChequeFirm2.Location = new Point(597, 9);
             lblChequeFirm2.Name = "lblChequeFirm2";
             lblChequeFirm2.Size = new Size(110, 20);
             lblChequeFirm2.TabIndex = 10;
@@ -266,7 +280,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm1Value.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm1Value.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblChequeFirm1Value.ForeColor = Color.DarkCyan;
-            lblChequeFirm1Value.Location = new Point(340, 8);
+            lblChequeFirm1Value.Location = new Point(436, 8);
             lblChequeFirm1Value.Name = "lblChequeFirm1Value";
             lblChequeFirm1Value.Size = new Size(123, 23);
             lblChequeFirm1Value.TabIndex = 9;
@@ -278,7 +292,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeFirm1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblChequeFirm1.AutoSize = true;
             lblChequeFirm1.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblChequeFirm1.Location = new Point(201, 8);
+            lblChequeFirm1.Location = new Point(297, 8);
             lblChequeFirm1.Name = "lblChequeFirm1";
             lblChequeFirm1.Size = new Size(110, 20);
             lblChequeFirm1.TabIndex = 8;
@@ -289,7 +303,7 @@ namespace SaleBillSystem.NET.Forms
             lblNetAmountValue.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblNetAmountValue.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblNetAmountValue.ForeColor = Color.Black;
-            lblNetAmountValue.Location = new Point(929, 10);
+            lblNetAmountValue.Location = new Point(1025, 10);
             lblNetAmountValue.Name = "lblNetAmountValue";
             lblNetAmountValue.Size = new Size(120, 23);
             lblNetAmountValue.TabIndex = 7;
@@ -301,7 +315,7 @@ namespace SaleBillSystem.NET.Forms
             lblNetAmount.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblNetAmount.AutoSize = true;
             lblNetAmount.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblNetAmount.Location = new Point(812, 10);
+            lblNetAmount.Location = new Point(908, 10);
             lblNetAmount.Name = "lblNetAmount";
             lblNetAmount.Size = new Size(101, 20);
             lblNetAmount.TabIndex = 6;
@@ -313,7 +327,7 @@ namespace SaleBillSystem.NET.Forms
             lblTotalBalanceValue.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             lblTotalBalanceValue.ForeColor = Color.Red;
             lblTotalBalanceValue.ImageAlign = ContentAlignment.MiddleLeft;
-            lblTotalBalanceValue.Location = new Point(1171, 10);
+            lblTotalBalanceValue.Location = new Point(1267, 10);
             lblTotalBalanceValue.Name = "lblTotalBalanceValue";
             lblTotalBalanceValue.Size = new Size(120, 23);
             lblTotalBalanceValue.TabIndex = 3;
@@ -325,7 +339,7 @@ namespace SaleBillSystem.NET.Forms
             lblTotalBalance.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblTotalBalance.AutoSize = true;
             lblTotalBalance.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
-            lblTotalBalance.Location = new Point(1053, 12);
+            lblTotalBalance.Location = new Point(1149, 12);
             lblTotalBalance.Name = "lblTotalBalance";
             lblTotalBalance.Size = new Size(106, 20);
             lblTotalBalance.TabIndex = 1;
@@ -338,7 +352,7 @@ namespace SaleBillSystem.NET.Forms
             Controls.Add(panelSummary);
             Controls.Add(panel1);
             Name = "BillListUserControl";
-            Size = new Size(1314, 670);
+            Size = new Size(1410, 670);
             Load += BillListUserControl_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
@@ -356,6 +370,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Button btnViewDetails;
         private System.Windows.Forms.Button btnEditBill;
         private System.Windows.Forms.Button btnNewBill;
+        private System.Windows.Forms.Button btnPrint;
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Label lblSearch;
         private System.Windows.Forms.DataGridView dgvBills;

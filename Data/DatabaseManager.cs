@@ -1107,5 +1107,417 @@ namespace SaleBillSystem.NET.Data
                 return false;
             }
         }
+
+        /// <summary>
+        /// Creates the AdvancePayments table if it doesn't exist
+        /// </summary>
+        public static void CreateAdvancePaymentsTable()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if table already exists using Access-specific method
+                    bool tableExists = false;
+                    try
+                    {
+                        string checkTableSql = "SELECT COUNT(*) FROM AdvancePayments";
+                        using (var checkCmd = new OleDbCommand(checkTableSql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            tableExists = true;
+                        }
+                    }
+                    catch
+                    {
+                        tableExists = false;
+                    }
+                    
+                    if (tableExists)
+                    {
+                        Console.WriteLine("AdvancePayments table already exists.");
+                        return;
+                    }
+                    
+                    // Create the AdvancePayments table with flexible schema
+                    string createTableSql = @"
+                        CREATE TABLE AdvancePayments (
+                            AdvanceID COUNTER PRIMARY KEY,
+                            PartyID LONG NULL,
+                            BrokerID LONG NULL,
+                            PaymentDate DATETIME NOT NULL,
+                            Amount CURRENCY NOT NULL,
+                            PaymentMethod TEXT(50),
+                            Reference TEXT(255),
+                            CompanyID LONG NOT NULL,
+                            CreatedDate DATETIME DEFAULT NOW(),
+                            CONSTRAINT CheckPartyOrBroker CHECK (PartyID IS NOT NULL OR BrokerID IS NOT NULL)
+                        )";
+                    
+                    using (var createCmd = new OleDbCommand(createTableSql, conn))
+                    {
+                        createCmd.ExecuteNonQuery();
+                        Console.WriteLine("AdvancePayments table created successfully.");
+                    }
+                    
+                    // Create indexes for better performance
+                    try
+                    {
+                        string createIndexesSql = @"
+                            CREATE INDEX idx_AdvancePayments_PartyID ON AdvancePayments(PartyID);
+                            CREATE INDEX idx_AdvancePayments_BrokerID ON AdvancePayments(BrokerID);
+                            CREATE INDEX idx_AdvancePayments_PaymentDate ON AdvancePayments(PaymentDate);
+                            CREATE INDEX idx_AdvancePayments_CompanyID ON AdvancePayments(CompanyID);
+                            CREATE INDEX idx_AdvancePayments_PartyBroker ON AdvancePayments(PartyID, BrokerID);";
+                        
+                        using (var indexCmd = new OleDbCommand(createIndexesSql, conn))
+                        {
+                            indexCmd.ExecuteNonQuery();
+                            Console.WriteLine("AdvancePayments table indexes created successfully.");
+                        }
+                    }
+                    catch (Exception indexEx)
+                    {
+                        Console.WriteLine($"Warning: Could not create indexes: {indexEx.Message}");
+                        // Continue without indexes - table creation is more important
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating AdvancePayments table: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds the IsAdvancePayment and AdvanceAmount columns to PaymentMaster table if they don't exist
+        /// </summary>
+        public static void AddAdvanceColumnsToPaymentMaster()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if IsAdvancePayment column exists using Access-specific method
+                    bool column1Exists = false;
+                    try
+                    {
+                        string checkColumn1Sql = "SELECT IsAdvancePayment FROM PaymentMaster WHERE 1=0";
+                        using (var checkCmd = new OleDbCommand(checkColumn1Sql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            column1Exists = true;
+                        }
+                    }
+                    catch
+                    {
+                        column1Exists = false;
+                    }
+                    
+                    if (!column1Exists)
+                    {
+                        // Add IsAdvancePayment column
+                        string addColumn1Sql = "ALTER TABLE PaymentMaster ADD COLUMN IsAdvancePayment BIT DEFAULT 0";
+                        using (var addCmd = new OleDbCommand(addColumn1Sql, conn))
+                        {
+                            addCmd.ExecuteNonQuery();
+                            Console.WriteLine("IsAdvancePayment column added to PaymentMaster table.");
+                        }
+                    }
+                    
+                    // Check if AdvanceAmount column exists
+                    bool column2Exists = false;
+                    try
+                    {
+                        string checkColumn2Sql = "SELECT AdvanceAmount FROM PaymentMaster WHERE 1=0";
+                        using (var checkCmd = new OleDbCommand(checkColumn2Sql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            column2Exists = true;
+                        }
+                    }
+                    catch
+                    {
+                        column2Exists = false;
+                    }
+                    
+                    if (!column2Exists)
+                    {
+                        // Add AdvanceAmount column
+                        string addColumn2Sql = "ALTER TABLE PaymentMaster ADD COLUMN AdvanceAmount CURRENCY DEFAULT 0";
+                        using (var addCmd = new OleDbCommand(addColumn2Sql, conn))
+                        {
+                            addCmd.ExecuteNonQuery();
+                            Console.WriteLine("AdvanceAmount column added to PaymentMaster table.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error adding advance columns to PaymentMaster: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Initializes all advance payment related database structures
+        /// </summary>
+        public static void InitializeAdvancePaymentSystem()
+        {
+            try
+            {
+                Console.WriteLine("Initializing advance payment system...");
+                
+                // Create the AdvancePayments table
+                CreateAdvancePaymentsTable();
+                
+                // Add advance columns to PaymentMaster table
+                AddAdvanceColumnsToPaymentMaster();
+                
+                Console.WriteLine("Advance payment system initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing advance payment system: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the total advance amount for a party (including broker-specific advances)
+        /// </summary>
+        public static decimal GetPartyAdvanceBalance(int partyId, int? brokerId = null, int companyId = 1)
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    string sql;
+                    if (brokerId.HasValue)
+                    {
+                        // Get advance balance for specific party + broker combination
+                        sql = @"
+                            SELECT IIF(SUM(Amount) IS NULL, 0, SUM(Amount)) 
+                            FROM AdvancePayments 
+                            WHERE PartyID = ? AND BrokerID = ? AND CompanyID = ?";
+                    }
+                    else
+                    {
+                        // Get total advance balance for party (including no-broker advances)
+                        sql = @"
+                            SELECT IIF(SUM(Amount) IS NULL, 0, SUM(Amount)) 
+                            FROM AdvancePayments 
+                            WHERE PartyID = ? AND CompanyID = ?";
+                    }
+                    
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.Add(new OleDbParameter("PartyID", partyId));
+                        if (brokerId.HasValue)
+                        {
+                            cmd.Parameters.Add(new OleDbParameter("BrokerID", brokerId.Value));
+                        }
+                        cmd.Parameters.Add(new OleDbParameter("CompanyID", companyId));
+                        
+                        object result = cmd.ExecuteScalar();
+                        return result != null ? Convert.ToDecimal(result) : 0m;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting party advance balance: {ex.Message}");
+                return 0m;
+            }
+        }
+
+        /// <summary>
+        /// Gets the total advance amount for a broker (including party-specific advances)
+        /// </summary>
+        public static decimal GetBrokerAdvanceBalance(int brokerId, int? partyId = null, int companyId = 1)
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    string sql;
+                    if (partyId.HasValue)
+                    {
+                        // Get advance balance for specific broker + party combination
+                        sql = @"
+                            SELECT IIF(SUM(Amount) IS NULL, 0, SUM(Amount)) 
+                            FROM AdvancePayments 
+                            WHERE BrokerID = ? AND PartyID = ? AND CompanyID = ?";
+                    }
+                    else
+                    {
+                        // Get total advance balance for broker (including no-party advances)
+                        sql = @"
+                            SELECT IIF(SUM(Amount) IS NULL, 0, SUM(Amount)) 
+                            FROM AdvancePayments 
+                            WHERE BrokerID = ? AND CompanyID = ?";
+                    }
+                    
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.Add(new OleDbParameter("BrokerID", brokerId));
+                        if (partyId.HasValue)
+                        {
+                            cmd.Parameters.Add(new OleDbParameter("PartyID", partyId.Value));
+                        }
+                        cmd.Parameters.Add(new OleDbParameter("CompanyID", companyId));
+                        
+                        object result = cmd.ExecuteScalar();
+                        return result != null ? Convert.ToDecimal(result) : 0m;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting broker advance balance: {ex.Message}");
+                return 0m;
+            }
+        }
+
+        /// <summary>
+        /// Gets all advance payments with flexible filtering
+        /// </summary>
+        // public static List<AdvancePayment> GetAdvancePayments(int? partyId = null, int? brokerId = null, int companyId = 1)
+        // {
+        //     var advancePayments = new List<AdvancePayment>();
+            
+        //     try
+        //     {
+        //         using (var conn = GetConnection())
+        //         {
+        //             conn.Open();
+                    
+        //             string sql = @"
+        //                 SELECT AdvanceID, PartyID, BrokerID, PaymentDate, Amount, 
+        //                        PaymentMethod, Reference, CompanyID, CreatedDate
+        //                 FROM AdvancePayments 
+        //                 WHERE CompanyID = ?";
+                    
+        //             var parameters = new List<OleDbParameter>
+        //             {
+        //                 new OleDbParameter("CompanyID", companyId)
+        //             };
+                    
+        //             if (partyId.HasValue)
+        //             {
+        //                 sql += " AND PartyID = ?";
+        //                 parameters.Add(new OleDbParameter("PartyID", partyId.Value));
+        //             }
+                    
+        //             if (brokerId.HasValue)
+        //             {
+        //                 sql += " AND BrokerID = ?";
+        //                 parameters.Add(new OleDbParameter("BrokerID", brokerId.Value));
+        //             }
+                    
+        //             sql += " ORDER BY PaymentDate DESC";
+                    
+        //             using (var cmd = new OleDbCommand(sql, conn))
+        //             {
+        //                 foreach (var param in parameters)
+        //                 {
+        //                     cmd.Parameters.Add(param);
+        //                 }
+                        
+        //                 using (var reader = cmd.ExecuteReader())
+        //                 {
+        //                     while (reader.Read())
+        //                     {
+        //                         advancePayments.Add(new AdvancePayment
+        //                         {
+        //                             AdvanceID = Convert.ToInt32(reader["AdvanceID"]),
+        //                             PartyID = reader["PartyID"] != DBNull.Value ? Convert.ToInt32(reader["PartyID"]) : null,
+        //                             BrokerID = reader["BrokerID"] != DBNull.Value ? Convert.ToInt32(reader["BrokerID"]) : null,
+        //                             PaymentDate = Convert.ToDateTime(reader["PaymentDate"]),
+        //                             Amount = Convert.ToDecimal(reader["Amount"]),
+        //                             PaymentMethod = reader["PaymentMethod"]?.ToString() ?? "",
+        //                             Reference = reader["Reference"]?.ToString() ?? "",
+        //                             CompanyID = Convert.ToInt32(reader["CompanyID"]),
+        //                             CreatedDate = Convert.ToDateTime(reader["CreatedDate"])
+        //                         });
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         Console.WriteLine($"Error getting advance payments: {ex.Message}");
+        //     }
+            
+        //     return advancePayments;
+        // }
+
+        /// <summary>
+        /// Gets advance payment summary for reporting
+        /// </summary>
+        public static Dictionary<string, decimal> GetAdvancePaymentSummary(int companyId = 1)
+        {
+            var summary = new Dictionary<string, decimal>();
+            
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Get total advances by type
+                    string sql = @"
+                        SELECT 
+                            CASE 
+                                WHEN PartyID IS NOT NULL AND BrokerID IS NOT NULL THEN 'Party+Broker'
+                                WHEN PartyID IS NOT NULL THEN 'Party Only'
+                                WHEN BrokerID IS NOT NULL THEN 'Broker Only'
+                                ELSE 'Unknown'
+                            END AS AdvanceType,
+                            IIF(SUM(Amount) IS NULL, 0, SUM(Amount)) AS TotalAmount
+                        FROM AdvancePayments 
+                        WHERE CompanyID = ?
+                        GROUP BY 
+                            CASE 
+                                WHEN PartyID IS NOT NULL AND BrokerID IS NOT NULL THEN 'Party+Broker'
+                                WHEN PartyID IS NOT NULL THEN 'Party Only'
+                                WHEN BrokerID IS NOT NULL THEN 'Broker Only'
+                                ELSE 'Unknown'
+                            END";
+                    
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.Parameters.Add(new OleDbParameter("CompanyID", companyId));
+                        
+                        using (var reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string advanceType = reader["AdvanceType"].ToString();
+                                decimal amount = Convert.ToDecimal(reader["TotalAmount"]);
+                                summary[advanceType] = amount;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting advance payment summary: {ex.Message}");
+            }
+            
+            return summary;
+        }
     }
 } 

@@ -52,6 +52,13 @@ namespace SaleBillSystem.NET
             // }
 
             // Set the active company to CompanyID = 1 so all services can find the data
+
+            try {
+                DatabaseManager.InitializeAdvancePaymentSystem();
+            }catch(Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not initialize advance payment system: {ex.Message}");
+            }
             try
             {
                 // Load the existing company with ID = 1 from the database

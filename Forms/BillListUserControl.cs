@@ -679,7 +679,6 @@ namespace SaleBillSystem.NET.Forms
 
         private string GenerateHtmlReport(List<Bill> bills)
         {
-            var company = Program.ActiveCompany; // Assuming you have this in Program.cs
             var sb = new StringBuilder();
 
             // Get filter details for the report header
@@ -692,63 +691,75 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine("<html><head><title>Bill List Report</title>");
             sb.AppendLine("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
             sb.AppendLine("<style>");
-            sb.AppendLine("@page { size: A4; margin: 15mm; }");
-            sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; font-size: 10pt; }");
-            sb.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 20px; }");
-            sb.AppendLine("th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 9pt; }");
+            sb.AppendLine("@page { size: A4; margin: 10mm; }");
+            sb.AppendLine("body { font-family: 'Segoe UI', Arial, sans-serif; margin: 10px; font-size: 9pt; }");
+            sb.AppendLine("table { width: 100%; border-collapse: collapse; margin-top: 10px; }");
+            sb.AppendLine("th, td { border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 8pt; }");
             sb.AppendLine("th { background-color: #f2f2f2; font-weight: bold; }");
-            sb.AppendLine(".header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }");
-            sb.AppendLine(".header-left, .header-right { width: 48%; }");
+            sb.AppendLine(".compact-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding: 5px 0; margin-bottom: 10px; }");
+            sb.AppendLine(".header-left { width: 40%; }");
+            sb.AppendLine(".header-right { width: 58%; text-align: right; }");
             sb.AppendLine(".text-right { text-align: right; }");
             sb.AppendLine(".total-row { font-weight: bold; background-color: #f8f8f8; }");
-            sb.AppendLine("h1, h2 { margin: 0; color: #333; }");
-            sb.AppendLine(".filter-info { background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd; }");
-            sb.AppendLine(".summary-box { background-color: #f5f5f5; padding: 10px; border-radius: 5px; margin: 10px 0; border: 1px solid #ddd; }");
+            sb.AppendLine("h1 { margin: 0; color: #333; font-size: 14pt; }");
+            sb.AppendLine("h2 { margin: 0; color: #333; font-size: 11pt; }");
+            sb.AppendLine("h3 { margin: 0; color: #333; font-size: 10pt; }");
+            sb.AppendLine("p { margin: 2px 0; font-size: 8pt; }");
+            sb.AppendLine(".filter-info { background-color: #f0f8ff; padding: 5px; border-radius: 3px; margin: 5px 0; border: 1px solid #ddd; font-size: 8pt; }");
+            sb.AppendLine(".summary-box { background-color: #f5f5f5; padding: 5px; border-radius: 3px; margin: 5px 0; border: 1px solid #ddd; font-size: 8pt; }");
             sb.AppendLine(".status-paid { color: #28a745; font-weight: bold; }");
             sb.AppendLine(".status-partial { color: #007bff; font-weight: bold; }");
             sb.AppendLine(".status-unpaid { color: #dc3545; font-weight: bold; }");
+            sb.AppendLine(".compact-row { display: flex; justify-content: space-between; margin: 1px 0; }");
+            sb.AppendLine(".compact-col { flex: 1; margin: 0 2px; }");
+            sb.AppendLine(".compact-table { font-size: 7pt; }");
+            sb.AppendLine(".compact-table th, .compact-table td { padding: 2px 3px; }");
             sb.AppendLine("</style></head><body>");
 
-            // --- Report Header ---
-            sb.AppendLine("<div class='header'>");
+            // --- Compact Report Header ---
+            sb.AppendLine("<div class='compact-header'>");
             sb.AppendLine("<div class='header-left'>");
             sb.AppendLine($"<h1>Bill List Report</h1>");
-            sb.AppendLine($"<p><strong>Generated:</strong> {DateTime.Now:dd/MM/yyyy HH:mm:ss}</p>");
-            // sb.AppendLine($"<p><strong>Company:</strong> {company?.CompanyName ?? "Your Company"}</p>");
-            // sb.AppendLine($"<p>{company?.Address?.Replace("\n", "<br>")}</p>");
+            sb.AppendLine($"<p style='margin: 1px 0; font-size: 8pt;'><strong>Generated:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>");
             sb.AppendLine("</div>");
             sb.AppendLine("<div class='header-right'>");
-            sb.AppendLine($"<h2>Report Summary</h2>");
-            sb.AppendLine($"<p><strong>Total Bills:</strong> {bills.Count}</p>");
-            sb.AppendLine($"<p><strong>Total Amount:</strong> ₹{bills.Sum(b => b.OriginalAmount):N2}</p>");
-            sb.AppendLine($"<p><strong>Total Balance:</strong> ₹{bills.Sum(b => b.Balance):N2}</p>");
+            sb.AppendLine($"<h2>Summary</h2>");
+            sb.AppendLine($"<div class='compact-row'>");
+            sb.AppendLine($"<div class='compact-col'><strong>Bills:</strong> {bills.Count}</div>");
+            sb.AppendLine($"<div class='compact-col'><strong>Amount:</strong> ₹{bills.Sum(b => b.OriginalAmount):N0}</div>");
+            sb.AppendLine("</div>");
+            sb.AppendLine($"<div class='compact-row'>");
+            sb.AppendLine($"<div class='compact-col'><strong>Balance:</strong> ₹{bills.Sum(b => b.Balance):N0}</div>");
+            sb.AppendLine($"<div class='compact-col'><strong>Charges:</strong> ₹{bills.Sum(b => b.AdditionalCharges):N0}</div>");
+            sb.AppendLine("</div>");
             sb.AppendLine("</div>");
             sb.AppendLine("</div>");
 
-            // --- Filter Information ---
+            // --- Compact Filter Information ---
             sb.AppendLine("<div class='filter-info'>");
-            sb.AppendLine("<h3>Filter Details</h3>");
-            sb.AppendLine($"<p><strong>Date Range:</strong> {dateRange}</p>");
-            sb.AppendLine($"<p><strong>Status Filter:</strong> {statusFilter}</p>");
+            sb.AppendLine($"<div class='compact-row'>");
+            sb.AppendLine($"<div class='compact-col'><strong>Date Range:</strong> {dateRange}</div>");
+            sb.AppendLine($"<div class='compact-col'><strong>Status:</strong> {statusFilter}</div>");
             if (!string.IsNullOrWhiteSpace(searchFilter))
             {
-                sb.AppendLine($"<p><strong>{searchFilter}</strong></p>");
+                sb.AppendLine($"<div class='compact-col'><strong>{searchFilter}</strong></div>");
             }
             sb.AppendLine("</div>");
+            sb.AppendLine("</div>");
 
-            // --- Bills Table ---
-            sb.AppendLine("<table>");
+            // --- Compact Bills Table ---
+            sb.AppendLine("<table class='compact-table'>");
             sb.AppendLine("<tr>");
-            sb.AppendLine("<th>Bill No</th>");
-            sb.AppendLine("<th>Date</th>");
-            sb.AppendLine("<th>Party</th>");
-            sb.AppendLine("<th>Broker</th>");
-            sb.AppendLine("<th class='text-right'>Amount</th>");
-            sb.AppendLine("<th class='text-right'>Charges</th>");
-            sb.AppendLine("<th class='text-right'>Cheque Firm1</th>");
-            sb.AppendLine("<th class='text-right'>Cheque Firm2</th>");
-            sb.AppendLine("<th class='text-right'>Balance</th>");
-            sb.AppendLine("<th>Status</th>");
+            sb.AppendLine("<th style='width: 12%;'>Bill No</th>");
+            sb.AppendLine("<th style='width: 8%;'>Date</th>");
+            sb.AppendLine("<th style='width: 20%;'>Party</th>");
+            sb.AppendLine("<th style='width: 15%;'>Broker</th>");
+            sb.AppendLine("<th style='width: 10%;' class='text-right'>Amount</th>");
+            sb.AppendLine("<th style='width: 10%;' class='text-right'>Charges</th>");
+            sb.AppendLine("<th style='width: 10%;' class='text-right'>Cheque1</th>");
+            sb.AppendLine("<th style='width: 10%;' class='text-right'>Cheque2</th>");
+            sb.AppendLine("<th style='width: 10%;' class='text-right'>Balance</th>");
+            sb.AppendLine("<th style='width: 5%;'>Status</th>");
             sb.AppendLine("</tr>");
 
             foreach (var bill in bills)
@@ -763,43 +774,45 @@ namespace SaleBillSystem.NET.Forms
 
                 sb.AppendLine("<tr>");
                 sb.AppendLine($"<td>{bill.BillNo}</td>");
-                sb.AppendLine($"<td>{bill.BillDate:dd/MM/yyyy}</td>");
+                sb.AppendLine($"<td>{bill.BillDate:dd/MM/yy}</td>");
                 sb.AppendLine($"<td>{bill.PartyName}</td>");
                 sb.AppendLine($"<td>{bill.BrokerName ?? "No Broker"}</td>");
-                sb.AppendLine($"<td class='text-right'>₹{bill.OriginalAmount:N2}</td>");
-                sb.AppendLine($"<td class='text-right'>₹{bill.AdditionalCharges:N2}</td>");
-                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm1:N2}</td>");
-                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm2:N2}</td>");
-                sb.AppendLine($"<td class='text-right'>₹{bill.Balance:N2}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.OriginalAmount:N0}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.AdditionalCharges:N0}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm1:N0}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.ChequeAmountFirm2:N0}</td>");
+                sb.AppendLine($"<td class='text-right'>₹{bill.Balance:N0}</td>");
                 sb.AppendLine($"<td class='{statusClass}'>{bill.Status}</td>");
                 sb.AppendLine("</tr>");
             }
 
-            // --- Summary Row ---
+            // --- Compact Summary Row ---
             sb.AppendLine("<tr class='total-row'>");
             sb.AppendLine("<td colspan='4'><strong>Total</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.OriginalAmount):N2}</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.AdditionalCharges):N2}</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm1):N2}</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm2):N2}</strong></td>");
-            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.Balance):N2}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.OriginalAmount):N0}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.AdditionalCharges):N0}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm1):N0}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.ChequeAmountFirm2):N0}</strong></td>");
+            sb.AppendLine($"<td class='text-right'><strong>₹{bills.Sum(b => b.Balance):N0}</strong></td>");
             sb.AppendLine("<td></td>");
             sb.AppendLine("</tr>");
             sb.AppendLine("</table>");
 
-            // --- Summary Box ---
+            // --- Compact Summary Box ---
             sb.AppendLine("<div class='summary-box'>");
-            sb.AppendLine("<h3>Summary by Status</h3>");
+            sb.AppendLine("<h3>Status Summary</h3>");
             
             var statusGroups = bills.GroupBy(b => b.Status).OrderBy(g => g.Key);
+            sb.AppendLine("<div class='compact-row'>");
             foreach (var group in statusGroups)
             {
                 decimal groupAmount = group.Sum(b => b.OriginalAmount);
                 decimal groupBalance = group.Sum(b => b.Balance);
                 int groupCount = group.Count();
                 
-                sb.AppendLine($"<p><strong>{group.Key}:</strong> {groupCount} bills, Amount: ₹{groupAmount:N2}, Balance: ₹{groupBalance:N2}</p>");
+                sb.AppendLine($"<div class='compact-col'><strong>{group.Key}:</strong> {groupCount} bills<br>₹{groupAmount:N0} | ₹{groupBalance:N0}</div>");
             }
+            sb.AppendLine("</div>");
             sb.AppendLine("</div>");
 
             sb.AppendLine("</body></html>");
@@ -807,5 +820,7 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
+
+
     }
 }

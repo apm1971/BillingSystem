@@ -24,6 +24,7 @@ namespace SaleBillSystem.NET.Forms
             cmbParty = new ComboBox();
             lblParty = new Label();
             pnlEntry = new Panel();
+            btnDelete = new Button();
             btnClear = new Button();
             btnSave = new Button();
             pnlChequeDetails = new Panel();
@@ -114,6 +115,7 @@ namespace SaleBillSystem.NET.Forms
             pnlEntry.BackColor = Color.FromArgb(240, 248, 255);
             pnlEntry.BorderStyle = BorderStyle.FixedSingle;
             pnlEntry.Controls.Add(pnlChequeDetails);
+            pnlEntry.Controls.Add(btnDelete);
             pnlEntry.Controls.Add(btnClear);
             pnlEntry.Controls.Add(btnSave);
             pnlEntry.Controls.Add(txtReference);
@@ -157,6 +159,19 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Text = "&Save";
             toolTip1.SetToolTip(btnSave, "Save the advance payment entry (Ctrl+S)");
             btnSave.UseVisualStyleBackColor = false;
+            // 
+            // btnDelete
+            // 
+            btnDelete.BackColor = Color.LightCoral;
+            btnDelete.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnDelete.Location = new Point(945, 115);
+            btnDelete.Margin = new Padding(4);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(100, 30);
+            btnDelete.TabIndex = 6;
+            btnDelete.Text = "&Delete";
+            toolTip1.SetToolTip(btnDelete, "Delete selected advance payment (Del)");
+            btnDelete.UseVisualStyleBackColor = false;
             // 
             // pnlChequeDetails
             // 
@@ -369,6 +384,7 @@ namespace SaleBillSystem.NET.Forms
         private ComboBox cmbParty;
         private Label lblParty;
         private Panel pnlEntry;
+        private Button btnDelete;
         private Button btnClear;
         private Button btnSave;
         private TextBox txtReference;

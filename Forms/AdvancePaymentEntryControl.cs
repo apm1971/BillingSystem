@@ -239,12 +239,14 @@ namespace SaleBillSystem.NET.Forms
         {
             btnSave.Click += BtnSave_Click;
             btnClear.Click += BtnClear_Click;
+            btnDelete.Click += BtnDelete_Click;
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
             cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             txtPaymentDate.TextChanged += TxtPaymentDate_TextChanged;
             cmbPaymentMethod.SelectedIndexChanged += CmbPaymentMethod_SelectedIndexChanged;
             txtChequeAmountFirm1.TextChanged += TxtChequeAmount_TextChanged;
             txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
+            dgvAdvancePayments.KeyDown += DgvAdvancePayments_KeyDown;
         }
 
         private void ClearForm()
@@ -438,6 +440,87 @@ namespace SaleBillSystem.NET.Forms
             dgvAdvancePayments.DataSource = _advancePayments;
             decimal totalAdvance = _advancePayments.Sum(ap => ap.Amount);
             lblTotalAdvances.Text = $"Total Advances: ₹{totalAdvance:N2}";
+        }
+
+        private void BtnDelete_Click(object sender, EventArgs e)
+        {
+            // Check if any row is selected
+            if (dgvAdvancePayments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select an advance payment to delete.", "No Selection", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Get the selected advance payment
+            var selectedAdvancePayment = dgvAdvancePayments.SelectedRows[0].DataBoundItem as AdvancePayment;
+            if (selectedAdvancePayment == null)
+            {
+                MessageBox.Show("Unable to determine selected advance payment.", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Show confirmation dialog
+            string confirmMessage = $"Are you sure you want to delete the advance payment?\n\n" +
+                                  $"Date: {selectedAdvancePayment.PaymentDate:dd-MMM-yyyy}\n" +
+                                  $"Amount: ₹{selectedAdvancePayment.Amount:N2}\n" +
+                                  $"Party: {selectedAdvancePayment.PartyName ?? "N/A"}\n" +
+                                  $"Broker: {selectedAdvancePayment.BrokerName ?? "N/A"}\n" +
+                                  $"Method: {selectedAdvancePayment.PaymentMethod}\n\n" +
+                                  $"This action cannot be undone!";
+
+            var result = MessageBox.Show(confirmMessage, "Confirm Delete", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
+            {
+                // Disable delete button to prevent multiple clicks
+                btnDelete.Enabled = false;
+                btnDelete.Text = "Deleting...";
+                
+                // Delete the advance payment
+                if (AdvancePaymentService.DeleteAdvancePayment(selectedAdvancePayment.AdvanceID))
+                {
+                    MessageBox.Show("Advance payment deleted successfully!", "Success", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Refresh the data
+                    LoadAdvancePayments();
+                    
+                    // Apply current filters if any
+                    FilterAdvancePayments();
+                }
+                else
+                {
+                    MessageBox.Show("Failed to delete advance payment. Please try again.", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting advance payment: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                // Re-enable delete button
+                btnDelete.Enabled = true;
+                btnDelete.Text = "&Delete";
+            }
+        }
+
+        private void DgvAdvancePayments_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Handle Delete key press
+            if (e.KeyCode == Keys.Delete)
+            {
+                BtnDelete_Click(sender, EventArgs.Empty);
+                e.Handled = true; // Prevent the default key handling
+            }
         }
 
         #endregion

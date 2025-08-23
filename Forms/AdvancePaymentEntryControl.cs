@@ -105,7 +105,7 @@ namespace SaleBillSystem.NET.Forms
             dgvAdvancePayments.Columns.Add(new DataGridViewTextBoxColumn 
             { 
                 DataPropertyName = "Amount", 
-                HeaderText = "Amount", 
+                HeaderText = "Available", 
                 DefaultCellStyle = new DataGridViewCellStyle 
                 { 
                     Format = "N2", 
@@ -114,6 +114,34 @@ namespace SaleBillSystem.NET.Forms
                     ForeColor = Color.Green
                 }, 
                 Width = 120, 
+                ReadOnly = true 
+            });
+            
+            dgvAdvancePayments.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                DataPropertyName = "OriginalAmount", 
+                HeaderText = "Original", 
+                DefaultCellStyle = new DataGridViewCellStyle 
+                { 
+                    Format = "N2", 
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    ForeColor = Color.Blue
+                }, 
+                Width = 100, 
+                ReadOnly = true 
+            });
+            
+            dgvAdvancePayments.Columns.Add(new DataGridViewTextBoxColumn 
+            { 
+                DataPropertyName = "UtilizedAmount", 
+                HeaderText = "Used", 
+                DefaultCellStyle = new DataGridViewCellStyle 
+                { 
+                    Format = "N2", 
+                    Alignment = DataGridViewContentAlignment.MiddleRight,
+                    ForeColor = Color.Red
+                }, 
+                Width = 100, 
                 ReadOnly = true 
             });
             

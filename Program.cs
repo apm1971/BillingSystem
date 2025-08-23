@@ -64,6 +64,14 @@ namespace SaleBillSystem.NET
             }
             try
             {
+                DatabaseManager.changePartyIdToNullable();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not change PartyID column to nullable: {ex.Message}");
+            }
+            try
+            {
                 // Load the existing company with ID = 1 from the database
                 using (var conn = DatabaseManager.GetConnection())
                 {

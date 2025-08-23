@@ -875,8 +875,10 @@ namespace SaleBillSystem.NET.Forms
             {
                 try
                 {
-                    int paymentId = SavePaymentInBackground(paymentData);
-                    e.Result = new { Success = true, PaymentId = paymentId };
+                    int paymentId;
+                    decimal totalAvailableAdvance;
+                    (paymentId, totalAvailableAdvance) = SavePaymentInBackground(paymentData);
+                    e.Result = new { Success = true, PaymentId = paymentId, TotalAvailableAdvance = totalAvailableAdvance };
                 }
                 catch (Exception ex)
                 {
@@ -894,7 +896,7 @@ namespace SaleBillSystem.NET.Forms
                 dynamic result = e.Result;
                 if (result.Success)
                 {
-                    MessageBox.Show("Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Payment(s) saved successfully! Total available advance: {result.TotalAvailableAdvance:C}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
                     // Show payment trace with print option
                     ShowPaymentTraceAfterSave(result.PaymentId);
@@ -927,9 +929,10 @@ namespace SaleBillSystem.NET.Forms
             public string Reference { get; set; }
             public string ChequeAmountFirm1Text { get; set; }
             public string ChequeAmountFirm2Text { get; set; }
+            public Dictionary<int, List<AdvanceUtilization>> AdvanceUtilizations { get; set; } = new Dictionary<int, List<AdvanceUtilization>>();
         }
 
-        private int SavePaymentInBackground(PaymentSaveData data)
+        private (int, decimal) SavePaymentInBackground(PaymentSaveData data)
         {
             using (var conn = DatabaseManager.GetConnection())
             {
@@ -938,37 +941,94 @@ namespace SaleBillSystem.NET.Forms
                 try
                 {
                     // Determine the party ID for the payment master record
-                    int partyId;
+                    int? partyId = null;
+                    decimal totalAvailableAdvance = 0;
+                    List<AdvancePayment> combinedAvailableAdvances = new List<AdvancePayment>();
                     if (data.SelectedPartyId.HasValue && data.SelectedPartyId.Value > 0)
                     {
                         // Party is directly selected
                         partyId = data.SelectedPartyId.Value;
+                     combinedAvailableAdvances.AddRange(AdvancePaymentService.GetAvailableAdvancePayments(partyId, null, 1));
+                    if (combinedAvailableAdvances.Any())
+                    {
+                        totalAvailableAdvance = combinedAvailableAdvances.Sum(a => a.Amount);
+                        System.Diagnostics.Debug.WriteLine($"Found {combinedAvailableAdvances.Count} advance payments totaling {totalAvailableAdvance:C} for PartyID: {partyId}");
                     }
                     else
                     {
-                        // Only broker is selected, get party from the first bill being paid
-                        var firstBill = BillService.GetBillByID(data.PaymentsToSave.First().BillID);
-                        if (firstBill == null)
-                        {
-                            throw new Exception("Unable to determine party for payment. Please select a party.");
-                        }
-                        partyId = firstBill.PartyID;
+                        System.Diagnostics.Debug.WriteLine($"No advance payments found for PartyID: {partyId}");
                     }
+                    }else{
+                        partyId = -1;
+                    }
+                    
 
                     // Determine the broker ID for the payment
                     int? brokerId = null;
                     if (data.SelectedBrokerId.HasValue && data.SelectedBrokerId.Value > 0)
                     {
                         brokerId = data.SelectedBrokerId.Value;
-                    }
-                    else if (data.PaymentsToSave.Any())
+                     combinedAvailableAdvances.AddRange(AdvancePaymentService.GetAvailableAdvancePayments(null, brokerId, 1));
+                    if (combinedAvailableAdvances.Any())
                     {
-                        // Get broker ID from the first bill being paid
-                        var firstBill = BillService.GetBillByID(data.PaymentsToSave.First().BillID);
-                        if (firstBill?.BrokerID.HasValue == true)
+                        totalAvailableAdvance = combinedAvailableAdvances.Sum(a => a.Amount);
+                        System.Diagnostics.Debug.WriteLine($"Found {combinedAvailableAdvances.Count} advance payments totaling {totalAvailableAdvance:C} for BrokerID: {brokerId}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"No advance payments found for BrokerID: {brokerId}");
+                    }
+                    }else{
+                        brokerId = -1;
+                    }
+                    
+
+                    
+
+                    // // Step 1.2: Use FIFO logic to consume advances first
+                    decimal totalPaymentNeeded = Math.Round(data.TotalPaymentAmount);
+                    decimal advanceUsed = 0;
+                    
+                    if (totalAvailableAdvance > 0 && totalPaymentNeeded > 0)
+                    {
+                        // Sort advances by payment date (FIFO - oldest first)
+                        var sortedAdvances = combinedAvailableAdvances.OrderBy(a => a.PaymentDate).ToList();
+                        decimal remainingPaymentNeeded = totalPaymentNeeded;
+                        
+                        foreach (var advance in sortedAdvances)
                         {
-                            brokerId = firstBill.BrokerID.Value;
+                            if (remainingPaymentNeeded <= 0) break;
+                            
+                            decimal amountToUse = Math.Min(advance.Amount, remainingPaymentNeeded);
+                            if (amountToUse > 0)
+                            {
+                                // Create utilization record instead of reducing advance amount
+                                var utilization = new AdvanceUtilization
+                                {
+                                    AdvanceID = advance.AdvanceID,
+                                    PaymentID = 0, // Will be set after PaymentMaster is saved
+                                    AmountUsed = amountToUse,
+                                    UtilizedDate = data.PaymentDate,
+                                    PartyID = advance.PartyID,
+                                    BrokerID = advance.BrokerID,
+                                    CompanyID = 1
+                                };
+                                
+                                // Store for later processing after PaymentMaster is saved
+                                if (!data.AdvanceUtilizations.ContainsKey(advance.AdvanceID))
+                                {
+                                    data.AdvanceUtilizations[advance.AdvanceID] = new List<AdvanceUtilization>();
+                                }
+                                data.AdvanceUtilizations[advance.AdvanceID].Add(utilization);
+                                
+                                advanceUsed += amountToUse;
+                                remainingPaymentNeeded -= amountToUse;
+                                
+                                System.Diagnostics.Debug.WriteLine($"Will use {amountToUse:C} from AdvanceID: {advance.AdvanceID}, remaining needed: {remainingPaymentNeeded:C}");
+                            }
                         }
+                        
+                        System.Diagnostics.Debug.WriteLine($"Total advance used: {advanceUsed:C}, remaining payment needed: {remainingPaymentNeeded:C}");
                     }
 
                     // Create a single master record for this payment event
@@ -1005,6 +1065,21 @@ namespace SaleBillSystem.NET.Forms
                         }
                     }
                     int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
+
+                    // Save advance utilization records after payment is saved
+                    foreach (var advanceUtilizationGroup in data.AdvanceUtilizations)
+                    {
+                        foreach (var utilization in advanceUtilizationGroup.Value)
+                        {
+                            utilization.PaymentID = paymentId; // Now we have the PaymentID
+                            bool utilizationSaved = AdvanceUtilizationService.AddUtilization(utilization, conn, dbTransaction);
+                            if (!utilizationSaved)
+                            {
+                                throw new Exception($"Failed to save advance utilization for AdvanceID: {utilization.AdvanceID}");
+                            }
+                            System.Diagnostics.Debug.WriteLine($"Saved utilization: {utilization.AmountUsed:C} from AdvanceID: {utilization.AdvanceID} for PaymentID: {paymentId}");
+                        }
+                    }
 
                     // OPTIMIZATION: Get all bill details in one query instead of individual calls
                     var billIds = data.PaymentsToSave.Select(b => b.BillID).ToList();
@@ -1101,7 +1176,7 @@ namespace SaleBillSystem.NET.Forms
                     // Now update bill statuses in a new transaction
                     UpdateBillStatuses(data.PaymentsToSave);
 
-                    return paymentId; // Return the payment ID for success handling
+                    return (paymentId, totalAvailableAdvance); // Return the payment ID for success handling
                 }
                 catch (Exception ex)
                 {
@@ -1485,8 +1560,8 @@ namespace SaleBillSystem.NET.Forms
 
             try
             {
-                // Get all advance payments for the selected party/broker combination
-                var advancePayments = AdvancePaymentService.GetAdvancePayments(partyId, brokerId);
+                // Get all available advance payments for the selected party/broker combination
+                var advancePayments = AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
 
                 foreach (var advance in advancePayments)
                 {

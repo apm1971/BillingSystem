@@ -17,5 +17,10 @@ namespace SaleBillSystem.NET.Models
         public decimal ChequeAmountFirm2 { get; set; } = 0;
         public int CompanyID { get; set; }
         public DateTime CreatedDate { get; set; }
+        
+        // Utilization tracking properties
+        public decimal OriginalAmount { get; set; } = 0; // Store original amount for reference
+        public decimal UtilizedAmount { get; set; } = 0; // Total amount used
+        public decimal AvailableAmount => Math.Max(0, Amount - UtilizedAmount); // Calculated available amount
     }
 }

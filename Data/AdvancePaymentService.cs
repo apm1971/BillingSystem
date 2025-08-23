@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.OleDb;
+using System.Linq;
 using SaleBillSystem.NET.Models;
 
 namespace SaleBillSystem.NET.Data
@@ -74,13 +75,19 @@ namespace SaleBillSystem.NET.Data
                 
                 foreach (DataRow row in dt.Rows)
                 {
+                    int advanceId = Convert.ToInt32(row["AdvanceID"]);
+                    decimal originalAmount = Convert.ToDecimal(row["Amount"]);
+                    decimal utilizedAmount = AdvanceUtilizationService.GetTotalUtilizedAmount(advanceId, companyId);
+                    
                     advancePayments.Add(new AdvancePayment
                     {
-                        AdvanceID = Convert.ToInt32(row["AdvanceID"]),
+                        AdvanceID = advanceId,
                         PartyID = row["PartyID"] != DBNull.Value ? Convert.ToInt32(row["PartyID"]) : null,
                         BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : null,
                         PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
-                        Amount = Convert.ToDecimal(row["Amount"]),
+                        Amount = Math.Max(0, originalAmount - utilizedAmount), // Show available amount
+                        OriginalAmount = originalAmount, // Store original for reference
+                        UtilizedAmount = utilizedAmount, // Show utilized amount
                         PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
                         Reference = row["Reference"]?.ToString() ?? string.Empty,
                         ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0m,
@@ -142,13 +149,19 @@ namespace SaleBillSystem.NET.Data
                 
                 foreach (DataRow row in dt.Rows)
                 {
+                    int advanceId = Convert.ToInt32(row["AdvanceID"]);
+                    decimal originalAmount = Convert.ToDecimal(row["Amount"]);
+                    decimal utilizedAmount = AdvanceUtilizationService.GetTotalUtilizedAmount(advanceId, companyId);
+                    
                     advancePayments.Add(new AdvancePayment
                     {
-                        AdvanceID = Convert.ToInt32(row["AdvanceID"]),
+                        AdvanceID = advanceId,
                         PartyID = row["PartyID"] != DBNull.Value ? Convert.ToInt32(row["PartyID"]) : null,
                         BrokerID = row["BrokerID"] != DBNull.Value ? Convert.ToInt32(row["BrokerID"]) : null,
                         PaymentDate = Convert.ToDateTime(row["PaymentDate"]),
-                        Amount = Convert.ToDecimal(row["Amount"]),
+                        Amount = Math.Max(0, originalAmount - utilizedAmount), // Show available amount
+                        OriginalAmount = originalAmount, // Store original for reference
+                        UtilizedAmount = utilizedAmount, // Show utilized amount
                         PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
                         Reference = row["Reference"]?.ToString() ?? string.Empty,
                         ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0m,
@@ -170,19 +183,23 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
-        /// Gets the total advance balance for a party (optionally filtered by broker)
+        /// Gets the total available advance balance for a party (optionally filtered by broker)
+        /// Uses utilization tracking to show only available amounts
         /// </summary>
         public static decimal GetPartyAdvanceBalance(int partyId, int? brokerId = null, int companyId = 1)
         {
-            return DatabaseManager.GetPartyAdvanceBalance(partyId, brokerId, companyId);
+            var availableAdvances = GetAvailableAdvancePayments(partyId, brokerId, companyId);
+            return availableAdvances.Sum(a => a.Amount);
         }
 
         /// <summary>
-        /// Gets the total advance balance for a broker (optionally filtered by party)
+        /// Gets the total available advance balance for a broker (optionally filtered by party)
+        /// Uses utilization tracking to show only available amounts
         /// </summary>
         public static decimal GetBrokerAdvanceBalance(int brokerId, int? partyId = null, int companyId = 1)
         {
-            return DatabaseManager.GetBrokerAdvanceBalance(brokerId, partyId, companyId);
+            var availableAdvances = GetAvailableAdvancePayments(partyId, brokerId, companyId);
+            return availableAdvances.Sum(a => a.Amount);
         }
 
         /// <summary>
@@ -206,6 +223,61 @@ namespace SaleBillSystem.NET.Data
                 System.Diagnostics.Debug.WriteLine($"Error deleting advance payment: {ex.Message}");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Gets the available amount for a specific advance payment (Original Amount - Utilized Amount)
+        /// </summary>
+        public static decimal GetAvailableAdvanceAmount(int advanceId, int companyId = 1)
+        {
+            try
+            {
+                // Get original advance amount
+                string originalSql = "SELECT Amount FROM AdvancePayments WHERE AdvanceID = ? AND CompanyID = ?";
+                var originalParams = new OleDbParameter[]
+                {
+                    new OleDbParameter("AdvanceID", OleDbType.Integer) { Value = advanceId },
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = companyId }
+                };
+
+                object originalResult = DatabaseManager.ExecuteScalar(originalSql, originalParams);
+                if (originalResult == null || originalResult == DBNull.Value)
+                {
+                    return 0m; // Advance not found
+                }
+
+                decimal originalAmount = Convert.ToDecimal(originalResult);
+                decimal utilizedAmount = AdvanceUtilizationService.GetTotalUtilizedAmount(advanceId, companyId);
+                
+                return Math.Max(0, originalAmount - utilizedAmount);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting available advance amount: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all advance payments with their available amounts (excludes fully utilized advances)
+        /// </summary>
+        public static List<AdvancePayment> GetAvailableAdvancePayments(int? partyId = null, int? brokerId = null, int companyId = 1)
+        {
+            var allAdvances = GetAdvancePayments(partyId, brokerId, companyId);
+            var availableAdvances = new List<AdvancePayment>();
+
+            foreach (var advance in allAdvances)
+            {
+                decimal availableAmount = GetAvailableAdvanceAmount(advance.AdvanceID, companyId);
+                if (availableAmount > 0)
+                {
+                    // Update the amount to show available amount instead of original
+                    advance.Amount = availableAmount;
+                    availableAdvances.Add(advance);
+                }
+            }
+
+            return availableAdvances;
         }
     }
 }

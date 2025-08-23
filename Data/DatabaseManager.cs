@@ -246,7 +246,7 @@ namespace SaleBillSystem.NET.Data
 
                     ExecuteNonQuery(conn, @"CREATE TABLE PaymentMaster (
                         PaymentID COUNTER PRIMARY KEY,
-                        PartyID INTEGER NOT NULL,
+                        PartyID INTEGER,
                         BrokerID INTEGER,
                         PaymentDate DATETIME NOT NULL,
                         TotalAmountPaid CURRENCY NOT NULL,
@@ -1193,6 +1193,93 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
+        /// Creates the AdvanceUtilization table for tracking advance payment usage
+        /// </summary>
+        public static void CreateAdvanceUtilizationTable()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if table already exists
+                    bool tableExists = false;
+                    try
+                    {
+                        string checkTableSql = "SELECT COUNT(*) FROM AdvanceUtilization";
+                        using (var checkCmd = new OleDbCommand(checkTableSql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            tableExists = true;
+                        }
+                    }
+                    catch
+                    {
+                        tableExists = false;
+                    }
+                    
+                    if (tableExists)
+                    {
+                        Console.WriteLine("AdvanceUtilization table already exists.");
+                        return;
+                    }
+                    
+                    // Create the AdvanceUtilization table
+                    string createTableSql = @"
+                        CREATE TABLE AdvanceUtilization (
+                            UtilizationID COUNTER PRIMARY KEY,
+                            AdvanceID LONG NOT NULL,
+                            PaymentID LONG NOT NULL,
+                            AmountUsed CURRENCY NOT NULL,
+                            UtilizedDate DATETIME NOT NULL,
+                            PartyID LONG NULL,
+                            BrokerID LONG NULL,
+                            CompanyID LONG NOT NULL,
+                            CreatedDate DATETIME DEFAULT NOW(),
+                            CONSTRAINT FK_AdvanceUtilization_Advance FOREIGN KEY (AdvanceID) REFERENCES AdvancePayments(AdvanceID),
+                            CONSTRAINT FK_AdvanceUtilization_Payment FOREIGN KEY (PaymentID) REFERENCES PaymentMaster(PaymentID),
+                            CONSTRAINT CheckPartyOrBrokerUtilization CHECK (PartyID IS NOT NULL OR BrokerID IS NOT NULL)
+                        )";
+                    
+                    using (var createCmd = new OleDbCommand(createTableSql, conn))
+                    {
+                        createCmd.ExecuteNonQuery();
+                        Console.WriteLine("AdvanceUtilization table created successfully.");
+                    }
+                    
+                    // Create indexes for better performance
+                    try
+                    {
+                        string createIndexesSql = @"
+                            CREATE INDEX idx_AdvanceUtilization_AdvanceID ON AdvanceUtilization(AdvanceID);
+                            CREATE INDEX idx_AdvanceUtilization_PaymentID ON AdvanceUtilization(PaymentID);
+                            CREATE INDEX idx_AdvanceUtilization_PartyID ON AdvanceUtilization(PartyID);
+                            CREATE INDEX idx_AdvanceUtilization_BrokerID ON AdvanceUtilization(BrokerID);
+                            CREATE INDEX idx_AdvanceUtilization_UtilizedDate ON AdvanceUtilization(UtilizedDate);
+                            CREATE INDEX idx_AdvanceUtilization_CompanyID ON AdvanceUtilization(CompanyID);";
+                        
+                        using (var indexCmd = new OleDbCommand(createIndexesSql, conn))
+                        {
+                            indexCmd.ExecuteNonQuery();
+                            Console.WriteLine("AdvanceUtilization table indexes created successfully.");
+                        }
+                    }
+                    catch (Exception indexEx)
+                    {
+                        Console.WriteLine($"Warning: Could not create AdvanceUtilization indexes: {indexEx.Message}");
+                        // Continue without indexes - table creation is more important
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating AdvanceUtilization table: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Adds the IsAdvancePayment and AdvanceAmount columns to PaymentMaster table if they don't exist
         /// </summary>
         public static void AddAdvanceColumnsToPaymentMaster()
@@ -1276,6 +1363,9 @@ namespace SaleBillSystem.NET.Data
                 
                 // Create the AdvancePayments table
                 CreateAdvancePaymentsTable();
+                
+                // Create the AdvanceUtilization table
+                CreateAdvanceUtilizationTable();
                 
                 // Add advance columns to PaymentMaster table
                 AddAdvanceColumnsToPaymentMaster();
@@ -1624,5 +1714,29 @@ namespace SaleBillSystem.NET.Data
                 return false;
             }
         }
+
+        public static void changePartyIdToNullable()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    string sql = "ALTER TABLE PaymentMaster ALTER COLUMN PartyID INT NULL";
+                    using (var cmd = new OleDbCommand(sql, conn))
+                    {
+                        cmd.ExecuteNonQuery();
+                        Console.WriteLine("PartyID column in PaymentMaster table changed to nullable.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error changing PartyID column to nullable: {ex.Message}");
+                throw;
+            }
+        }
     }
 } 
+

@@ -8,7 +8,7 @@ namespace SaleBillSystem.NET.Models
     public class PaymentMaster
     {
         public int PaymentID { get; set; }
-        public int PartyID { get; set; }
+        public int? PartyID { get; set; }
         public int? BrokerID { get; set; }
         public DateTime PaymentDate { get; set; }
         public decimal TotalAmountPaid { get; set; }

@@ -56,6 +56,11 @@ namespace SaleBillSystem.NET.Forms
             txtPaymentAmount = new TextBox();
             label4 = new Label();
             pnlButtons = new Panel();
+            pnlAdvanceDisplay = new Panel();
+            lblAdvanceTitle = new Label();
+            lblAdvanceCash = new Label();
+            lblAdvanceFirm1 = new Label();
+            lblAdvanceFirm2 = new Label();
             btnClear = new Button();
             btnSave = new Button();
             toolTip1 = new ToolTip(components);
@@ -64,6 +69,7 @@ namespace SaleBillSystem.NET.Forms
             gbPayment.SuspendLayout();
             pnlChequeDetails.SuspendLayout();
             pnlButtons.SuspendLayout();
+            pnlAdvanceDisplay.SuspendLayout();
             SuspendLayout();
             // 
             // pnlTop
@@ -247,7 +253,7 @@ namespace SaleBillSystem.NET.Forms
             lblFinalAmount.Location = new Point(744, 22);
             lblFinalAmount.Margin = new Padding(4, 0, 4, 0);
             lblFinalAmount.Name = "lblFinalAmount";
-            lblFinalAmount.Size = new Size(208, 20);
+            lblFinalAmount.Size = new Size(164, 20);
             lblFinalAmount.TabIndex = 2;
             lblFinalAmount.Text = "Amount Due: ₹0.00";
             // 
@@ -317,6 +323,72 @@ namespace SaleBillSystem.NET.Forms
             gbPayment.TabStop = false;
             gbPayment.Text = "Payment Details";
             // 
+            // pnlChequeDetails
+            // 
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm1);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm1);
+            pnlChequeDetails.Controls.Add(lblChequeDetails);
+            pnlChequeDetails.Location = new Point(970, 57);
+            pnlChequeDetails.Name = "pnlChequeDetails";
+            pnlChequeDetails.Size = new Size(300, 100);
+            pnlChequeDetails.TabIndex = 13;
+            pnlChequeDetails.Visible = false;
+            // 
+            // txtChequeAmountFirm2
+            // 
+            txtChequeAmountFirm2.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtChequeAmountFirm2.Location = new Point(150, 65);
+            txtChequeAmountFirm2.Margin = new Padding(4);
+            txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
+            txtChequeAmountFirm2.Size = new Size(130, 22);
+            txtChequeAmountFirm2.TabIndex = 15;
+            txtChequeAmountFirm2.Text = "0.00";
+            txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
+            // 
+            // lblChequeAmountFirm2
+            // 
+            lblChequeAmountFirm2.AutoSize = true;
+            lblChequeAmountFirm2.Location = new Point(13, 68);
+            lblChequeAmountFirm2.Margin = new Padding(4, 0, 4, 0);
+            lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
+            lblChequeAmountFirm2.Size = new Size(131, 15);
+            lblChequeAmountFirm2.TabIndex = 14;
+            lblChequeAmountFirm2.Text = "Cheque Amount Firm2:";
+            // 
+            // txtChequeAmountFirm1
+            // 
+            txtChequeAmountFirm1.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtChequeAmountFirm1.Location = new Point(150, 35);
+            txtChequeAmountFirm1.Margin = new Padding(4);
+            txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
+            txtChequeAmountFirm1.Size = new Size(130, 22);
+            txtChequeAmountFirm1.TabIndex = 13;
+            txtChequeAmountFirm1.Text = "0.00";
+            txtChequeAmountFirm1.TextChanged += TxtChequeAmount_TextChanged;
+            // 
+            // lblChequeAmountFirm1
+            // 
+            lblChequeAmountFirm1.AutoSize = true;
+            lblChequeAmountFirm1.Location = new Point(13, 38);
+            lblChequeAmountFirm1.Margin = new Padding(4, 0, 4, 0);
+            lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
+            lblChequeAmountFirm1.Size = new Size(131, 15);
+            lblChequeAmountFirm1.TabIndex = 12;
+            lblChequeAmountFirm1.Text = "Cheque Amount Firm1:";
+            // 
+            // lblChequeDetails
+            // 
+            lblChequeDetails.AutoSize = true;
+            lblChequeDetails.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblChequeDetails.Location = new Point(13, 10);
+            lblChequeDetails.Margin = new Padding(4, 0, 4, 0);
+            lblChequeDetails.Name = "lblChequeDetails";
+            lblChequeDetails.Size = new Size(93, 15);
+            lblChequeDetails.TabIndex = 11;
+            lblChequeDetails.Text = "Cheque Details:";
+            // 
             // btnAutoAllocate
             // 
             btnAutoAllocate.Location = new Point(970, 20);
@@ -365,72 +437,6 @@ namespace SaleBillSystem.NET.Forms
             label6.Size = new Size(104, 15);
             label6.TabIndex = 4;
             label6.Text = "Reference / Notes:";
-            // 
-            // pnlChequeDetails
-            // 
-            pnlChequeDetails.Controls.Add(txtChequeAmountFirm2);
-            pnlChequeDetails.Controls.Add(lblChequeAmountFirm2);
-            pnlChequeDetails.Controls.Add(txtChequeAmountFirm1);
-            pnlChequeDetails.Controls.Add(lblChequeAmountFirm1);
-            pnlChequeDetails.Controls.Add(lblChequeDetails);
-            pnlChequeDetails.Location = new Point(970, 57);
-            pnlChequeDetails.Name = "pnlChequeDetails";
-            pnlChequeDetails.Size = new Size(300, 100);
-            pnlChequeDetails.TabIndex = 13;
-            pnlChequeDetails.Visible = false;
-            // 
-            // txtChequeAmountFirm2
-            // 
-            txtChequeAmountFirm2.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtChequeAmountFirm2.Location = new Point(150, 65);
-            txtChequeAmountFirm2.Margin = new Padding(4);
-            txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
-            txtChequeAmountFirm2.Size = new Size(130, 22);
-            txtChequeAmountFirm2.TabIndex = 15;
-            txtChequeAmountFirm2.Text = "0.00";
-            txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
-            // 
-            // lblChequeAmountFirm2
-            // 
-            lblChequeAmountFirm2.AutoSize = true;
-            lblChequeAmountFirm2.Location = new Point(13, 68);
-            lblChequeAmountFirm2.Margin = new Padding(4, 0, 4, 0);
-            lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
-            lblChequeAmountFirm2.Size = new Size(129, 15);
-            lblChequeAmountFirm2.TabIndex = 14;
-            lblChequeAmountFirm2.Text = "Cheque Amount Firm2:";
-            // 
-            // txtChequeAmountFirm1
-            // 
-            txtChequeAmountFirm1.Font = new Font("Microsoft Sans Serif", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            txtChequeAmountFirm1.Location = new Point(150, 35);
-            txtChequeAmountFirm1.Margin = new Padding(4);
-            txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
-            txtChequeAmountFirm1.Size = new Size(130, 22);
-            txtChequeAmountFirm1.TabIndex = 13;
-            txtChequeAmountFirm1.Text = "0.00";
-            txtChequeAmountFirm1.TextChanged += TxtChequeAmount_TextChanged;
-            // 
-            // lblChequeAmountFirm1
-            // 
-            lblChequeAmountFirm1.AutoSize = true;
-            lblChequeAmountFirm1.Location = new Point(13, 38);
-            lblChequeAmountFirm1.Margin = new Padding(4, 0, 4, 0);
-            lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
-            lblChequeAmountFirm1.Size = new Size(129, 15);
-            lblChequeAmountFirm1.TabIndex = 12;
-            lblChequeAmountFirm1.Text = "Cheque Amount Firm1:";
-            // 
-            // lblChequeDetails
-            // 
-            lblChequeDetails.AutoSize = true;
-            lblChequeDetails.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblChequeDetails.Location = new Point(13, 10);
-            lblChequeDetails.Margin = new Padding(4, 0, 4, 0);
-            lblChequeDetails.Name = "lblChequeDetails";
-            lblChequeDetails.Size = new Size(94, 15);
-            lblChequeDetails.TabIndex = 11;
-            lblChequeDetails.Text = "Cheque Details:";
             // 
             // cmbPaymentMethod
             // 
@@ -488,6 +494,63 @@ namespace SaleBillSystem.NET.Forms
             pnlButtons.Size = new Size(1410, 50);
             pnlButtons.TabIndex = 5;
             // 
+            // pnlAdvanceDisplay
+            // 
+            pnlAdvanceDisplay.BackColor = Color.LightYellow;
+            pnlAdvanceDisplay.BorderStyle = BorderStyle.FixedSingle;
+            pnlAdvanceDisplay.Controls.Add(lblAdvanceTitle);
+            pnlAdvanceDisplay.Controls.Add(lblAdvanceCash);
+            pnlAdvanceDisplay.Controls.Add(lblAdvanceFirm1);
+            pnlAdvanceDisplay.Controls.Add(lblAdvanceFirm2);
+            pnlAdvanceDisplay.Location = new Point(11, 539);
+            pnlAdvanceDisplay.Name = "pnlAdvanceDisplay";
+            pnlAdvanceDisplay.Size = new Size(600, 40);
+            pnlAdvanceDisplay.TabIndex = 15;
+            pnlAdvanceDisplay.Visible = false;
+            // 
+            // lblAdvanceTitle
+            // 
+            lblAdvanceTitle.AutoSize = true;
+            lblAdvanceTitle.Font = new Font("Segoe UI", 8.25F, FontStyle.Bold);
+            lblAdvanceTitle.Location = new Point(5, 3);
+            lblAdvanceTitle.Name = "lblAdvanceTitle";
+            lblAdvanceTitle.Size = new Size(84, 13);
+            lblAdvanceTitle.TabIndex = 0;
+            lblAdvanceTitle.Text = "Advance Avail:";
+            // 
+            // lblAdvanceCash
+            // 
+            lblAdvanceCash.AutoSize = true;
+            lblAdvanceCash.Font = new Font("Segoe UI", 8.25F);
+            lblAdvanceCash.ForeColor = Color.Green;
+            lblAdvanceCash.Location = new Point(5, 20);
+            lblAdvanceCash.Name = "lblAdvanceCash";
+            lblAdvanceCash.Size = new Size(65, 13);
+            lblAdvanceCash.TabIndex = 1;
+            lblAdvanceCash.Text = "Cash: ₹0.00";
+            // 
+            // lblAdvanceFirm1
+            // 
+            lblAdvanceFirm1.AutoSize = true;
+            lblAdvanceFirm1.Font = new Font("Segoe UI", 8.25F);
+            lblAdvanceFirm1.ForeColor = Color.Blue;
+            lblAdvanceFirm1.Location = new Point(150, 20);
+            lblAdvanceFirm1.Name = "lblAdvanceFirm1";
+            lblAdvanceFirm1.Size = new Size(68, 13);
+            lblAdvanceFirm1.TabIndex = 2;
+            lblAdvanceFirm1.Text = "Firm1: ₹0.00";
+            // 
+            // lblAdvanceFirm2
+            // 
+            lblAdvanceFirm2.AutoSize = true;
+            lblAdvanceFirm2.Font = new Font("Segoe UI", 8.25F);
+            lblAdvanceFirm2.ForeColor = Color.Blue;
+            lblAdvanceFirm2.Location = new Point(300, 20);
+            lblAdvanceFirm2.Name = "lblAdvanceFirm2";
+            lblAdvanceFirm2.Size = new Size(68, 13);
+            lblAdvanceFirm2.TabIndex = 3;
+            lblAdvanceFirm2.Text = "Firm2: ₹0.00";
+            // 
             // btnClear
             // 
             btnClear.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -516,6 +579,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(pnlAdvanceDisplay);
             Controls.Add(gbPayment);
             Controls.Add(dgvOutstandingBills);
             Controls.Add(pnlTop);
@@ -534,6 +598,8 @@ namespace SaleBillSystem.NET.Forms
             pnlChequeDetails.PerformLayout();
             pnlButtons.ResumeLayout(false);
             pnlButtons.PerformLayout();
+            pnlAdvanceDisplay.ResumeLayout(false);
+            pnlAdvanceDisplay.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -581,5 +647,10 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtChequeAmountFirm2;
         private System.Windows.Forms.Label lblChequeAmountFirm2;
         private System.Windows.Forms.Label lblChequeDetails;
+        private System.Windows.Forms.Panel pnlAdvanceDisplay;
+        private System.Windows.Forms.Label lblAdvanceCash;
+        private System.Windows.Forms.Label lblAdvanceFirm1;
+        private System.Windows.Forms.Label lblAdvanceFirm2;
+        private System.Windows.Forms.Label lblAdvanceTitle;
     }
 }

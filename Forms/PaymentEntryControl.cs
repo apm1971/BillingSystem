@@ -187,6 +187,9 @@ namespace SaleBillSystem.NET.Forms
             // Make all fields editable by default
             SetFieldsEditable(true);
 
+            // Hide advance payment display
+            UpdateAdvancePaymentDisplay();
+
             cmbParty.Focus();
         }
 
@@ -199,12 +202,14 @@ namespace SaleBillSystem.NET.Forms
             // When party changes, clear broker selection to avoid cascading events
              LoadBillsBasedOnSelection();
              UpdateFieldsBasedOnSelection();
+             UpdateAdvancePaymentDisplay();
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
             LoadBillsBasedOnSelection();
             UpdateFieldsBasedOnSelection();
+            UpdateAdvancePaymentDisplay();
         }
 
          private void LoadBillsBasedOnSelection()
@@ -1430,5 +1435,80 @@ namespace SaleBillSystem.NET.Forms
                 txtPaymentAmount.Text = totalChequeAmount.ToString("F2");
             }
         }
+
+        #region Advance Payment Display
+
+        /// <summary>
+        /// Updates the advance payment display based on selected party and broker
+        /// </summary>
+        private void UpdateAdvancePaymentDisplay()
+        {
+            try
+            {
+                int? partyId = cmbParty.SelectedValue as int?;
+                int? brokerId = cmbBroker.SelectedValue as int?;
+
+                // Hide panel if nothing is selected
+                if ((!partyId.HasValue || partyId.Value <= 0) && (!brokerId.HasValue || brokerId.Value <= 0))
+                {
+                    pnlAdvanceDisplay.Visible = false;
+                    return;
+                }
+
+                // Get advance amounts by payment method
+                var advanceAmounts = GetAdvanceAmountsByPaymentMethod(partyId, brokerId);
+                
+                // Update labels
+                lblAdvanceCash.Text = $"Cash: ₹{advanceAmounts.Cash:N2}";
+                lblAdvanceFirm1.Text = $"Firm1: ₹{advanceAmounts.Firm1:N2}";
+                lblAdvanceFirm2.Text = $"Firm2: ₹{advanceAmounts.Firm2:N2}";
+
+                // Show panel only if there are any advances
+                bool hasAdvances = advanceAmounts.Cash > 0 || advanceAmounts.Firm1 > 0 || advanceAmounts.Firm2 > 0;
+                pnlAdvanceDisplay.Visible = hasAdvances;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating advance payment display: {ex.Message}");
+                pnlAdvanceDisplay.Visible = false;
+            }
+        }
+
+        /// <summary>
+        /// Gets advance amounts broken down by payment method
+        /// </summary>
+        private (decimal Cash, decimal Firm1, decimal Firm2) GetAdvanceAmountsByPaymentMethod(int? partyId, int? brokerId)
+        {
+            decimal cashAmount = 0;
+            decimal firm1Amount = 0;
+            decimal firm2Amount = 0;
+
+            try
+            {
+                // Get all advance payments for the selected party/broker combination
+                var advancePayments = AdvancePaymentService.GetAdvancePayments(partyId, brokerId);
+
+                foreach (var advance in advancePayments)
+                {
+                    if (advance.PaymentMethod?.Trim().Equals("Cash", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        cashAmount += advance.Amount;
+                    }
+                    else if (advance.PaymentMethod?.Trim().Equals("Cheque", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        firm1Amount += advance.ChequeAmountFirm1;
+                        firm2Amount += advance.ChequeAmountFirm2;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting advance amounts by payment method: {ex.Message}");
+            }
+
+            return (cashAmount, firm1Amount, firm2Amount);
+        }
+
+        #endregion
     }
 }

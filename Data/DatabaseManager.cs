@@ -1519,5 +1519,110 @@ namespace SaleBillSystem.NET.Data
             
             return summary;
         }
+
+        /// <summary>
+        /// Adds the ChequeAmountFirm1 and ChequeAmountFirm2 columns to AdvancePayments table if they don't exist
+        /// </summary>
+        public static bool AddChequeAmountColumnsToAdvancePayments()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    bool changesNeeded = false;
+                    
+                    // Check if ChequeAmountFirm1 column exists
+                    bool firm1Exists = false;
+                    try
+                    {
+                        string checkColumn1Sql = "SELECT ChequeAmountFirm1 FROM AdvancePayments WHERE 1=0";
+                        using (var checkCmd = new OleDbCommand(checkColumn1Sql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            firm1Exists = true;
+                        }
+                    }
+                    catch
+                    {
+                        firm1Exists = false;
+                    }
+                    
+                    if (!firm1Exists)
+                    {
+                        // Add ChequeAmountFirm1 column
+                        string addColumn1Sql = "ALTER TABLE AdvancePayments ADD COLUMN ChequeAmountFirm1 CURRENCY DEFAULT 0";
+                        using (var addCmd = new OleDbCommand(addColumn1Sql, conn))
+                        {
+                            addCmd.ExecuteNonQuery();
+                            Console.WriteLine("ChequeAmountFirm1 column added to AdvancePayments table.");
+                            changesNeeded = true;
+                        }
+                    }
+                    
+                    // Check if ChequeAmountFirm2 column exists
+                    bool firm2Exists = false;
+                    try
+                    {
+                        string checkColumn2Sql = "SELECT ChequeAmountFirm2 FROM AdvancePayments WHERE 1=0";
+                        using (var checkCmd = new OleDbCommand(checkColumn2Sql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            firm2Exists = true;
+                        }
+                    }
+                    catch
+                    {
+                        firm2Exists = false;
+                    }
+                    
+                    if (!firm2Exists)
+                    {
+                        // Add ChequeAmountFirm2 column
+                        string addColumn2Sql = "ALTER TABLE AdvancePayments ADD COLUMN ChequeAmountFirm2 CURRENCY DEFAULT 0";
+                        using (var addCmd = new OleDbCommand(addColumn2Sql, conn))
+                        {
+                            addCmd.ExecuteNonQuery();
+                            Console.WriteLine("ChequeAmountFirm2 column added to AdvancePayments table.");
+                            changesNeeded = true;
+                        }
+                    }
+                    
+                    if (changesNeeded)
+                    {
+                        System.Windows.Forms.MessageBox.Show(
+                            "Successfully added cheque amount fields to AdvancePayments table:\n" +
+                            "• ChequeAmountFirm1 (CURRENCY)\n" +
+                            "• ChequeAmountFirm2 (CURRENCY)\n\n" +
+                            "These fields will be used when payment method is 'Cheque' to track firm-specific amounts.",
+                            "Database Update Complete",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        System.Windows.Forms.MessageBox.Show(
+                            "Cheque amount columns already exist in AdvancePayments table.",
+                            "Database Update Complete",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Information);
+                    }
+                    
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error adding cheque amount columns to AdvancePayments: {ex.Message}",
+                    "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                
+                Console.WriteLine($"Error adding cheque columns to AdvancePayments: {ex.Message}");
+                return false;
+            }
+        }
     }
 } 

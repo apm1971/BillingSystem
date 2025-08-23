@@ -19,8 +19,8 @@ namespace SaleBillSystem.NET.Data
                 DatabaseManager.InitializeAdvancePaymentSystem();
 
                 string sql = @"
-                    INSERT INTO AdvancePayments (PartyID, BrokerID, PaymentDate, Amount, PaymentMethod, Reference, CompanyID, CreatedDate)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    INSERT INTO AdvancePayments (PartyID, BrokerID, PaymentDate, Amount, PaymentMethod, Reference, ChequeAmountFirm1, ChequeAmountFirm2, CompanyID, CreatedDate)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 var parameters = new OleDbParameter[]
                 {
@@ -30,6 +30,8 @@ namespace SaleBillSystem.NET.Data
                     new OleDbParameter("Amount", OleDbType.Currency) { Value = advancePayment.Amount },
                     new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = advancePayment.PaymentMethod ?? (object)DBNull.Value },
                     new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = advancePayment.Reference ?? (object)DBNull.Value },
+                    new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = advancePayment.ChequeAmountFirm1 },
+                    new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = advancePayment.ChequeAmountFirm2 },
                     new OleDbParameter("CompanyID", OleDbType.Integer) { Value = advancePayment.CompanyID },
                     new OleDbParameter("CreatedDate", OleDbType.Date) { Value = DateTime.Now }
                 };
@@ -55,8 +57,8 @@ namespace SaleBillSystem.NET.Data
             {
                 string sql = @"
                     SELECT ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
-                           ap.Amount, ap.PaymentMethod, ap.Reference, ap.CompanyID, ap.CreatedDate,
-                           pm.PartyName, bm.BrokerName
+                           ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2, 
+                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
                     FROM ((AdvancePayments ap
                     LEFT JOIN PartyMaster pm ON ap.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON ap.BrokerID = bm.BrokerID)
@@ -81,6 +83,8 @@ namespace SaleBillSystem.NET.Data
                         Amount = Convert.ToDecimal(row["Amount"]),
                         PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
                         Reference = row["Reference"]?.ToString() ?? string.Empty,
+                        ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0m,
+                        ChequeAmountFirm2 = row["ChequeAmountFirm2"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm2"]) : 0m,
                         CompanyID = Convert.ToInt32(row["CompanyID"]),
                         CreatedDate = Convert.ToDateTime(row["CreatedDate"]),
                         PartyName = row["PartyName"]?.ToString() ?? string.Empty,
@@ -108,8 +112,8 @@ namespace SaleBillSystem.NET.Data
             {
                 string sql = @"
                     SELECT ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
-                           ap.Amount, ap.PaymentMethod, ap.Reference, ap.CompanyID, ap.CreatedDate,
-                           pm.PartyName, bm.BrokerName
+                           ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2,
+                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
                     FROM ((AdvancePayments ap
                     LEFT JOIN PartyMaster pm ON ap.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON ap.BrokerID = bm.BrokerID)
@@ -147,6 +151,8 @@ namespace SaleBillSystem.NET.Data
                         Amount = Convert.ToDecimal(row["Amount"]),
                         PaymentMethod = row["PaymentMethod"]?.ToString() ?? string.Empty,
                         Reference = row["Reference"]?.ToString() ?? string.Empty,
+                        ChequeAmountFirm1 = row["ChequeAmountFirm1"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm1"]) : 0m,
+                        ChequeAmountFirm2 = row["ChequeAmountFirm2"] != DBNull.Value ? Convert.ToDecimal(row["ChequeAmountFirm2"]) : 0m,
                         CompanyID = Convert.ToInt32(row["CompanyID"]),
                         CreatedDate = Convert.ToDateTime(row["CreatedDate"]),
                         PartyName = row["PartyName"]?.ToString() ?? string.Empty,

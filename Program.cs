@@ -55,6 +55,9 @@ namespace SaleBillSystem.NET
 
             try {
                 DatabaseManager.InitializeAdvancePaymentSystem();
+                
+                // Add cheque amount columns to AdvancePayments table
+                DatabaseManager.AddChequeAmountColumnsToAdvancePayments();
             }catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Warning: Could not initialize advance payment system: {ex.Message}");

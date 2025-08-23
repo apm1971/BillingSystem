@@ -26,6 +26,11 @@ namespace SaleBillSystem.NET.Forms
             pnlEntry = new Panel();
             btnClear = new Button();
             btnSave = new Button();
+            pnlChequeDetails = new Panel();
+            txtChequeAmountFirm2 = new TextBox();
+            lblChequeAmountFirm2 = new Label();
+            txtChequeAmountFirm1 = new TextBox();
+            lblChequeAmountFirm1 = new Label();
             txtReference = new TextBox();
             lblReference = new Label();
             cmbPaymentMethod = new ComboBox();
@@ -40,6 +45,7 @@ namespace SaleBillSystem.NET.Forms
             toolTip1 = new ToolTip(components);
             pnlTop.SuspendLayout();
             pnlEntry.SuspendLayout();
+            pnlChequeDetails.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudAmount).BeginInit();
             pnlGrid.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvAdvancePayments).BeginInit();
@@ -107,6 +113,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             pnlEntry.BackColor = Color.FromArgb(240, 248, 255);
             pnlEntry.BorderStyle = BorderStyle.FixedSingle;
+            pnlEntry.Controls.Add(pnlChequeDetails);
             pnlEntry.Controls.Add(btnClear);
             pnlEntry.Controls.Add(btnSave);
             pnlEntry.Controls.Add(txtReference);
@@ -122,14 +129,14 @@ namespace SaleBillSystem.NET.Forms
             pnlEntry.Margin = new Padding(4);
             pnlEntry.Name = "pnlEntry";
             pnlEntry.Padding = new Padding(10);
-            pnlEntry.Size = new Size(1178, 120);
+            pnlEntry.Size = new Size(1178, 160);
             pnlEntry.TabIndex = 1;
             // 
             // btnClear
             // 
             btnClear.BackColor = Color.LightGray;
             btnClear.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnClear.Location = new Point(835, 75);
+            btnClear.Location = new Point(835, 115);
             btnClear.Margin = new Padding(4);
             btnClear.Name = "btnClear";
             btnClear.Size = new Size(100, 30);
@@ -142,7 +149,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             btnSave.BackColor = Color.LightGreen;
             btnSave.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnSave.Location = new Point(725, 75);
+            btnSave.Location = new Point(725, 115);
             btnSave.Margin = new Padding(4);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(100, 30);
@@ -150,6 +157,56 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Text = "&Save";
             toolTip1.SetToolTip(btnSave, "Save the advance payment entry (Ctrl+S)");
             btnSave.UseVisualStyleBackColor = false;
+            // 
+            // pnlChequeDetails
+            // 
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm2);
+            pnlChequeDetails.Controls.Add(txtChequeAmountFirm1);
+            pnlChequeDetails.Controls.Add(lblChequeAmountFirm1);
+            pnlChequeDetails.Location = new Point(15, 75);
+            pnlChequeDetails.Name = "pnlChequeDetails";
+            pnlChequeDetails.Size = new Size(500, 35);
+            pnlChequeDetails.TabIndex = 6;
+            pnlChequeDetails.Visible = false;
+            // 
+            // txtChequeAmountFirm2
+            // 
+            txtChequeAmountFirm2.Location = new Point(370, 6);
+            txtChequeAmountFirm2.Name = "txtChequeAmountFirm2";
+            txtChequeAmountFirm2.PlaceholderText = "0.00";
+            txtChequeAmountFirm2.Size = new Size(100, 23);
+            txtChequeAmountFirm2.TabIndex = 1;
+            txtChequeAmountFirm2.TextAlign = HorizontalAlignment.Right;
+            toolTip1.SetToolTip(txtChequeAmountFirm2, "Enter Firm 2 cheque amount");
+            // 
+            // lblChequeAmountFirm2
+            // 
+            lblChequeAmountFirm2.AutoSize = true;
+            lblChequeAmountFirm2.Location = new Point(270, 10);
+            lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
+            lblChequeAmountFirm2.Size = new Size(94, 15);
+            lblChequeAmountFirm2.TabIndex = 0;
+            lblChequeAmountFirm2.Text = "Firm 2 Amount:";
+            // 
+            // txtChequeAmountFirm1
+            // 
+            txtChequeAmountFirm1.Location = new Point(120, 6);
+            txtChequeAmountFirm1.Name = "txtChequeAmountFirm1";
+            txtChequeAmountFirm1.PlaceholderText = "0.00";
+            txtChequeAmountFirm1.Size = new Size(100, 23);
+            txtChequeAmountFirm1.TabIndex = 0;
+            txtChequeAmountFirm1.TextAlign = HorizontalAlignment.Right;
+            toolTip1.SetToolTip(txtChequeAmountFirm1, "Enter Firm 1 cheque amount");
+            // 
+            // lblChequeAmountFirm1
+            // 
+            lblChequeAmountFirm1.AutoSize = true;
+            lblChequeAmountFirm1.Location = new Point(20, 10);
+            lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
+            lblChequeAmountFirm1.Size = new Size(94, 15);
+            lblChequeAmountFirm1.TabIndex = 0;
+            lblChequeAmountFirm1.Text = "Firm 1 Amount:";
             // 
             // txtReference
             // 
@@ -244,10 +301,10 @@ namespace SaleBillSystem.NET.Forms
             pnlGrid.Controls.Add(dgvAdvancePayments);
             pnlGrid.Controls.Add(lblTotalAdvances);
             pnlGrid.Dock = DockStyle.Fill;
-            pnlGrid.Location = new Point(11, 181);
+            pnlGrid.Location = new Point(11, 221);
             pnlGrid.Margin = new Padding(4);
             pnlGrid.Name = "pnlGrid";
-            pnlGrid.Size = new Size(1178, 468);
+            pnlGrid.Size = new Size(1178, 428);
             pnlGrid.TabIndex = 2;
             // 
             // dgvAdvancePayments
@@ -261,7 +318,7 @@ namespace SaleBillSystem.NET.Forms
             dgvAdvancePayments.Name = "dgvAdvancePayments";
             dgvAdvancePayments.ReadOnly = true;
             dgvAdvancePayments.RowHeadersWidth = 51;
-            dgvAdvancePayments.Size = new Size(1178, 433);
+            dgvAdvancePayments.Size = new Size(1178, 393);
             dgvAdvancePayments.TabIndex = 0;
             // 
             // lblTotalAdvances
@@ -271,7 +328,7 @@ namespace SaleBillSystem.NET.Forms
             lblTotalAdvances.Dock = DockStyle.Bottom;
             lblTotalAdvances.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold);
             lblTotalAdvances.ForeColor = Color.DarkGreen;
-            lblTotalAdvances.Location = new Point(0, 433);
+            lblTotalAdvances.Location = new Point(0, 393);
             lblTotalAdvances.Margin = new Padding(4, 0, 4, 0);
             lblTotalAdvances.Name = "lblTotalAdvances";
             lblTotalAdvances.Padding = new Padding(10, 5, 10, 5);
@@ -296,6 +353,8 @@ namespace SaleBillSystem.NET.Forms
             pnlTop.PerformLayout();
             pnlEntry.ResumeLayout(false);
             pnlEntry.PerformLayout();
+            pnlChequeDetails.ResumeLayout(false);
+            pnlChequeDetails.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)nudAmount).EndInit();
             pnlGrid.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dgvAdvancePayments).EndInit();
@@ -323,6 +382,11 @@ namespace SaleBillSystem.NET.Forms
         private Panel pnlGrid;
         private DataGridView dgvAdvancePayments;
         private Label lblTotalAdvances;
+        private Panel pnlChequeDetails;
+        private TextBox txtChequeAmountFirm2;
+        private Label lblChequeAmountFirm2;
+        private TextBox txtChequeAmountFirm1;
+        private Label lblChequeAmountFirm1;
         private ToolTip toolTip1;
     }
 }

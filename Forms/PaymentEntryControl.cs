@@ -822,7 +822,27 @@ namespace SaleBillSystem.NET.Forms
         private void UpdateTotalPaymentFromGrid()
         {
             decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
-            txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
+            
+            // Only update payment amount if user hasn't entered a larger amount (preserve excess)
+            if (decimal.TryParse(txtPaymentAmount.Text, out decimal currentPaymentAmount))
+            {
+                if (totalAllocated > currentPaymentAmount)
+                {
+                    // If allocated amount is greater than what user entered, update the field
+                    txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
+                }
+                // If user entered more than allocated (excess), keep the original amount and show excess in advance display
+                else if (currentPaymentAmount > totalAllocated)
+                {
+                    // Refresh advance display to show the potential excess as advance
+                    UpdateAdvancePaymentDisplay();
+                }
+            }
+            else
+            {
+                // Fallback to old behavior if payment amount is not a valid number
+                txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
+            }
         }
 
         private void ResetGridStyles()
@@ -1168,6 +1188,93 @@ namespace SaleBillSystem.NET.Forms
                             CompanyID = 1 // Replace with Program.ActiveCompany.CompanyID
                         };
                         LedgerService.AddTransaction(paymentTx, conn, dbTransaction);
+                    }
+
+                    // Handle excess amount - create new advance payment if payment > bills allocated
+                    decimal totalBillAmount = data.PaymentsToSave.Sum(p => p.PaymentAllocation);
+                    decimal excessAmount = data.TotalPaymentAmount - totalBillAmount;
+                    
+                    if (excessAmount > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Creating advance payment for excess amount: {excessAmount:C}");
+                        
+                        // Create new advance payment record from excess amount
+                        var excessAdvancePayment = new AdvancePayment
+                        {
+                            PartyID = data.SelectedPartyId > 0 ? data.SelectedPartyId : null,
+                            BrokerID = data.SelectedBrokerId > 0 ? data.SelectedBrokerId : null,
+                            PaymentDate = data.PaymentDate,
+                            Amount = Math.Round(excessAmount),
+                            PaymentMethod = data.PaymentMethod,
+                            Reference = $"Excess from Payment Ref: {data.Reference}",
+                            CompanyID = 1
+                        };
+
+                        // Handle cheque amounts for excess
+                        if (data.PaymentMethod?.Equals("Cheque", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount) && 
+                                decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
+                            {
+                                decimal totalCheque = firm1Amount + firm2Amount;
+                                if (totalCheque > 0)
+                                {
+                                    // Distribute excess proportionally to firm amounts
+                                    decimal firm1Ratio = firm1Amount / totalCheque;
+                                    decimal firm2Ratio = firm2Amount / totalCheque;
+                                    excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount * firm1Ratio);
+                                    excessAdvancePayment.ChequeAmountFirm2 = Math.Round(excessAmount * firm2Ratio);
+                                }
+                                else
+                                {
+                                    // Default to Firm1 if no distribution is clear
+                                    excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount);
+                                    excessAdvancePayment.ChequeAmountFirm2 = 0;
+                                }
+                            }
+                            else
+                            {
+                                // Default to Firm1 if parsing fails
+                                excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount);
+                                excessAdvancePayment.ChequeAmountFirm2 = 0;
+                            }
+                        }
+                        else
+                        {
+                            // For cash or other payment methods, set cheque amounts to 0
+                            excessAdvancePayment.ChequeAmountFirm1 = 0;
+                            excessAdvancePayment.ChequeAmountFirm2 = 0;
+                        }
+
+                        // Add advance payment directly in the same transaction to avoid lock issues
+                        string advanceSql = @"
+                            INSERT INTO AdvancePayments (PartyID, BrokerID, PaymentDate, Amount, PaymentMethod, Reference, ChequeAmountFirm1, ChequeAmountFirm2, CompanyID, CreatedDate)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+                        using (var advanceCmd = new OleDbCommand(advanceSql, conn, dbTransaction))
+                        {
+                            var parameters = new OleDbParameter[]
+                            {
+                                new OleDbParameter("PartyID", OleDbType.Integer) { Value = excessAdvancePayment.PartyID ?? (object)DBNull.Value },
+                                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = excessAdvancePayment.BrokerID ?? (object)DBNull.Value },
+                                new OleDbParameter("PaymentDate", OleDbType.Date) { Value = excessAdvancePayment.PaymentDate },
+                                new OleDbParameter("Amount", OleDbType.Currency) { Value = excessAdvancePayment.Amount },
+                                new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = excessAdvancePayment.PaymentMethod ?? (object)DBNull.Value },
+                                new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = excessAdvancePayment.Reference ?? (object)DBNull.Value },
+                                new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = excessAdvancePayment.ChequeAmountFirm1 },
+                                new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = excessAdvancePayment.ChequeAmountFirm2 },
+                                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = excessAdvancePayment.CompanyID },
+                                new OleDbParameter("CreatedDate", OleDbType.Date) { Value = DateTime.Now }
+                            };
+
+                            advanceCmd.Parameters.AddRange(parameters);
+                            
+                            int advanceRows = advanceCmd.ExecuteNonQuery();
+                            if (advanceRows > 0)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Created advance payment for excess: {excessAmount:C}");
+                            }
+                        }
                     }
 
                     // First commit the ledger transactions
@@ -1533,12 +1640,70 @@ namespace SaleBillSystem.NET.Forms
                 // Get advance amounts by payment method
                 var advanceAmounts = GetAdvanceAmountsByPaymentMethod(partyId, brokerId);
                 
+                // Calculate excess amount if payment amount is greater than allocated
+                decimal excessAmount = 0;
+                string selectedPaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
+                
+                if (decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount))
+                {
+                    decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
+                    if (paymentAmount > totalAllocated)
+                    {
+                        excessAmount = paymentAmount - totalAllocated;
+                        
+                        // Add excess to the appropriate advance category based on payment method
+                        if (selectedPaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+                        {
+                            advanceAmounts.Cash += excessAmount;
+                        }
+                        else if (selectedPaymentMethod.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // For cheque payments, distribute excess based on firm amounts ratio
+                            if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1) && 
+                                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2))
+                            {
+                                decimal totalCheque = firm1 + firm2;
+                                if (totalCheque > 0 && Math.Abs(totalCheque - paymentAmount) < 0.01m)
+                                {
+                                    // Distribute excess proportionally
+                                    decimal firm1Ratio = firm1 / totalCheque;
+                                    decimal firm2Ratio = firm2 / totalCheque;
+                                    advanceAmounts.Firm1 += excessAmount * firm1Ratio;
+                                    advanceAmounts.Firm2 += excessAmount * firm2Ratio;
+                                }
+                                else
+                                {
+                                    // Default to equal split or add to Firm1
+                                    advanceAmounts.Firm1 += excessAmount;
+                                }
+                            }
+                            else
+                            {
+                                // Default to adding excess to Firm1
+                                advanceAmounts.Firm1 += excessAmount;
+                            }
+                        }
+                    }
+                }
+                
                 // Update labels
                 lblAdvanceCash.Text = $"Cash: ₹{advanceAmounts.Cash:N2}";
                 lblAdvanceFirm1.Text = $"Firm1: ₹{advanceAmounts.Firm1:N2}";
                 lblAdvanceFirm2.Text = $"Firm2: ₹{advanceAmounts.Firm2:N2}";
 
-                // Show panel only if there are any advances
+                // Update title to show if there's excess
+                if (excessAmount > 0)
+                {
+                    lblAdvanceTitle.Text = $"Advance Avail (+ ₹{excessAmount:N2} excess):";
+                    lblAdvanceTitle.ForeColor = Color.Red; // Highlight excess
+                }
+                else
+                {
+                    lblAdvanceTitle.Text = "Advance Avail:";
+                    lblAdvanceTitle.ForeColor = Color.Black; // Default color
+                }
+
+                // Show panel if there are any advances or excess
                 bool hasAdvances = advanceAmounts.Cash > 0 || advanceAmounts.Firm1 > 0 || advanceAmounts.Firm2 > 0;
                 pnlAdvanceDisplay.Visible = hasAdvances;
             }

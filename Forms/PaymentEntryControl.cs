@@ -881,7 +881,10 @@ namespace SaleBillSystem.NET.Forms
                 PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
                 Reference = txtReference.Text,
                 ChequeAmountFirm1Text = txtChequeAmountFirm1.Text,
-                ChequeAmountFirm2Text = txtChequeAmountFirm2.Text
+                ChequeAmountFirm2Text = txtChequeAmountFirm2.Text,
+                AdvanceUsed = 0,
+                AdvanceAmount = 0,
+                IsAdvancePayment = false
             };
 
             // Show loading indicator and disable save button to prevent double-clicking
@@ -950,6 +953,9 @@ namespace SaleBillSystem.NET.Forms
             public string ChequeAmountFirm1Text { get; set; }
             public string ChequeAmountFirm2Text { get; set; }
             public Dictionary<int, List<AdvanceUtilization>> AdvanceUtilizations { get; set; } = new Dictionary<int, List<AdvanceUtilization>>();
+            public decimal AdvanceUsed { get; set; }
+            public decimal AdvanceAmount { get; set; }
+            public bool IsAdvancePayment { get; set; }
         }
 
         private (int, decimal) SavePaymentInBackground(PaymentSaveData data)
@@ -1061,12 +1067,15 @@ namespace SaleBillSystem.NET.Forms
                         PartyID = partyId,
                         BrokerID = brokerId,
                         PaymentDate = data.PaymentDate,
-                        TotalAmountPaid = Math.Round(actualCashUsed), // Only the cash actually used for bills
+                        TotalAmountPaid = Math.Round(data.TotalPaymentAmount), // Only the cash actually used for bills
                         PaymentMethod = data.PaymentMethod,
                         Reference = data.Reference,
                         CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
                         ChequeAmountFirm1 = 0,
-                        ChequeAmountFirm2 = 0
+                        ChequeAmountFirm2 = 0,
+                        AdvanceUsed = data.AdvanceUsed,
+                        AdvanceAmount = data.AdvanceAmount,
+                        IsAdvancePayment = data.IsAdvancePayment
                     };
                     
                     // If payment method is Cheque, distribute the actual cash used proportionally
@@ -1087,6 +1096,23 @@ namespace SaleBillSystem.NET.Forms
                                 System.Diagnostics.Debug.WriteLine($"Cheque distribution for actual cash used {actualCashUsed:C}: Firm1={paymentMaster.ChequeAmountFirm1:C}, Firm2={paymentMaster.ChequeAmountFirm2:C}");
                             }
                         }
+                    }
+                    decimal excessAmount = 0;
+                    if(advanceUsed < data.TotalPaymentAmount){
+                    excessAmount = data.TotalPaymentAmount - actualCashUsed;
+                    paymentMaster.AdvanceAmount = excessAmount;
+                    paymentMaster.AdvanceUsed = advanceUsed;
+                    paymentMaster.IsAdvancePayment = true;
+                    }
+                    if(excessAmount == 0 && advanceUsed > 0){
+                        paymentMaster.AdvanceAmount = 0;
+                        paymentMaster.AdvanceUsed = advanceUsed;
+                        paymentMaster.IsAdvancePayment = false;
+                    } 
+                    if(excessAmount == 0 && advanceUsed == 0){
+                        paymentMaster.AdvanceAmount = 0;
+                        paymentMaster.AdvanceUsed = 0;
+                        paymentMaster.IsAdvancePayment = false;
                     }
                     int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
 
@@ -1196,10 +1222,6 @@ namespace SaleBillSystem.NET.Forms
 
                     // Handle excess amount - create new advance payment
                     // Excess = Total Payment Entered - Actual Cash Used for Bills
-                    decimal excessAmount = 0;
-                    if(advanceUsed < data.TotalPaymentAmount){
-                    excessAmount = data.TotalPaymentAmount - actualCashUsed;
-                    }
                     
                     System.Diagnostics.Debug.WriteLine($"Excess calculation: Payment entered {data.TotalPaymentAmount:C} - Cash used {actualCashUsed:C} = Excess {excessAmount:C}");
                     

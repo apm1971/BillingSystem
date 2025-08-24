@@ -25,5 +25,11 @@ namespace SaleBillSystem.NET.Models
         /// Cheque amount from Firm2 (only applicable when PaymentMethod is "Cheque")
         /// </summary>
         public decimal ChequeAmountFirm2 { get; set; }
+        /// <summary>
+        /// Advance amount used
+        /// </summary>
+        public decimal AdvanceUsed { get; set; }
+        public decimal AdvanceAmount { get; set; }
+        public bool IsAdvancePayment { get; set; }
     }
 }

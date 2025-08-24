@@ -1343,6 +1343,31 @@ namespace SaleBillSystem.NET.Data
                             Console.WriteLine("AdvanceAmount column added to PaymentMaster table.");
                         }
                     }
+                    bool column3Exists = false;
+                    try
+                    {
+                        string checkColumn3Sql = "SELECT AdvanceUsed FROM PaymentMaster WHERE 1=0";
+                        using (var checkCmd = new OleDbCommand(checkColumn3Sql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            column3Exists = true;
+                        }
+                    }
+                    catch
+                    {
+                        column3Exists = false;
+                    }
+                    if (!column3Exists)
+                    {
+                        // Add AdvanceUsed column
+                        string addColumn3Sql = "ALTER TABLE PaymentMaster ADD COLUMN AdvanceUsed CURRENCY DEFAULT 0";
+                        using (var addCmd = new OleDbCommand(addColumn3Sql, conn))
+                        {
+                            addCmd.ExecuteNonQuery();
+                            Console.WriteLine("AdvanceUsed column added to PaymentMaster table.");
+                        }
+                    }
+                    
                 }
             }
             catch (Exception ex)

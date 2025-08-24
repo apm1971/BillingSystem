@@ -19,8 +19,8 @@ namespace SaleBillSystem.NET.Data
             try
             {
                 string sql = @"
-                    INSERT INTO PaymentMaster (PartyID, BrokerID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID, ChequeAmountFirm1, ChequeAmountFirm2)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    INSERT INTO PaymentMaster (PartyID, BrokerID, PaymentDate, TotalAmountPaid, PaymentMethod, Reference, CompanyID, ChequeAmountFirm1, ChequeAmountFirm2, AdvanceUsed, AdvanceAmount, IsAdvancePayment)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
                 var parameters = new OleDbParameter[]
                 {
@@ -32,7 +32,10 @@ namespace SaleBillSystem.NET.Data
                     new OleDbParameter("Reference", payment.Reference ?? (object)DBNull.Value),
                     new OleDbParameter("CompanyID", payment.CompanyID),
                     new OleDbParameter("ChequeAmountFirm1", payment.ChequeAmountFirm1),
-                    new OleDbParameter("ChequeAmountFirm2", payment.ChequeAmountFirm2)
+                    new OleDbParameter("ChequeAmountFirm2", payment.ChequeAmountFirm2),
+                    new OleDbParameter("AdvanceUsed", payment.AdvanceUsed),
+                    new OleDbParameter("AdvanceAmount", payment.AdvanceAmount),
+                    new OleDbParameter("IsAdvancePayment", payment.IsAdvancePayment)
                 };
 
                 using (var cmd = new OleDbCommand(sql, conn, trans))

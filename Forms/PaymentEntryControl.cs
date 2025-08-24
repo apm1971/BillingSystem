@@ -1005,21 +1005,22 @@ namespace SaleBillSystem.NET.Forms
 
                     
 
-                    // // Step 1.2: Use FIFO logic to consume advances first
-                    decimal totalPaymentNeeded = Math.Round(data.TotalPaymentAmount);
+                    // Step 1.2: Use FIFO logic to consume advances against bills (not payment amount)
+                    decimal totalBillAmount = data.PaymentsToSave.Sum(p => p.PaymentAllocation);
+                    decimal totalAmountNeeded = totalBillAmount; // Use advances to cover bills, not full payment
                     decimal advanceUsed = 0;
                     
-                    if (totalAvailableAdvance > 0 && totalPaymentNeeded > 0)
+                    if (totalAvailableAdvance > 0 && totalAmountNeeded > 0)
                     {
                         // Sort advances by payment date (FIFO - oldest first)
                         var sortedAdvances = combinedAvailableAdvances.OrderBy(a => a.PaymentDate).ToList();
-                        decimal remainingPaymentNeeded = totalPaymentNeeded;
+                        decimal remainingAmountNeeded = totalAmountNeeded; // Amount still needed to cover bills
                         
                         foreach (var advance in sortedAdvances)
                         {
-                            if (remainingPaymentNeeded <= 0) break;
+                            if (remainingAmountNeeded <= 0) break;
                             
-                            decimal amountToUse = Math.Min(advance.Amount, remainingPaymentNeeded);
+                            decimal amountToUse = Math.Min(advance.Amount, remainingAmountNeeded);
                             if (amountToUse > 0)
                             {
                                 // Create utilization record instead of reducing advance amount
@@ -1042,22 +1043,25 @@ namespace SaleBillSystem.NET.Forms
                                 data.AdvanceUtilizations[advance.AdvanceID].Add(utilization);
                                 
                                 advanceUsed += amountToUse;
-                                remainingPaymentNeeded -= amountToUse;
+                                remainingAmountNeeded -= amountToUse;
                                 
-                                System.Diagnostics.Debug.WriteLine($"Will use {amountToUse:C} from AdvanceID: {advance.AdvanceID}, remaining needed: {remainingPaymentNeeded:C}");
+                                System.Diagnostics.Debug.WriteLine($"Will use {amountToUse:C} from AdvanceID: {advance.AdvanceID} to cover bills, remaining bill amount needed: {remainingAmountNeeded:C}");
                             }
                         }
                         
-                        System.Diagnostics.Debug.WriteLine($"Total advance used: {advanceUsed:C}, remaining payment needed: {remainingPaymentNeeded:C}");
+                        System.Diagnostics.Debug.WriteLine($"Total advance used against bills: {advanceUsed:C}, remaining bill amount needed: {remainingAmountNeeded:C}");
                     }
 
-                    // Create a single master record for this payment event
+                    // Calculate actual cash payment used (bills - advance used)
+                    decimal actualCashUsed = Math.Max(0, totalBillAmount - advanceUsed);
+                    
+                    // Create a single master record for this payment event (actual cash used, not total payment)
                     var paymentMaster = new PaymentMaster
                     {
                         PartyID = partyId,
                         BrokerID = brokerId,
                         PaymentDate = data.PaymentDate,
-                        TotalAmountPaid = Math.Round(data.TotalPaymentAmount),
+                        TotalAmountPaid = Math.Round(actualCashUsed), // Only the cash actually used for bills
                         PaymentMethod = data.PaymentMethod,
                         Reference = data.Reference,
                         CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
@@ -1065,23 +1069,23 @@ namespace SaleBillSystem.NET.Forms
                         ChequeAmountFirm2 = 0
                     };
                     
-                    // If payment method is Cheque, get the firm amounts
+                    // If payment method is Cheque, distribute the actual cash used proportionally
                     if (paymentMaster.PaymentMethod == "Cheque")
                     {
-                        if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount))
+                        if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount) && 
+                            decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
                         {
-                            paymentMaster.ChequeAmountFirm1 = Math.Round(firm1Amount);
-                        }
-                        
-                        if (decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
-                        {
-                            paymentMaster.ChequeAmountFirm2 = Math.Round(firm2Amount);
-                        }
-                        
-                        // Validate that the sum matches the total payment amount
-                        if (Math.Abs((paymentMaster.ChequeAmountFirm1 + paymentMaster.ChequeAmountFirm2) - data.TotalPaymentAmount) > 0.01m)
-                        {
-                            throw new Exception("The sum of Firm 1 and Firm 2 amounts must equal the total payment amount.");
+                            decimal totalCheque = firm1Amount + firm2Amount;
+                            if (totalCheque > 0 && actualCashUsed > 0)
+                            {
+                                // Distribute actual cash used proportionally based on original firm amounts
+                                decimal firm1Ratio = firm1Amount / totalCheque;
+                                decimal firm2Ratio = firm2Amount / totalCheque;
+                                paymentMaster.ChequeAmountFirm1 = Math.Round(actualCashUsed * firm1Ratio);
+                                paymentMaster.ChequeAmountFirm2 = Math.Round(actualCashUsed * firm2Ratio);
+                                
+                                System.Diagnostics.Debug.WriteLine($"Cheque distribution for actual cash used {actualCashUsed:C}: Firm1={paymentMaster.ChequeAmountFirm1:C}, Firm2={paymentMaster.ChequeAmountFirm2:C}");
+                            }
                         }
                     }
                     int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
@@ -1190,9 +1194,11 @@ namespace SaleBillSystem.NET.Forms
                         LedgerService.AddTransaction(paymentTx, conn, dbTransaction);
                     }
 
-                    // Handle excess amount - create new advance payment if payment > bills allocated
-                    decimal totalBillAmount = data.PaymentsToSave.Sum(p => p.PaymentAllocation);
-                    decimal excessAmount = data.TotalPaymentAmount - totalBillAmount;
+                    // Handle excess amount - create new advance payment
+                    // Excess = Total Payment Entered - Actual Cash Used for Bills
+                    decimal excessAmount = data.TotalPaymentAmount - actualCashUsed;
+                    
+                    System.Diagnostics.Debug.WriteLine($"Excess calculation: Payment entered {data.TotalPaymentAmount:C} - Cash used {actualCashUsed:C} = Excess {excessAmount:C}");
                     
                     if (excessAmount > 0)
                     {

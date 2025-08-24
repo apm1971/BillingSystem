@@ -1196,7 +1196,10 @@ namespace SaleBillSystem.NET.Forms
 
                     // Handle excess amount - create new advance payment
                     // Excess = Total Payment Entered - Actual Cash Used for Bills
-                    decimal excessAmount = data.TotalPaymentAmount - actualCashUsed;
+                    decimal excessAmount = 0;
+                    if(advanceUsed < data.TotalPaymentAmount){
+                    excessAmount = data.TotalPaymentAmount - actualCashUsed;
+                    }
                     
                     System.Diagnostics.Debug.WriteLine($"Excess calculation: Payment entered {data.TotalPaymentAmount:C} - Cash used {actualCashUsed:C} = Excess {excessAmount:C}");
                     
@@ -1646,18 +1649,72 @@ namespace SaleBillSystem.NET.Forms
                 // Get advance amounts by payment method
                 var advanceAmounts = GetAdvanceAmountsByPaymentMethod(partyId, brokerId);
                 
-                // Calculate excess amount if payment amount is greater than allocated
+                // Calculate excess amount using the same logic as save process
                 decimal excessAmount = 0;
                 string selectedPaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
                 
                 if (decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount))
                 {
                     decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
-                    if (paymentAmount > totalAllocated)
+                    
+                    if (paymentAmount > 0 && totalAllocated > 0)
                     {
+                        // Calculate how much advance would be used against bills (FIFO simulation)
+                        decimal totalAdvanceAvailable = advanceAmounts.Cash + advanceAmounts.Firm1 + advanceAmounts.Firm2;
+                        decimal advanceUsedAgainstBills = Math.Min(totalAdvanceAvailable, totalAllocated);
+                        
+                        // Remove used advances from display (they will be consumed)
+                        if (advanceUsedAgainstBills > 0)
+                        {
+                            // Simulate FIFO consumption to remove used amounts from display
+                            decimal remainingToRemove = advanceUsedAgainstBills;
+                            
+                            // Remove from Cash first
+                            if (remainingToRemove > 0 && advanceAmounts.Cash > 0)
+                            {
+                                decimal removeFromCash = Math.Min(advanceAmounts.Cash, remainingToRemove);
+                                advanceAmounts.Cash -= removeFromCash;
+                                remainingToRemove -= removeFromCash;
+                            }
+                            
+                            // Remove from Firm1 next
+                            if (remainingToRemove > 0 && advanceAmounts.Firm1 > 0)
+                            {
+                                decimal removeFromFirm1 = Math.Min(advanceAmounts.Firm1, remainingToRemove);
+                                advanceAmounts.Firm1 -= removeFromFirm1;
+                                remainingToRemove -= removeFromFirm1;
+                            }
+                            
+                            // Remove from Firm2 last
+                            if (remainingToRemove > 0 && advanceAmounts.Firm2 > 0)
+                            {
+                                decimal removeFromFirm2 = Math.Min(advanceAmounts.Firm2, remainingToRemove);
+                                advanceAmounts.Firm2 -= removeFromFirm2;
+                                remainingToRemove -= removeFromFirm2;
+                            }
+                        }
+                        
+                        // Calculate actual cash that would be used for bills
+                        decimal actualCashUsed = Math.Max(0, totalAllocated - advanceUsedAgainstBills);
+                        
+                        // Excess = Payment Entered - Cash Actually Used
+                        if (paymentAmount > actualCashUsed)
+                        {
+                            excessAmount = paymentAmount - actualCashUsed;
+                            
+                            System.Diagnostics.Debug.WriteLine($"Display calculation: Payment {paymentAmount:C}, Bills {totalAllocated:C}, Advance used {advanceUsedAgainstBills:C}, Cash used {actualCashUsed:C}, Excess {excessAmount:C}");
+                        }
+                    }
+                    else if (paymentAmount > totalAllocated)
+                    {
+                        // Fallback for when no bills are allocated
                         excessAmount = paymentAmount - totalAllocated;
                         
-                        // Add excess to the appropriate advance category based on payment method
+                    }
+                    
+                    // Add excess to the appropriate advance category based on payment method (if any excess exists)
+                    if (excessAmount > 0)
+                    {
                         if (selectedPaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
                         {
                             advanceAmounts.Cash += excessAmount;

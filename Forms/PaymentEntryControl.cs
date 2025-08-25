@@ -17,6 +17,15 @@ namespace SaleBillSystem.NET.Forms
         private List<Broker> _brokers = new List<Broker>();
         private List<BillViewModel> _outstandingBills = new List<BillViewModel>();
         private List<Bill> _allBills = new List<Bill>();
+        
+        // Cache for advance payments to avoid repeated DB calls
+        private Dictionary<string, List<AdvancePayment>> _advancePaymentsCache = new Dictionary<string, List<AdvancePayment>>();
+        private (decimal Cash, decimal Firm1, decimal Firm2)? _cachedAdvanceAmounts = null;
+        private string _lastCacheKey = string.Empty;
+        
+        // Background loading state
+        private System.ComponentModel.BackgroundWorker _advanceLoadingWorker;
+        private bool _isLoadingAdvances = false;
 
         public PaymentEntryControl()
         {
@@ -187,6 +196,9 @@ namespace SaleBillSystem.NET.Forms
             // Make all fields editable by default
             SetFieldsEditable(true);
 
+            // Clear advance payment cache when form is cleared
+            ClearAdvancePaymentCache();
+
             // Hide advance payment display
             UpdateAdvancePaymentDisplay();
 
@@ -199,17 +211,43 @@ namespace SaleBillSystem.NET.Forms
 
         private void CmbParty_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            // When party changes, clear broker selection to avoid cascading events
-             LoadBillsBasedOnSelection();
-             UpdateFieldsBasedOnSelection();
-             UpdateAdvancePaymentDisplay();
+            try
+            {
+                // When party changes, clear broker selection to avoid cascading events
+                LoadBillsBasedOnSelection();
+                UpdateFieldsBasedOnSelection();
+                
+                // Clear cache and preload advance payments for selected party/broker
+                InvalidateAdvancePaymentCache();
+                PreloadAdvancePayments();
+                UpdateAdvancePaymentDisplay();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in CmbParty_SelectedIndexChanged: {ex.Message}");
+                // Still show the error to user but don't crash
+                MessageBox.Show($"Error loading party data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void CmbBroker_SelectedIndexChanged(object? sender, EventArgs e)
         {
-            LoadBillsBasedOnSelection();
-            UpdateFieldsBasedOnSelection();
-            UpdateAdvancePaymentDisplay();
+            try
+            {
+                LoadBillsBasedOnSelection();
+                UpdateFieldsBasedOnSelection();
+                
+                // Clear cache and preload advance payments for selected party/broker
+                InvalidateAdvancePaymentCache();
+                PreloadAdvancePayments();
+                UpdateAdvancePaymentDisplay();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in CmbBroker_SelectedIndexChanged: {ex.Message}");
+                // Still show the error to user but don't crash
+                MessageBox.Show($"Error loading broker data: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
          private void LoadBillsBasedOnSelection()
@@ -923,6 +961,10 @@ namespace SaleBillSystem.NET.Forms
                     
                     // Show payment trace with print option
                     ShowPaymentTraceAfterSave(result.PaymentId);
+                    
+                    // Refresh advance display to show updated amounts after save
+                    InvalidateAdvancePaymentCache();
+                    UpdateAdvancePaymentDisplay();
                     
                     ClearForm();
                 }
@@ -1800,18 +1842,27 @@ namespace SaleBillSystem.NET.Forms
         }
 
         /// <summary>
-        /// Gets advance amounts broken down by payment method
+        /// Gets advance amounts broken down by payment method using cache
         /// </summary>
         private (decimal Cash, decimal Firm1, decimal Firm2) GetAdvanceAmountsByPaymentMethod(int? partyId, int? brokerId)
         {
-            decimal cashAmount = 0;
-            decimal firm1Amount = 0;
-            decimal firm2Amount = 0;
-
             try
             {
-                // Get all available advance payments for the selected party/broker combination
-                var advancePayments = AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
+                // Generate cache key
+                string cacheKey = GetCacheKey(partyId, brokerId);
+                
+                // Return cached amounts if available and cache key hasn't changed
+                if (_cachedAdvanceAmounts.HasValue && _lastCacheKey == cacheKey)
+                {
+                    return _cachedAdvanceAmounts.Value;
+                }
+
+                decimal cashAmount = 0;
+                decimal firm1Amount = 0;
+                decimal firm2Amount = 0;
+
+                // Get advance payments from cache or database
+                var advancePayments = GetAdvancePaymentsFromCache(partyId, brokerId);
 
                 foreach (var advance in advancePayments)
                 {
@@ -1825,13 +1876,99 @@ namespace SaleBillSystem.NET.Forms
                         firm2Amount += advance.ChequeAmountFirm2;
                     }
                 }
+
+                // Cache the result
+                var result = (cashAmount, firm1Amount, firm2Amount);
+                _cachedAdvanceAmounts = result;
+                _lastCacheKey = cacheKey;
+
+                return result;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error getting advance amounts by payment method: {ex.Message}");
+                return (0, 0, 0);
+            }
+        }
+
+        #endregion
+
+        #region Advance Payment Cache Management
+
+        /// <summary>
+        /// Generates a cache key for advance payments based on party and broker IDs
+        /// </summary>
+        private string GetCacheKey(int? partyId, int? brokerId)
+        {
+            return $"P{partyId ?? 0}_B{brokerId ?? 0}";
+        }
+
+        /// <summary>
+        /// Gets advance payments from cache or loads from database if not cached
+        /// </summary>
+        private List<AdvancePayment> GetAdvancePaymentsFromCache(int? partyId, int? brokerId)
+        {
+            string cacheKey = GetCacheKey(partyId, brokerId);
+            
+            // Return from cache if exists
+            if (_advancePaymentsCache.TryGetValue(cacheKey, out List<AdvancePayment> cachedPayments))
+            {
+                System.Diagnostics.Debug.WriteLine($"Using cached advance payments for key: {cacheKey}");
+                return cachedPayments;
             }
 
-            return (cashAmount, firm1Amount, firm2Amount);
+            // Load from database and cache
+            System.Diagnostics.Debug.WriteLine($"Loading advance payments from database for key: {cacheKey}");
+            var payments = AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
+            _advancePaymentsCache[cacheKey] = payments;
+            
+            return payments;
+        }
+
+        /// <summary>
+        /// Preloads advance payments for the current selection to cache
+        /// </summary>
+        private void PreloadAdvancePayments()
+        {
+            try
+            {
+                int? partyId = cmbParty.SelectedValue as int?;
+                int? brokerId = cmbBroker.SelectedValue as int?;
+                
+                // Only preload if party or broker is selected
+                if ((!partyId.HasValue || partyId.Value <= 0) && (!brokerId.HasValue || brokerId.Value <= 0))
+                {
+                    return;
+                }
+
+                // Load synchronously for now to avoid thread issues
+                // Background loading can be added later after ensuring thread safety
+                GetAdvancePaymentsFromCache(partyId, brokerId);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error preloading advance payments: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Clears the entire advance payment cache
+        /// </summary>
+        private void ClearAdvancePaymentCache()
+        {
+            _advancePaymentsCache.Clear();
+            _cachedAdvanceAmounts = null;
+            _lastCacheKey = string.Empty;
+            System.Diagnostics.Debug.WriteLine("Advance payment cache cleared");
+        }
+
+        /// <summary>
+        /// Invalidates cache for current selection (forces reload on next access)
+        /// </summary>
+        private void InvalidateAdvancePaymentCache()
+        {
+            _cachedAdvanceAmounts = null;
+            _lastCacheKey = string.Empty;
         }
 
         #endregion

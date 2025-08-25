@@ -48,7 +48,7 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
-        /// Gets all advance payments with party and broker names
+        /// Gets all advance payments with party and broker names - OPTIMIZED to avoid N+1 queries
         /// </summary>
         public static List<AdvancePayment> GetAllAdvancePayments(int companyId = 1)
         {
@@ -56,14 +56,20 @@ namespace SaleBillSystem.NET.Data
             
             try
             {
+                // OPTIMIZED: Single query with LEFT JOIN to get utilization amounts
                 string sql = @"
                     SELECT ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
                            ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2, 
-                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
-                    FROM ((AdvancePayments ap
+                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName,
+                           IIF(SUM(au.AmountUsed) IS NULL, 0, SUM(au.AmountUsed)) AS TotalUtilized
+                    FROM (((AdvancePayments ap
                     LEFT JOIN PartyMaster pm ON ap.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON ap.BrokerID = bm.BrokerID)
+                    LEFT JOIN AdvanceUtilization au ON ap.AdvanceID = au.AdvanceID AND au.CompanyID = ap.CompanyID)
                     WHERE ap.CompanyID = ?
+                    GROUP BY ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
+                             ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2, 
+                             ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
                     ORDER BY ap.PaymentDate DESC";
 
                 var parameters = new OleDbParameter[]
@@ -77,7 +83,7 @@ namespace SaleBillSystem.NET.Data
                 {
                     int advanceId = Convert.ToInt32(row["AdvanceID"]);
                     decimal originalAmount = Convert.ToDecimal(row["Amount"]);
-                    decimal utilizedAmount = AdvanceUtilizationService.GetTotalUtilizedAmount(advanceId, companyId);
+                    decimal utilizedAmount = Convert.ToDecimal(row["TotalUtilized"]); // OPTIMIZED: From single query
                     
                     advancePayments.Add(new AdvancePayment
                     {
@@ -109,7 +115,7 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
-        /// Gets advance payments filtered by party and/or broker
+        /// Gets advance payments filtered by party and/or broker - OPTIMIZED to avoid N+1 queries
         /// </summary>
         public static List<AdvancePayment> GetAdvancePayments(int? partyId = null, int? brokerId = null, int companyId = 1)
         {
@@ -117,13 +123,16 @@ namespace SaleBillSystem.NET.Data
             
             try
             {
+                // OPTIMIZED: Single query with LEFT JOIN to get utilization amounts
                 string sql = @"
                     SELECT ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
                            ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2,
-                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
-                    FROM ((AdvancePayments ap
+                           ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName,
+                           IIF(SUM(au.AmountUsed) IS NULL, 0, SUM(au.AmountUsed)) AS TotalUtilized
+                    FROM (((AdvancePayments ap
                     LEFT JOIN PartyMaster pm ON ap.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON ap.BrokerID = bm.BrokerID)
+                    LEFT JOIN AdvanceUtilization au ON ap.AdvanceID = au.AdvanceID AND au.CompanyID = ap.CompanyID)
                     WHERE ap.CompanyID = ?";
 
                 var parametersList = new List<OleDbParameter>
@@ -143,7 +152,11 @@ namespace SaleBillSystem.NET.Data
                     parametersList.Add(new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerId.Value });
                 }
 
-                sql += " ORDER BY ap.PaymentDate DESC";
+                sql += @"
+                    GROUP BY ap.AdvanceID, ap.PartyID, ap.BrokerID, ap.PaymentDate, 
+                             ap.Amount, ap.PaymentMethod, ap.Reference, ap.ChequeAmountFirm1, ap.ChequeAmountFirm2,
+                             ap.CompanyID, ap.CreatedDate, pm.PartyName, bm.BrokerName
+                    ORDER BY ap.PaymentDate DESC";
 
                 DataTable dt = DatabaseManager.ExecuteQuery(sql, parametersList.ToArray());
                 
@@ -151,7 +164,7 @@ namespace SaleBillSystem.NET.Data
                 {
                     int advanceId = Convert.ToInt32(row["AdvanceID"]);
                     decimal originalAmount = Convert.ToDecimal(row["Amount"]);
-                    decimal utilizedAmount = AdvanceUtilizationService.GetTotalUtilizedAmount(advanceId, companyId);
+                    decimal utilizedAmount = Convert.ToDecimal(row["TotalUtilized"]); // OPTIMIZED: From single query
                     
                     advancePayments.Add(new AdvancePayment
                     {
@@ -259,20 +272,19 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
-        /// Gets all advance payments with their available amounts (excludes fully utilized advances)
+        /// Gets all advance payments with their available amounts (excludes fully utilized advances) - OPTIMIZED
         /// </summary>
         public static List<AdvancePayment> GetAvailableAdvancePayments(int? partyId = null, int? brokerId = null, int companyId = 1)
         {
+            // OPTIMIZED: Use the already optimized GetAdvancePayments which includes utilization data
             var allAdvances = GetAdvancePayments(partyId, brokerId, companyId);
             var availableAdvances = new List<AdvancePayment>();
 
+            // OPTIMIZED: No additional database calls needed - utilization already calculated
             foreach (var advance in allAdvances)
             {
-                decimal availableAmount = GetAvailableAdvanceAmount(advance.AdvanceID, companyId);
-                if (availableAmount > 0)
+                if (advance.Amount > 0) // Available amount already calculated in GetAdvancePayments
                 {
-                    // Update the amount to show available amount instead of original
-                    advance.Amount = availableAmount;
                     availableAdvances.Add(advance);
                 }
             }

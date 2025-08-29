@@ -15,7 +15,6 @@ namespace SaleBillSystem.NET.Models
         public string? BrokerName { get; set; }
         public int CompanyID { get; set; }
         public DateTime CreatedDate { get; set; }
-        
         // Navigation/Reference properties for convenience
         public string? PaymentReference { get; set; }
         public string? OriginalAdvanceReference { get; set; }

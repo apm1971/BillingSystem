@@ -150,6 +150,63 @@ namespace SaleBillSystem.NET.Data
             return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0));
         }
 
+        public static (decimal interest, decimal discount, decimal finalAmountDue,DateTime InterestStartDate,decimal brokerage) CalculateSettlementTillNow(
+            Bill bill,
+            int interestDays, 
+            decimal interestRate, 
+            int discountDays,
+            decimal discountRate,
+            decimal brokerageRate
+) // Added paymentDate for accuracy
+        {
+            var transactions = GetTransactionsForBill(bill.BillID);
+            DateTime effectiveDueDate = bill.BillDate.AddDays(interestDays);
+            decimal currentBalance = BillService.GetBillBalance(bill.BillID) - (bill.TotalAmount*brokerageRate/100);
+            decimal earnedDiscount = 0;
+            decimal accruedInterest = 0;
+
+            // 1. Calculate Discount
+            decimal totalAmountEligibleForDiscount = 0;
+            DateTime discountDueDate = bill.BillDate.AddDays(discountDays);
+            // Find past payments made on time for discount
+            decimal pastEarlyPayments = transactions
+                .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date <= discountDueDate.Date)
+                .Sum(t => t.CreditAmount);
+            
+            totalAmountEligibleForDiscount += pastEarlyPayments;
+
+           
+            
+            earnedDiscount = totalAmountEligibleForDiscount * (discountRate / 100m);
+
+            // 2. Calculate Interest
+            
+                // Logic to calculate interest on overdue balances
+                decimal interestBearingPrincipal = bill.TotalAmount - pastEarlyPayments;
+                DateTime interestStartDate = effectiveDueDate;
+
+                // Loop through late payments to calculate interest in stages
+                var latePayments = transactions
+                    .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date > effectiveDueDate.Date)
+                    .OrderBy(t => t.TransactionDate);
+
+                foreach (var payment in latePayments)
+                {
+                    int overdueDays = (payment.TransactionDate.Date - interestStartDate.Date).Days;
+                    if (overdueDays > 0)
+                    {
+                        accruedInterest += interestBearingPrincipal * (interestRate / 100m) * (overdueDays / 365m);
+                    }
+                    interestBearingPrincipal -= payment.CreditAmount;
+                    interestStartDate = payment.TransactionDate;
+                }
+                
+            
+            // 3. Calculate Final Amount
+            decimal finalAmountDue = currentBalance - earnedDiscount + accruedInterest;
+            
+            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0),interestStartDate, bill.TotalAmount*brokerageRate/100);
+        }
         private static Transaction MapRowToTransaction(DataRow row)
         {
             return new Transaction

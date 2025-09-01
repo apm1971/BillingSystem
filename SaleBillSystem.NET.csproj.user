@@ -34,6 +34,9 @@
     <Compile Update="Forms\PaymentListControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Forms\PaymentReportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\PaymentTraceForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -48,6 +51,9 @@
     </Compile>
     <Compile Update="Forms\SaleBillUserControl.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Forms\UnusedAdvanceReversalForm.cs">
+      <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
 </Project>

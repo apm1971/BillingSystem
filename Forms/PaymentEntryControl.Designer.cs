@@ -25,6 +25,7 @@ namespace SaleBillSystem.NET.Forms
             lblParty = new Label();
             dgvOutstandingBills = new DataGridView();
             btnCalculate = new Button();
+            btnGenerateReport = new Button();
             btnSelectPayments = new Button();
             txtBrokerageRate = new TextBox();
             label7 = new Label();
@@ -56,13 +57,13 @@ namespace SaleBillSystem.NET.Forms
             txtPaymentAmount = new TextBox();
             label4 = new Label();
             pnlButtons = new Panel();
+            btnClear = new Button();
+            btnSave = new Button();
             pnlAdvanceDisplay = new Panel();
             lblAdvanceTitle = new Label();
             lblAdvanceCash = new Label();
             lblAdvanceFirm1 = new Label();
             lblAdvanceFirm2 = new Label();
-            btnClear = new Button();
-            btnSave = new Button();
             toolTip1 = new ToolTip(components);
             pnlTop.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvOutstandingBills).BeginInit();
@@ -155,6 +156,21 @@ namespace SaleBillSystem.NET.Forms
             btnCalculate.UseVisualStyleBackColor = false;
             btnCalculate.Click += btnCalculate_Click_2;
             // 
+            // btnGenerateReport
+            // 
+            btnGenerateReport.BackColor = Color.LightBlue;
+            btnGenerateReport.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnGenerateReport.ForeColor = Color.Black;
+            btnGenerateReport.Location = new Point(630, 137);
+            btnGenerateReport.Margin = new Padding(4);
+            btnGenerateReport.Name = "btnGenerateReport";
+            btnGenerateReport.Size = new Size(140, 33);
+            btnGenerateReport.TabIndex = 11;
+            btnGenerateReport.Text = "Generate Report";
+            btnGenerateReport.UseVisualStyleBackColor = false;
+            btnGenerateReport.Visible = false;
+            btnGenerateReport.Click += BtnGenerateReport_Click;
+            // 
             // btnSelectPayments
             // 
             btnSelectPayments.BackColor = Color.LightBlue;
@@ -166,9 +182,9 @@ namespace SaleBillSystem.NET.Forms
             btnSelectPayments.Size = new Size(140, 33);
             btnSelectPayments.TabIndex = 11;
             btnSelectPayments.Text = "Select Payments";
+            toolTip1.SetToolTip(btnSelectPayments, "Select specific advance payments to use");
             btnSelectPayments.UseVisualStyleBackColor = false;
             btnSelectPayments.Visible = false;
-            toolTip1.SetToolTip(btnSelectPayments, "Select specific advance payments to use");
             btnSelectPayments.Click += BtnSelectPayments_Click;
             // 
             // txtBrokerageRate
@@ -313,6 +329,7 @@ namespace SaleBillSystem.NET.Forms
             gbPayment.Controls.Add(txtBrokerageRate);
             gbPayment.Controls.Add(txtPaymentDate);
             gbPayment.Controls.Add(btnCalculate);
+            gbPayment.Controls.Add(btnGenerateReport);
             gbPayment.Controls.Add(btnSelectPayments);
             gbPayment.Controls.Add(lblPaymentDate);
             gbPayment.Controls.Add(label8);
@@ -404,7 +421,6 @@ namespace SaleBillSystem.NET.Forms
             lblChequeDetails.Size = new Size(93, 15);
             lblChequeDetails.TabIndex = 11;
             lblChequeDetails.Text = "Cheque Details:";
-
             // 
             // txtPaymentDate
             // 
@@ -500,6 +516,30 @@ namespace SaleBillSystem.NET.Forms
             pnlButtons.Size = new Size(1410, 50);
             pnlButtons.TabIndex = 5;
             // 
+            // btnClear
+            // 
+            btnClear.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnClear.Location = new Point(1277, 12);
+            btnClear.Margin = new Padding(4);
+            btnClear.Name = "btnClear";
+            btnClear.Size = new Size(116, 32);
+            btnClear.TabIndex = 12;
+            btnClear.Text = "Clear";
+            btnClear.UseVisualStyleBackColor = true;
+            // 
+            // btnSave
+            // 
+            btnSave.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnSave.BackColor = Color.LightGreen;
+            btnSave.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnSave.Location = new Point(1134, 11);
+            btnSave.Margin = new Padding(4);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(123, 33);
+            btnSave.TabIndex = 11;
+            btnSave.Text = "Save Payment";
+            btnSave.UseVisualStyleBackColor = false;
+            // 
             // pnlAdvanceDisplay
             // 
             pnlAdvanceDisplay.BackColor = Color.LightYellow;
@@ -557,30 +597,6 @@ namespace SaleBillSystem.NET.Forms
             lblAdvanceFirm2.TabIndex = 3;
             lblAdvanceFirm2.Text = "Firm2: ₹0.00";
             // 
-            // btnClear
-            // 
-            btnClear.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnClear.Location = new Point(1277, 12);
-            btnClear.Margin = new Padding(4);
-            btnClear.Name = "btnClear";
-            btnClear.Size = new Size(116, 32);
-            btnClear.TabIndex = 12;
-            btnClear.Text = "Clear";
-            btnClear.UseVisualStyleBackColor = true;
-            // 
-            // btnSave
-            // 
-            btnSave.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnSave.BackColor = Color.LightGreen;
-            btnSave.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            btnSave.Location = new Point(1134, 11);
-            btnSave.Margin = new Padding(4);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(123, 33);
-            btnSave.TabIndex = 11;
-            btnSave.Text = "Save Payment";
-            btnSave.UseVisualStyleBackColor = false;
-            // 
             // PaymentEntryControl
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -624,6 +640,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtDiscountRate;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnCalculate;
+        private System.Windows.Forms.Button btnGenerateReport;
         private System.Windows.Forms.Button btnSelectPayments;
         private System.Windows.Forms.Label lblDiscountValue;
         private System.Windows.Forms.Label lblFinalAmount;

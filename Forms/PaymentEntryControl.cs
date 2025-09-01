@@ -1726,15 +1726,43 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                         var paymentMethod = cmbPaymentMethod.Text ?? "Cash";
                         var reference = txtReference.Text ?? "";
 
+                        // Handle cash and cheque allocation based on payment method
+                        decimal chequeAmountFirm1 = 0;
+                        decimal chequeAmountFirm2 = 0;
+                        
+                        if (paymentMethod.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // For cheque payments, use the amounts from the form fields
+                            if (!decimal.TryParse(txtChequeAmountFirm1.Text, out chequeAmountFirm1))
+                                chequeAmountFirm1 = 0;
+                            if (!decimal.TryParse(txtChequeAmountFirm2.Text, out chequeAmountFirm2))
+                                chequeAmountFirm2 = 0;
+                            
+                            // Validate that the sum matches the cash needed
+                            decimal totalChequeAmount = chequeAmountFirm1 + chequeAmountFirm2;
+                            if (Math.Round(totalChequeAmount) != Math.Round(_lastSettlementResult.TotalCashNeeded))
+                            {
+                                throw new InvalidOperationException($"Cheque amounts (₹{totalChequeAmount:N2}) do not match cash needed (₹{_lastSettlementResult.TotalCashNeeded:N2}). Please adjust the cheque amounts.");
+                            }
+                        }
+                        else
+                        {
+                            // For cash payments, the full amount goes to cash (no cheque allocation)
+                            chequeAmountFirm1 = 0;
+                            chequeAmountFirm2 = 0;
+                        }
+
                         // Create advance payment record for cash payment
                         var cashPayment = new AdvancePayment
                         {
                             PartyID = partyId,
                             BrokerID = brokerId,
-                            PaymentDate = DateTime.Now,
+                            PaymentDate = _lastSettlementResult.PaymentDate,
                             Amount = _lastSettlementResult.TotalCashNeeded,
                             PaymentMethod = paymentMethod,
                             Reference = reference,
+                            ChequeAmountFirm1 = chequeAmountFirm1,
+                            ChequeAmountFirm2 = chequeAmountFirm2,
                             CompanyID = 1,
                             CreatedDate = DateTime.Now
                         };
@@ -1752,8 +1780,8 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                             new OleDbParameter("Amount", OleDbType.Currency) { Value = cashPayment.Amount },
                             new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = cashPayment.PaymentMethod },
                             new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = cashPayment.Reference },
-                            new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = 0m },
-                            new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = 0m },
+                            new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = cashPayment.ChequeAmountFirm1 },
+                            new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = cashPayment.ChequeAmountFirm2 },
                             new OleDbParameter("CompanyID", OleDbType.Integer) { Value = cashPayment.CompanyID },
                             new OleDbParameter("CreatedDate", OleDbType.Date) { Value = cashPayment.CreatedDate }
                         };
@@ -2502,12 +2530,62 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
             if (cmbPaymentMethod.SelectedItem?.ToString() != "Cheque")
                 return;
                 
-            // Calculate the total of the two firm amounts
-            if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount) && 
-                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+            // Get the target payment amount
+            if (!decimal.TryParse(txtPaymentAmount.Text, out decimal targetPaymentAmount))
+                return;
+                
+            // Store the current cursor position for the field being edited
+            TextBox currentTextBox = sender as TextBox;
+            int cursorPosition = currentTextBox?.SelectionStart ?? 0;
+                
+            // Determine which field was changed and auto-calculate the other
+            if (sender == txtChequeAmountFirm1)
             {
-                decimal totalChequeAmount = firm1Amount + firm2Amount;
-                txtPaymentAmount.Text = totalChequeAmount.ToString("F2");
+                // Firm1 was changed, calculate Firm2
+                if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount))
+                {
+                    decimal remainingAmount = targetPaymentAmount - firm1Amount;
+                    if (remainingAmount >= 0)
+                    {
+                        txtChequeAmountFirm2.Text = remainingAmount.ToString("F2");
+                    }
+                    else
+                    {
+                        // Firm1 amount exceeds target, clear Firm2 and show warning
+                        txtChequeAmountFirm2.Text = "0.00";
+                        // Optional: Show a subtle warning or change color
+                    }
+                }
+                
+                // Restore cursor position for Firm1
+                if (currentTextBox != null)
+                {
+                    currentTextBox.SelectionStart = Math.Min(cursorPosition, currentTextBox.Text.Length);
+                }
+            }
+            else if (sender == txtChequeAmountFirm2)
+            {
+                // Firm2 was changed, calculate Firm1
+                if (decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+                {
+                    decimal remainingAmount = targetPaymentAmount - firm2Amount;
+                    if (remainingAmount >= 0)
+                    {
+                        txtChequeAmountFirm1.Text = remainingAmount.ToString("F2");
+                    }
+                    else
+                    {
+                        // Firm2 amount exceeds target, clear Firm1 and show warning
+                        txtChequeAmountFirm1.Text = "0.00";
+                        // Optional: Show a subtle warning or change color
+                    }
+                }
+                
+                // Restore cursor position for Firm2
+                if (currentTextBox != null)
+                {
+                    currentTextBox.SelectionStart = Math.Min(cursorPosition, currentTextBox.Text.Length);
+                }
             }
         }
 

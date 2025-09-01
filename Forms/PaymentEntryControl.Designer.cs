@@ -25,6 +25,7 @@ namespace SaleBillSystem.NET.Forms
             lblParty = new Label();
             dgvOutstandingBills = new DataGridView();
             btnCalculate = new Button();
+            btnSelectPayments = new Button();
             txtBrokerageRate = new TextBox();
             label7 = new Label();
             txtInterestRate = new TextBox();
@@ -46,7 +47,6 @@ namespace SaleBillSystem.NET.Forms
             txtChequeAmountFirm1 = new TextBox();
             lblChequeAmountFirm1 = new Label();
             lblChequeDetails = new Label();
-            btnAutoAllocate = new Button();
             txtPaymentDate = new TextBox();
             lblPaymentDate = new Label();
             txtReference = new TextBox();
@@ -154,6 +154,22 @@ namespace SaleBillSystem.NET.Forms
             toolTip1.SetToolTip(btnCalculate, "Calculate final amount based on the terms provided");
             btnCalculate.UseVisualStyleBackColor = false;
             btnCalculate.Click += btnCalculate_Click_2;
+            // 
+            // btnSelectPayments
+            // 
+            btnSelectPayments.BackColor = Color.LightBlue;
+            btnSelectPayments.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnSelectPayments.ForeColor = Color.Black;
+            btnSelectPayments.Location = new Point(630, 57);
+            btnSelectPayments.Margin = new Padding(4);
+            btnSelectPayments.Name = "btnSelectPayments";
+            btnSelectPayments.Size = new Size(140, 33);
+            btnSelectPayments.TabIndex = 11;
+            btnSelectPayments.Text = "Select Payments";
+            btnSelectPayments.UseVisualStyleBackColor = false;
+            btnSelectPayments.Visible = false;
+            toolTip1.SetToolTip(btnSelectPayments, "Select specific advance payments to use");
+            btnSelectPayments.Click += BtnSelectPayments_Click;
             // 
             // txtBrokerageRate
             // 
@@ -293,11 +309,11 @@ namespace SaleBillSystem.NET.Forms
             // gbPayment
             // 
             gbPayment.Controls.Add(pnlChequeDetails);
-            gbPayment.Controls.Add(btnAutoAllocate);
             gbPayment.Controls.Add(label7);
             gbPayment.Controls.Add(txtBrokerageRate);
             gbPayment.Controls.Add(txtPaymentDate);
             gbPayment.Controls.Add(btnCalculate);
+            gbPayment.Controls.Add(btnSelectPayments);
             gbPayment.Controls.Add(lblPaymentDate);
             gbPayment.Controls.Add(label8);
             gbPayment.Controls.Add(txtDiscountDays);
@@ -388,17 +404,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeDetails.Size = new Size(93, 15);
             lblChequeDetails.TabIndex = 11;
             lblChequeDetails.Text = "Cheque Details:";
-            // 
-            // btnAutoAllocate
-            // 
-            btnAutoAllocate.Location = new Point(970, 20);
-            btnAutoAllocate.Margin = new Padding(4);
-            btnAutoAllocate.Name = "btnAutoAllocate";
-            btnAutoAllocate.Size = new Size(130, 22);
-            btnAutoAllocate.TabIndex = 7;
-            btnAutoAllocate.Text = "Allocate";
-            toolTip1.SetToolTip(btnAutoAllocate, "Automatically apply the payment amount to the oldest bills first");
-            btnAutoAllocate.UseVisualStyleBackColor = true;
+
             // 
             // txtPaymentDate
             // 
@@ -618,6 +624,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.TextBox txtDiscountRate;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnCalculate;
+        private System.Windows.Forms.Button btnSelectPayments;
         private System.Windows.Forms.Label lblDiscountValue;
         private System.Windows.Forms.Label lblFinalAmount;
         private System.Windows.Forms.Label lblInterestValue;
@@ -633,7 +640,6 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Label lblPaymentDate;
         private System.Windows.Forms.TextBox txtPaymentDate;
-        private System.Windows.Forms.Button btnAutoAllocate;
         private System.Windows.Forms.Button btnClear;
         private System.Windows.Forms.TextBox txtBrokerageRate;
         private System.Windows.Forms.Label label7;

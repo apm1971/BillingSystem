@@ -25,11 +25,18 @@ namespace SaleBillSystem.NET.Forms
             this.lblParty = new System.Windows.Forms.Label();
             this.cmbBroker = new System.Windows.Forms.ComboBox();
             this.lblBroker = new System.Windows.Forms.Label();
+            this.cmbPaymentStatus = new System.Windows.Forms.ComboBox();
+            this.lblPaymentStatus = new System.Windows.Forms.Label();
+            this.dtpFromDate = new System.Windows.Forms.DateTimePicker();
+            this.lblFromDate = new System.Windows.Forms.Label();
+            this.dtpToDate = new System.Windows.Forms.DateTimePicker();
+            this.lblToDate = new System.Windows.Forms.Label();
             this.gbLedger = new System.Windows.Forms.GroupBox();
             this.dgvLedger = new System.Windows.Forms.DataGridView();
             this.pnlButtons = new System.Windows.Forms.Panel();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.btnPrint = new System.Windows.Forms.Button();
+            this.btnClearFilters = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
             this.splitContainer.Panel1.SuspendLayout();
             this.splitContainer.Panel2.SuspendLayout();
@@ -87,6 +94,12 @@ namespace SaleBillSystem.NET.Forms
             // 
             // pnlTop
             // 
+            this.pnlTop.Controls.Add(this.dtpToDate);
+            this.pnlTop.Controls.Add(this.lblToDate);
+            this.pnlTop.Controls.Add(this.dtpFromDate);
+            this.pnlTop.Controls.Add(this.lblFromDate);
+            this.pnlTop.Controls.Add(this.cmbPaymentStatus);
+            this.pnlTop.Controls.Add(this.lblPaymentStatus);
             this.pnlTop.Controls.Add(this.cmbBroker);
             this.pnlTop.Controls.Add(this.lblBroker);
             this.pnlTop.Controls.Add(this.cmbParty);
@@ -135,6 +148,61 @@ namespace SaleBillSystem.NET.Forms
             this.lblBroker.TabIndex = 0;
             this.lblBroker.Text = "Select a Broker:";
             // 
+            // cmbPaymentStatus
+            // 
+            this.cmbPaymentStatus.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbPaymentStatus.FormattingEnabled = true;
+            this.cmbPaymentStatus.Location = new System.Drawing.Point(750, 9);
+            this.cmbPaymentStatus.Name = "cmbPaymentStatus";
+            this.cmbPaymentStatus.Size = new System.Drawing.Size(120, 21);
+            this.cmbPaymentStatus.TabIndex = 5;
+            this.cmbPaymentStatus.SelectedIndexChanged += new System.EventHandler(this.cmbPaymentStatus_SelectedIndexChanged);
+            // 
+            // lblPaymentStatus
+            // 
+            this.lblPaymentStatus.AutoSize = true;
+            this.lblPaymentStatus.Location = new System.Drawing.Point(720, 12);
+            this.lblPaymentStatus.Name = "lblPaymentStatus";
+            this.lblPaymentStatus.Size = new System.Drawing.Size(24, 13);
+            this.lblPaymentStatus.TabIndex = 4;
+            this.lblPaymentStatus.Text = "Status:";
+            // 
+            // dtpFromDate
+            // 
+            this.dtpFromDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpFromDate.Location = new System.Drawing.Point(900, 9);
+            this.dtpFromDate.Name = "dtpFromDate";
+            this.dtpFromDate.Size = new System.Drawing.Size(100, 20);
+            this.dtpFromDate.TabIndex = 6;
+            this.dtpFromDate.ValueChanged += new System.EventHandler(this.dtpFromDate_ValueChanged);
+            // 
+            // lblFromDate
+            // 
+            this.lblFromDate.AutoSize = true;
+            this.lblFromDate.Location = new System.Drawing.Point(880, 12);
+            this.lblFromDate.Name = "lblFromDate";
+            this.lblFromDate.Size = new System.Drawing.Size(14, 13);
+            this.lblFromDate.TabIndex = 6;
+            this.lblFromDate.Text = "From:";
+            // 
+            // dtpToDate
+            // 
+            this.dtpToDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpToDate.Location = new System.Drawing.Point(1050, 9);
+            this.dtpToDate.Name = "dtpToDate";
+            this.dtpToDate.Size = new System.Drawing.Size(100, 20);
+            this.dtpToDate.TabIndex = 7;
+            this.dtpToDate.ValueChanged += new System.EventHandler(this.dtpToDate_ValueChanged);
+            // 
+            // lblToDate
+            // 
+            this.lblToDate.AutoSize = true;
+            this.lblToDate.Location = new System.Drawing.Point(1030, 12);
+            this.lblToDate.Name = "lblToDate";
+            this.lblToDate.Size = new System.Drawing.Size(14, 13);
+            this.lblToDate.TabIndex = 7;
+            this.lblToDate.Text = "To:";
+            // 
             // gbLedger
             // 
             this.gbLedger.Controls.Add(this.dgvLedger);
@@ -163,6 +231,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.pnlButtons.Controls.Add(this.btnRefresh);
             this.pnlButtons.Controls.Add(this.btnPrint);
+            this.pnlButtons.Controls.Add(this.btnClearFilters);
             this.pnlButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.pnlButtons.Location = new System.Drawing.Point(0, 257);
             this.pnlButtons.Name = "pnlButtons";
@@ -188,6 +257,16 @@ namespace SaleBillSystem.NET.Forms
             this.btnPrint.TabIndex = 0;
             this.btnPrint.Text = "Print";
             this.btnPrint.UseVisualStyleBackColor = true;
+            // 
+            // btnClearFilters
+            // 
+            this.btnClearFilters.Location = new System.Drawing.Point(260, 10);
+            this.btnClearFilters.Name = "btnClearFilters";
+            this.btnClearFilters.Size = new System.Drawing.Size(100, 30);
+            this.btnClearFilters.TabIndex = 2;
+            this.btnClearFilters.Text = "Clear Filters";
+            this.btnClearFilters.UseVisualStyleBackColor = true;
+            this.btnClearFilters.Click += new System.EventHandler(this.btnClearFilters_Click);
             // 
             // BillLedgerControl
             // 
@@ -228,6 +307,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Panel pnlButtons;
         private System.Windows.Forms.Button btnPrint;
         private System.Windows.Forms.Button btnRefresh;
+        private System.Windows.Forms.Button btnClearFilters;
         private System.Windows.Forms.Label lblLedgerTitle;
     }
 }

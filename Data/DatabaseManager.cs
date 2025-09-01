@@ -1230,7 +1230,7 @@ namespace SaleBillSystem.NET.Data
                         CREATE TABLE AdvanceUtilization (
                             UtilizationID COUNTER PRIMARY KEY,
                             AdvanceID LONG NOT NULL,
-                            PaymentID LONG NOT NULL,
+                            PaymentID LONG NULL,
                             AmountUsed CURRENCY NOT NULL,
                             UtilizedDate DATETIME NOT NULL,
                             PartyID LONG NULL,
@@ -1238,7 +1238,6 @@ namespace SaleBillSystem.NET.Data
                             CompanyID LONG NOT NULL,
                             CreatedDate DATETIME DEFAULT NOW(),
                             CONSTRAINT FK_AdvanceUtilization_Advance FOREIGN KEY (AdvanceID) REFERENCES AdvancePayments(AdvanceID),
-                            CONSTRAINT FK_AdvanceUtilization_Payment FOREIGN KEY (PaymentID) REFERENCES PaymentMaster(PaymentID),
                             CONSTRAINT CheckPartyOrBrokerUtilization CHECK (PartyID IS NOT NULL OR BrokerID IS NOT NULL)
                         )";
                     
@@ -1394,6 +1393,9 @@ namespace SaleBillSystem.NET.Data
                 
                 // Add advance columns to PaymentMaster table
                 AddAdvanceColumnsToPaymentMaster();
+                 
+                 // Update existing database constraints if needed
+                 UpdateAdvanceUtilizationTable();
                 
                 Console.WriteLine("Advance payment system initialized successfully.");
             }
@@ -1760,6 +1762,97 @@ namespace SaleBillSystem.NET.Data
             {
                 Console.WriteLine($"Error changing PartyID column to nullable: {ex.Message}");
                 throw;
+            }
+        }
+
+        public static void UpdateAdvanceUtilizationTable()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+                    
+                    // Check if AdvanceUtilization table exists
+                    bool tableExists = false;
+                    try
+                    {
+                        string checkTableSql = "SELECT COUNT(*) FROM AdvanceUtilization";
+                        using (var checkCmd = new OleDbCommand(checkTableSql, conn))
+                        {
+                            checkCmd.ExecuteScalar();
+                            tableExists = true;
+                        }
+                    }
+                    catch
+                    {
+                        tableExists = false;
+                    }
+                    
+                    if (tableExists)
+                    {
+                        // Table exists, try to make PaymentID nullable
+                        try
+                        {
+                            string sql = "ALTER TABLE AdvanceUtilization ALTER COLUMN PaymentID INT NULL";
+                            using (var cmd = new OleDbCommand(sql, conn))
+                            {
+                                cmd.ExecuteNonQuery();
+                                Console.WriteLine("PaymentID column in AdvanceUtilization table changed to nullable.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Warning: Could not make PaymentID nullable: {ex.Message}");
+                            
+                            // If that fails, try to drop and recreate the table without the constraint
+                            try
+                            {
+                                Console.WriteLine("Attempting to recreate AdvanceUtilization table without PaymentMaster constraint...");
+                                
+                                // Drop the existing table
+                                string dropSql = "DROP TABLE AdvanceUtilization";
+                                using (var dropCmd = new OleDbCommand(dropSql, conn))
+                                {
+                                    dropCmd.ExecuteNonQuery();
+                                    Console.WriteLine("Dropped existing AdvanceUtilization table.");
+                                }
+                                
+                                // Recreate without the problematic constraint
+                                string createTableSql = @"
+                                    CREATE TABLE AdvanceUtilization (
+                                        UtilizationID COUNTER PRIMARY KEY,
+                                        AdvanceID LONG NOT NULL,
+                                        PaymentID LONG NULL,
+                                        AmountUsed CURRENCY NOT NULL,
+                                        UtilizedDate DATETIME NOT NULL,
+                                        PartyID LONG NULL,
+                                        BrokerID LONG NULL,
+                                        CompanyID LONG NOT NULL,
+                                        CreatedDate DATETIME DEFAULT NOW(),
+                                        CONSTRAINT FK_AdvanceUtilization_Advance FOREIGN KEY (AdvanceID) REFERENCES AdvancePayments(AdvanceID),
+                                        CONSTRAINT CheckPartyOrBrokerUtilization CHECK (PartyID IS NOT NULL OR BrokerID IS NOT NULL)
+                                    )";
+                                
+                                using (var createCmd = new OleDbCommand(createTableSql, conn))
+                                {
+                                    createCmd.ExecuteNonQuery();
+                                    Console.WriteLine("Recreated AdvanceUtilization table without PaymentMaster constraint.");
+                                }
+                            }
+                            catch (Exception recreateEx)
+                            {
+                                Console.WriteLine($"Error recreating table: {recreateEx.Message}");
+                                // Continue - this is not critical for basic functionality
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating AdvanceUtilization table: {ex.Message}");
+                // Don't throw - this is not critical for basic functionality
             }
         }
     }

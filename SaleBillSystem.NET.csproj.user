@@ -4,6 +4,9 @@
     <Compile Update="Forms\AdvancePaymentEntryControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Forms\AdvancePaymentSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\BillLedgerControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

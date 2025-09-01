@@ -23,10 +23,13 @@ namespace SaleBillSystem.NET.Forms
         private (decimal Cash, decimal Firm1, decimal Firm2)? _cachedAdvanceAmounts = null;
         private string _lastCacheKey = string.Empty;
         
+        // User-selected advance payments
+        private List<AdvancePayment> _userSelectedAdvancePayments = new List<AdvancePayment>();
+        private SettlementCalculationResult? _lastSettlementResult = null;
+
         // Background loading state
         private System.ComponentModel.BackgroundWorker _advanceLoadingWorker;
         private bool _isLoadingAdvances = false;
-
         public class PaymentAllocationResult
         {
             public decimal AdvanceUsed { get; set; }
@@ -50,15 +53,18 @@ namespace SaleBillSystem.NET.Forms
             public decimal TotalInterestCharged { get; set; }
             public decimal TotalBrokerageCharged { get; set; }
             public decimal ExcessAmount { get; set; }
-            public List<BillPaymentResult> BillResults { get; set; }
-            public List<AdvanceUtilization> AdvanceUtilizations { get; set; }
-            public bool HasExcess => ExcessAmount > 0.01m;
-            public bool IsFullyAllocated => Math.Abs(TotalPaymentAmount - (TotalAdvanceUsed + TotalCashUsed + ExcessAmount)) < 0.01m;
+            public List<BillPaymentResult> BillResults { get; set; } = new List<BillPaymentResult>();
+            public List<AdvanceUtilization> AdvanceUtilizations { get; set; } = new List<AdvanceUtilization>();
         }
-
         /// <summary>
         /// Individual bill payment result
         /// </summary>
+        public class AdvanceAllocation
+{
+    public int AdvanceID { get; set; }
+    public decimal AmountUsed { get; set; }
+    public DateTime AdvanceDate { get; set; }
+}
         public class BillPaymentResult
         {
             public int BillID { get; set; }
@@ -68,14 +74,19 @@ namespace SaleBillSystem.NET.Forms
             public decimal RemainingBalance { get; set; }
             public decimal AdvanceUsed { get; set; }
             public decimal CashUsed { get; set; }
-            public decimal DiscountEarned { get; set; }
             public decimal InterestCharged { get; set; }
+            public decimal DiscountEarned { get; set; }
             public decimal BrokerageCharged { get; set; }
-            public bool IsFullyPaid => RemainingBalance <= 0.01m;
-            public bool IsPartiallyPaid => PaymentAllocated > 0.01m && !IsFullyPaid;
-            public DateTime PaymentDate { get; set; }
+            public PaymentStatus Status { get; set; }
+            public List<AdvanceAllocation> AdvanceAllocations { get; set; } = new List<AdvanceAllocation>();
         }
-
+        public enum PaymentStatus
+        {
+            FullyPaid,
+            PartiallyPaid,
+            NothingPaid
+        }
+        private PaymentAllocationSummary _currentAllocationSummary;
         /// <summary>
         /// Payment terms for calculations
         /// </summary>
@@ -139,11 +150,11 @@ namespace SaleBillSystem.NET.Forms
             dgvOutstandingBills.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "PaymentAllocation",
-                HeaderText = "Allocated Payment",
+                HeaderText = "Calculated Amount",
                 Name = "PaymentAllocation",
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N2", Alignment = DataGridViewContentAlignment.MiddleRight, BackColor = Color.LightYellow },
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-                ReadOnly = false
+                ReadOnly = true
             });
 
             // Add Cheque Amount Firm1 column
@@ -168,74 +179,298 @@ namespace SaleBillSystem.NET.Forms
                 ReadOnly = true
             });
         }
-        private PaymentAllocationResult CalculateMixedPaymentAllocation(
-        Bill bill, 
-        BillViewModel billVm,
-        List<AdvancePayment> availableAdvances,
-        decimal cashPayment,
-        DateTime paymentDate,
-        int interestDays, decimal interestRate,
-        int discountDays, decimal discountRate,
-        decimal brokerageRate)
+
+        public class PaymentEvent
         {
-            var result = new PaymentAllocationResult();
+            public DateTime Date { get; set; }
+            public decimal Amount { get; set; }
+            public string Type { get; set; } // "Advance", "Payment"
+            public bool IsHistorical { get; set; } // True for existing transactions, false for new ones
+            public int AdvanceId { get; set; } // For tracking advance utilization
+        }
 
-            // Step 1: Calculate base adjustments on original bill
-            var (interest, discount, adjustedAmount,interestStartDate,brokerage) =
-        LedgerService.CalculateSettlementTillNow(
-                bill, interestDays, interestRate, discountDays, discountRate,brokerageRate);   
-            decimal netBillAmount = adjustedAmount;
-            // Step 2: Determine total available payment sources
-            decimal totalAdvanceAvailable = availableAdvances.Sum(a => a.Amount);
-            decimal totalAvailable = totalAdvanceAvailable + cashPayment;
-            // Step 3: Calculate proportional allocation
-            decimal discountAdvance = 0;
-            decimal interestAdvance = 0;
-            decimal amountNeeded = netBillAmount;
-            result.AdvanceUsed = 0;
-            result.CashUsed = 0;
-            var sortedAdvances = availableAdvances.OrderBy(a => a.CreatedDate).ToList();
-            foreach(var adv in sortedAdvances){
-                if(amountNeeded<=0) break;
-                decimal amountToUse = Math.Min(adv.Amount, amountNeeded);
-                if(amountToUse>0){
-                    if((adv.CreatedDate.Date-billVm.BillDate.Date).Days<=(discountDays)){
-                        discountAdvance = discountAdvance + (amountToUse*discountRate)/100;
-                        discount = discount + (amountToUse*discountRate)/100;
-                    }
-                    int overDays = (adv.CreatedDate.Date - interestStartDate.Date).Days ;
-                    if(overDays>0){
-                        interestAdvance +=  amountToUse * (interestRate / 100m) * (overDays / 365m);
-                        interest = interest +  amountToUse * (interestRate / 100m) * (overDays / 365m);
-                        interestStartDate = adv.CreatedDate;
-                    }
-                    result.AdvanceUsed += amountToUse;
-                    amountNeeded -= amountToUse;
-                }
-            }
-            result.AdvanceUsed = result.AdvanceUsed + interestAdvance -discountAdvance;
-            decimal interest_cash = 0;
-            decimal discount_cash = 0;
-            if(amountNeeded>0){
-                result.CashUsed += amountNeeded;
-                if((paymentDate.Date-billVm.BillDate.Date).Days<=(discountDays)){
-                    discount += result.CashUsed*discountRate/100;
-                    discount_cash = result.CashUsed*discountRate/100;
-                }
-                int overDays = (paymentDate.Date - interestStartDate.Date).Days ;
-                if(overDays>0){
-                    interest_cash = result.CashUsed * (interestRate / 100m) * (overDays / 365m);
-                    interestStartDate = paymentDate;
-                }
-                interest += interest_cash;
-                result.CashUsed  =  result.CashUsed  + interest_cash - discount_cash;
-            }
+        public class PaymentCalculationSummary
+        {
+            public decimal TotalAmountDue { get; set; }
+            public decimal AdvanceAvailable { get; set; }
+            public decimal AdvanceUsable { get; set; }
+            public decimal CashRequired { get; set; }
+            public decimal InterestCharged { get; set; }
+            public decimal DiscountEarned { get; set; }
+            public decimal BrokerageCharged { get; set; }
+            public bool CanFullySettle { get; set; }
+        }
 
-            result.DiscountEarned = Math.Round(discount);
-            result.InterestCharged = Math.Round(interest);
-            result.BrokerageCharged = Math.Round(brokerage);
-            result.NetSettlement = Math.Round(result.AdvanceUsed + result.CashUsed);
+        private PaymentCalculationSummary CalculateBillRequirementOnly(
+    Bill bill, 
+    BillViewModel billVm,
+    List<AdvancePayment> availableAdvances,
+    DateTime paymentDate,
+    int interestDays, 
+    decimal interestRate,
+    int discountDays, 
+    decimal discountRate,
+    decimal brokerageRate)
+{
+    // Step 1: Get historical transactions only
+    var historicalTransactions = LedgerService.GetTransactionsForBill(bill.BillID);
+    
+    // Step 2: Create timeline with ONLY historical payments (no new advances)
+    var historicalEvents = new List<PaymentEvent>();
+    foreach (var transaction in historicalTransactions)
+    {
+        if (transaction.TransactionType == "Payment" || transaction.TransactionType == "Advance")
+        {
+            historicalEvents.Add(new PaymentEvent
+            {
+                Date = transaction.TransactionDate,
+                Amount = transaction.CreditAmount,
+                Type = transaction.TransactionType,
+                IsHistorical = true,
+                AdvanceId = transaction.PaymentID ?? 0
+            });
+        }
+    }
+
+    // Step 3: Calculate timeline with historical payments only
+    var timeline = CalculateCompleteTimeline(
+        bill, 
+        historicalEvents.OrderBy(e => e.Date).ToList(), 
+        interestDays, 
+        interestRate, 
+        discountDays, 
+        discountRate, 
+        brokerageRate,
+        paymentDate);
+    
+    // Step 4: Calculate what's needed vs what's available
+    decimal totalNeeded = timeline.RemainingBalance + timeline.TotalInterest - timeline.TotalDiscount;
+    decimal totalAdvanceAvailable = availableAdvances.Sum(a => a.Amount);
+    decimal advanceUsable = Math.Min(totalAdvanceAvailable, totalNeeded);
+    decimal cashRequired = Math.Max(0, totalNeeded - totalAdvanceAvailable);
+    
+    return new PaymentCalculationSummary
+    {
+        TotalAmountDue = totalNeeded,
+        AdvanceAvailable = totalAdvanceAvailable,
+        AdvanceUsable = advanceUsable,
+        CashRequired = cashRequired,
+        InterestCharged = timeline.TotalInterest,
+        DiscountEarned = timeline.TotalDiscount,
+        BrokerageCharged = timeline.Brokerage,
+        CanFullySettle = cashRequired <= 0.01m
+    };
+}
+
+        private TimelineCalculationResult CalculateCompleteTimeline(
+        Bill bill, 
+        List<PaymentEvent> sortedEvents,
+        int interestDays, 
+        decimal interestRate, 
+        int discountDays, 
+        decimal discountRate, 
+        decimal brokerageRate,
+        DateTime paymentDate)
+        {
+            var result = new TimelineCalculationResult();
+            
+            // Key dates
+            DateTime billDate = bill.BillDate;
+            DateTime dueDate = billDate.AddDays(interestDays);
+            DateTime discountDueDate = billDate.AddDays(discountDays);
+            
+            // Initialize
+            decimal originalAmount = bill.TotalAmount;
+            decimal brokerage = originalAmount * brokerageRate / 100m;
+            decimal principalBalance = originalAmount - brokerage;
+            decimal nonHistoricalAdvanceAmount = 0;
+            decimal totalDiscount = 0;
+            decimal totalInterest = 0;
+            
+            DateTime currentInterestDate = dueDate;
+            
+            // Process each payment event chronologically
+            foreach (var paymentEvent in sortedEvents)
+            {
+                // Calculate interest from last interest date to this payment date
+                if (paymentEvent.Date > dueDate && principalBalance > 0)
+                {
+                    int interestDaysThisPeriod = (paymentEvent.Date.Date - currentInterestDate.Date).Days;
+                    if (interestDaysThisPeriod > 0)
+                    {
+                        decimal periodInterest = principalBalance * (interestRate / 100m) * (interestDaysThisPeriod / 365m);
+                        totalInterest += periodInterest;
+                        
+                        // Store period details for debugging
+                        result.InterestPeriods.Add(new InterestPeriod
+                        {
+                            StartDate = currentInterestDate,
+                            EndDate = paymentEvent.Date,
+                            Days = interestDaysThisPeriod,
+                            Principal = principalBalance,
+                            Interest = periodInterest
+                        });
+                    }
+                    currentInterestDate = paymentEvent.Date;
+                }
+                
+                // Calculate discount if payment is within discount period
+                if (paymentEvent.Date <= discountDueDate)
+                {
+                    decimal paymentDiscount = Math.Min(paymentEvent.Amount, principalBalance) * (discountRate / 100m);
+                    totalDiscount += paymentDiscount;
+                    
+                    result.DiscountDetails.Add(new DiscountDetail
+                    {
+                        PaymentDate = paymentEvent.Date,
+                        PaymentAmount = paymentEvent.Amount,
+                        DiscountEarned = paymentDiscount
+                    });
+                }
+                
+                // Reduce principal balance
+                if(paymentEvent.Type == "Advance" && !paymentEvent.IsHistorical){
+                    nonHistoricalAdvanceAmount += Math.Min(paymentEvent.Amount, principalBalance);
+                }
+                principalBalance -= Math.Min(paymentEvent.Amount, principalBalance);
+                
+                // Store payment allocation
+                result.PaymentAllocations.Add(new PaymentAllocation
+                {
+                    Date = paymentEvent.Date,
+                    Amount = paymentEvent.Amount,
+                    Type = paymentEvent.Type,
+                    RemainingBalance = Math.Max(0, principalBalance)
+                });
+                MessageBox.Show($"Debug: Payment Allocation: {paymentEvent.Type} {paymentEvent.Amount} on {paymentEvent.Date:dd-MM-yyyy}", "Debug: Timeline Calculation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Stop if fully paid
+                if (principalBalance <= 0) break;
+            }
+            
+            if (principalBalance > 0)
+    {
+        DateTime lastEventDate = sortedEvents.Any() 
+            ? sortedEvents.Max(e => e.Date) 
+            : dueDate;
+        
+        // DateTime paymentDate = paymentDate; // You need to pass this as parameter
+        
+        if (paymentDate > lastEventDate && paymentDate > dueDate)
+        {
+            DateTime interestStartDate = lastEventDate > dueDate ? lastEventDate : dueDate;
+            int remainingDays = (paymentDate.Date - interestStartDate.Date).Days;
+            
+            if (remainingDays > 0)
+            {
+                decimal finalInterest = principalBalance * (interestRate / 100m) * (remainingDays / 365m);
+                totalInterest += finalInterest;
+                
+                // Store this period for debugging
+                result.InterestPeriods.Add(new InterestPeriod
+                {
+                    StartDate = interestStartDate,
+                    EndDate = paymentDate,
+                    Days = remainingDays,
+                    Principal = principalBalance,
+                    Interest = finalInterest
+                });
+            }
+        }
+    }
+            result.TotalInterest = Math.Round(totalInterest, 2);
+            result.TotalDiscount = Math.Round(totalDiscount, 2);
+            result.Brokerage = Math.Round(brokerage, 2);
+            result.RemainingBalance = Math.Max(0, principalBalance);
+            result.NetAmount = Math.Round(result.RemainingBalance + result.TotalInterest - result.TotalDiscount , 2);
+            MessageBox.Show($"Debug: Total Interest: {result.TotalInterest}, Total Discount: {result.TotalDiscount}, Brokerage: {result.Brokerage}, Remaining Balance: {result.RemainingBalance}, Net Amount: {result.NetAmount}, Non Historical Advance Amount: {nonHistoricalAdvanceAmount}", "Debug: Timeline Calculation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            
             return result;
+        }
+
+        // private PaymentAllocationResult AllocateNewPayments(
+        //     Bill bill, 
+        //     TimelineCalculationResult timelineResult,
+        //     List<AdvancePayment> newAdvances, 
+        //     decimal cashUsed)
+        // {
+        //     var result = new PaymentAllocationResult();
+        //     result.AdvanceBreakdown = new List<AdvanceUtilization>();
+            
+        //     decimal totalAmountNeeded = timelineResult.NetAmount;
+        //     decimal totalAllocated = 0;
+            
+        //     // Step 1: Allocate new advances first (in chronological order)
+        //     foreach (var advance in newAdvances.OrderBy(a => a.PaymentDate))
+        //     {
+        //         decimal remainingNeeded = totalAmountNeeded - totalAllocated;
+        //         if (remainingNeeded <= 0) break;
+                
+        //         decimal amountToUse = Math.Min(advance.Amount, remainingNeeded);
+                
+        //         if (amountToUse > 0)
+        //         {
+        //             result.AdvanceUsed += amountToUse;
+        //             result.AdvanceBreakdown.Add(new AdvanceUtilization
+        //             {
+        //                 AdvanceID = advance.AdvanceID,
+        //                 AmountUsed = amountToUse,
+        //                 CreatedDate = advance.PaymentDate, // Use PaymentDate for calculations
+        //                 UtilizedDate = DateTime.Now
+        //             });
+        //             totalAllocated += amountToUse;
+        //         }
+        //     }
+            
+        //     // Step 2: Use cash for any remaining amount
+        //     decimal remainingAfterAdvances = totalAmountNeeded - result.AdvanceUsed;
+        //     if (remainingAfterAdvances > 0 && cashUsed > 0)
+        //     {
+        //         result.CashUsed = Math.Min(cashUsed, remainingAfterAdvances);
+        //     }
+            
+        //     // Step 3: Set final results
+        //     result.InterestCharged = timelineResult.TotalInterest;
+        //     result.DiscountEarned = timelineResult.TotalDiscount;
+        //     result.BrokerageCharged = timelineResult.Brokerage;
+        //     result.NetSettlement = Math.Round(result.AdvanceUsed + result.CashUsed, 2);
+            
+        //     return result;
+        // }
+
+        public class TimelineCalculationResult
+        {
+            public decimal TotalInterest { get; set; }
+            public decimal TotalDiscount { get; set; }
+            public decimal Brokerage { get; set; }
+            public decimal RemainingBalance { get; set; }
+            public decimal NetAmount { get; set; }
+            public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
+            public List<DiscountDetail> DiscountDetails { get; set; } = new List<DiscountDetail>();
+            public List<PaymentAllocation> PaymentAllocations { get; set; } = new List<PaymentAllocation>();
+        }
+
+        public class InterestPeriod
+        {
+            public DateTime StartDate { get; set; }
+            public DateTime EndDate { get; set; }
+            public int Days { get; set; }
+            public decimal Principal { get; set; }
+            public decimal Interest { get; set; }
+        }
+
+        public class DiscountDetail
+        {
+            public DateTime PaymentDate { get; set; }
+            public decimal PaymentAmount { get; set; }
+            public decimal DiscountEarned { get; set; }
+        }
+
+        public class PaymentAllocation
+        {
+            public DateTime Date { get; set; }
+            public decimal Amount { get; set; }
+            public string Type { get; set; }
+            public decimal RemainingBalance { get; set; }
         }
         private void LoadInitialData()
         {
@@ -280,12 +515,12 @@ namespace SaleBillSystem.NET.Forms
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
             cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             btnCalculate.Click += BtnCalculate_Click;
-            btnAutoAllocate.Click += BtnAutoAllocate_Click;
+
             btnSave.Click += BtnSave_Click;
             btnClear.Click += BtnClear_Click;
             // Note: btnClose doesn't exist in the designer, removed the event handler
 
-            dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
+            // PaymentAllocation column is now read-only, no need for CellValueChanged event
             txtPaymentDate.TextChanged += TxtPaymentDate_TextChanged;
             cmbPaymentMethod.SelectedIndexChanged += CmbPaymentMethod_SelectedIndexChanged;
             
@@ -329,8 +564,14 @@ namespace SaleBillSystem.NET.Forms
             // Clear advance payment cache when form is cleared
             ClearAdvancePaymentCache();
 
+            // Clear user-selected advance payments
+            _userSelectedAdvancePayments.Clear();
+
             // Hide advance payment display
-            UpdateAdvancePaymentDisplay();
+            // UpdateAdvancePaymentDisplay();
+            
+            // Hide Select Payments button
+            btnSelectPayments.Visible = false;
 
             cmbParty.Focus();
         }
@@ -350,7 +591,9 @@ namespace SaleBillSystem.NET.Forms
                 // Clear cache and preload advance payments for selected party/broker
                 InvalidateAdvancePaymentCache();
                 PreloadAdvancePayments();
-                UpdateAdvancePaymentDisplay();
+                
+                // Show/hide Select Payments button based on whether advance payments are available
+                UpdateSelectPaymentsButtonVisibility();
             }
             catch (Exception ex)
             {
@@ -370,7 +613,9 @@ namespace SaleBillSystem.NET.Forms
                 // Clear cache and preload advance payments for selected party/broker
                 InvalidateAdvancePaymentCache();
                 PreloadAdvancePayments();
-                UpdateAdvancePaymentDisplay();
+                
+                // Show/hide Select Payments button based on whether advance payments are available
+                UpdateSelectPaymentsButtonVisibility();
             }
             catch (Exception ex)
             {
@@ -856,174 +1101,357 @@ namespace SaleBillSystem.NET.Forms
                 }
             }
         }
-        private void BtnCalculate_Click(object? sender, EventArgs e)
+
+        private void ConsumeAdvancesFromCalculation(List<AdvancePayment> advances, decimal amountToConsume)
+{
+    decimal remaining = amountToConsume;
+    var sortedAdvances = advances.OrderBy(a => a.PaymentDate).ToList();
+
+    foreach (var advance in sortedAdvances)
+    {
+        if (remaining <= 0) break;
+
+        decimal consumeFromThis = Math.Min(advance.Amount, remaining);
+        advance.Amount -= consumeFromThis;
+        remaining -= consumeFromThis;
+
+        // Remove fully consumed advances
+        if (advance.Amount <= 0.01m)
         {
-            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
-            if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
+            advances.Remove(advance);
+        }
+    }
+}
+       private void BtnCalculate_Click(object? sender, EventArgs e)
+{
+    if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
+    if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
+    {
+        MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+    }
+
+    var billsToProcess = GetSelectedBillsFromGrid();
+    if (!billsToProcess.Any())
+    {
+        MessageBox.Show("Please select one or more bills to calculate.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+    }
+
+    // Show advance payment status
+    if (_userSelectedAdvancePayments.Any())
+    {
+        decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+        MessageBox.Show($"Using {_userSelectedAdvancePayments.Count} selected advance payments (₹{totalSelected:N2}) for calculation.", 
+            "Advance Payments Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+    else
+    {
+        MessageBox.Show("No advance payments selected. Calculation will use cash only.", 
+            "Cash Only Calculation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    // PaymentAllocation column is now read-only, no need for CellValueChanged event
+    ResetGridStyles();
+
+    int? partyId = cmbParty.SelectedValue as int?;
+    int? brokerId = cmbBroker.SelectedValue as int?;
+    
+    // Use user-selected advance payments if any, otherwise use empty list
+    var availableAdvances = _userSelectedAdvancePayments.Any() 
+        ? _userSelectedAdvancePayments 
+        : new List<AdvancePayment>();
+    
+    // Use the new settlement calculation logic
+    var settlementResult = CalculateSettlementRequirement(
+        billsToProcess, availableAdvances, paymentDate,
+            interestDays, interestRate, discountDays, discountRate, brokerageRate);
+                _lastSettlementResult = settlementResult;
+            
+            // Set PartyID and BrokerID from form selections
+            _lastSettlementResult.PartyID = cmbParty.SelectedValue as int?;
+            _lastSettlementResult.BrokerID = cmbBroker.SelectedValue as int?;
+            
+            // DEBUG: Show calculation settlement result
+            var debugMessage = $"DEBUG - Payment Calculation Results:\n" +
+                             $"Party ID: {_lastSettlementResult.PartyID}\n" +
+                             $"Broker ID: {_lastSettlementResult.BrokerID}\n" +
+                             $"Total Cash Needed: {_lastSettlementResult.TotalCashNeeded:C}\n" +
+                             $"Total Advance Used: {_lastSettlementResult.TotalAdvanceUsed:C}\n" +
+                             $"Total Amount Due: {_lastSettlementResult.TotalAmountDue:C}\n" +
+                             $"Total Interest: {_lastSettlementResult.TotalInterest:C}\n" +
+                             $"Total Discount: {_lastSettlementResult.TotalDiscount:C}\n" +
+                             $"Total Brokerage: {_lastSettlementResult.TotalBrokerage:C}\n\n" +
+                             $"Settlement Breakdown:\n";
+            
+            if (_lastSettlementResult.BillBreakdowns != null)
             {
-                MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            decimal totalAmountDue = 0;
-
-            var billsToProcess = GetSelectedBillsFromGrid();
-            if (!billsToProcess.Any())
-            {
-                MessageBox.Show("Please select one or more bills to reconcile, or check 'Apply to all'.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
-            ResetGridStyles();
-
-            int? partyId = cmbParty.SelectedValue as int?;
-            int? brokerId = cmbBroker.SelectedValue as int?;
-            var availableAdvances =
-            AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
-            decimal totalCashPayment = 0;
-            decimal totalDiscount = 0, totalInterest = 0, totalBrokerage = 0;
-      decimal totalAdvanceUsed = 0, totalCashUsed = 0;
-            // OPTIMIZATION: Get all bill details in one query instead of individual calls
-            var billIds = billsToProcess.Select(b => b.BillID).ToList();
-            var billDetails = BillService.GetBillsByIDs(billIds);
-
-            foreach (var billVm in billsToProcess)
-            {
-                // Use cached bill data instead of individual database calls
-                var fullBill = billDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
-                if (fullBill == null) 
+                foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
                 {
-                    // Fallback to individual call if batch didn't work
-                    fullBill = BillService.GetBillByID(billVm.BillID);
-                    if (fullBill == null) continue;
-                }
-
-                var allocation = CalculateMixedPaymentAllocation(
-              fullBill,billVm, availableAdvances, totalCashPayment, paymentDate,
-              interestDays, interestRate, discountDays, discountRate,
-              brokerageRate);
-                // Set the payment allocation to the calculated final amount
-                billVm.PaymentAllocation = allocation.NetSettlement;
-                totalAdvanceUsed += allocation.AdvanceUsed;
-                totalCashUsed += allocation.CashUsed;
-                totalDiscount += allocation.DiscountEarned;
-                totalInterest += allocation.InterestCharged;
-                totalBrokerage += allocation.BrokerageCharged;
-                totalAmountDue += allocation.NetSettlement;
-                ConsumeAdvances(availableAdvances, allocation.AdvanceUsed);
-                // Highlight the row
-                foreach (DataGridViewRow row in dgvOutstandingBills.Rows)
-                {
-                    if ((row.DataBoundItem as BillViewModel)?.BillID == billVm.BillID)
+                    debugMessage += $"Bill {breakdown.BillNo}: Amount Due={breakdown.AmountDue:C}, " +
+                                  $"Interest={breakdown.Interest:C}, " +
+                                  $"Discount={breakdown.Discount:C}, " +
+                                  $"Brokerage={breakdown.Brokerage:C}, " +
+                                  $"Advance Used={breakdown.AdvanceUsed:C}, " +
+                                  $"Cash Needed={breakdown.CashNeeded:C}\n";
+                    
+                    if (breakdown.AdvanceUtilizations != null && breakdown.AdvanceUtilizations.Any())
                     {
-                        row.DefaultCellStyle.BackColor = Color.LightGreen;
-                        break;
+                        debugMessage += $"  Advance Utilizations: ";
+                        foreach (var util in breakdown.AdvanceUtilizations)
+                        {
+                            debugMessage += $"AdvanceID={util.AdvanceID}, Amount={util.AmountUsed:C}; ";
+                        }
+                        debugMessage += "\n";
                     }
                 }
             }
-            // UpdatePaymentBreakdown(totalAdvanceUsed, totalCashUsed, totalDiscount,
-            // totalInterest, totalBrokerage);
-            dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
+            else
+            {
+                debugMessage += "No settlement breakdown available\n";
+            }
+            
+            System.Windows.Forms.MessageBox.Show(debugMessage, "DEBUG - Payment Calculation", 
+                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
 
-            dgvOutstandingBills.Refresh();
+    // Update grid with settlement results
+    foreach (var billBreakdown in settlementResult.BillBreakdowns)
+    {
+        var billVm = billsToProcess.FirstOrDefault(b => b.BillID == billBreakdown.BillID);
+        if (billVm != null)
+        {
+        // Set calculated amount in grid - this shows what the bill needs
+            billVm.PaymentAllocation = billBreakdown.AdvanceUsed + billBreakdown.CashNeeded;
 
-            // Update payment amount to include brokerage
-            txtPaymentAmount.Text = Math.Round(totalAmountDue).ToString("F0");
+        // Highlight the row (different color to show this is calculation, not allocation)
+        foreach (DataGridViewRow row in dgvOutstandingBills.Rows)
+        {
+            if ((row.DataBoundItem as BillViewModel)?.BillID == billVm.BillID)
+            {
+                row.DefaultCellStyle.BackColor = Color.LightBlue; // Blue for calculation
+                break;
+                }
+            }
+        }
+    }
 
-            lblDiscountValue.Text = $"Earned Discount: ₹{Math.Round(totalDiscount):N0}";
-            lblInterestValue.Text = $"Accrued Interest: ₹{Math.Round(totalInterest):N0}";
-            lblBrokerageValue.Text = $"Brokerage: ₹{Math.Round(totalBrokerage):N0}";
-            lblFinalAmount.Text = $"Amount Due: ₹{Math.Round(totalAmountDue):N0}";
+    // PaymentAllocation column is now read-only, no need for CellValueChanged event
+    dgvOutstandingBills.Refresh();
+
+    // Update display with settlement calculation results
+    txtPaymentAmount.Text = Math.Round(settlementResult.TotalCashNeeded).ToString("F0"); // Show cash needed
+    lblDiscountValue.Text = $"Discount Available: ₹{Math.Round(settlementResult.TotalDiscount):N0}";
+    lblInterestValue.Text = $"Interest Due: ₹{Math.Round(settlementResult.TotalInterest):N0}";
+    lblBrokerageValue.Text = $"Brokerage: ₹{Math.Round(settlementResult.TotalBrokerage):N0}";
+    lblFinalAmount.Text = $"Total Due: ₹{Math.Round(settlementResult.TotalAmountDue):N0}";
+
+                // Show settlement summary
+            ShowSettlementSummary(settlementResult);
+            
+            // Show information about advance payments used
+            if (_userSelectedAdvancePayments.Any())
+            {
+                decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+                decimal totalUsed = settlementResult.TotalAdvanceUsed;
+                decimal unused = totalSelected - totalUsed;
+                
+                string advanceInfo = $"=== ADVANCE PAYMENT USAGE ===\n\n" +
+                                   $"Total Selected: ₹{totalSelected:N2}\n" +
+                                   $"Total Used: ₹{totalUsed:N2}\n" +
+                                   $"Unused: ₹{unused:N2}";
+                
+                MessageBox.Show(advanceInfo, "Advance Payment Usage", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+}
+
+// Add this helper method
+private void ShowCalculationSummary(PaymentCalculationSummary calculation, string billNo)
+{
+    var details = $"=== CALCULATION SUMMARY FOR BILL {billNo} ===\n\n" +
+                  $"Total Amount Due: ₹{calculation.TotalAmountDue:N2}\n" +
+                  $"Available Advance: ₹{calculation.AdvanceAvailable:N2}\n" +
+                  $"Advance Usable: ₹{calculation.AdvanceUsable:N2}\n" +
+                  $"Cash Required: ₹{calculation.CashRequired:N2}\n" +
+                  $"Interest Charged: ₹{calculation.InterestCharged:N2}\n" +
+                  $"Discount Available: ₹{calculation.DiscountEarned:N2}\n" +
+                  $"Can Fully Settle: {(calculation.CanFullySettle ? "Yes" : "No")}";
+    
+    MessageBox.Show(details, $"Calculation - Bill {billNo}", MessageBoxButtons.OK, MessageBoxIcon.Information);
+}
+
+        /// <summary>
+        /// Shows settlement summary for all bills
+        /// </summary>
+        private void ShowSettlementSummary(SettlementCalculationResult settlementResult)
+        {
+            string advanceStatus = _userSelectedAdvancePayments.Any() 
+                ? $"Advance Payments: {_userSelectedAdvancePayments.Count} selected (₹{_userSelectedAdvancePayments.Sum(ap => ap.Amount):N2})"
+                : "Advance Payments: None selected (calculation uses cash only)";
+            
+            var summary = $"=== SETTLEMENT CALCULATION SUMMARY ===\n\n" +
+                          $"{advanceStatus}\n\n" +
+                          $"Total Amount Due: ₹{settlementResult.TotalAmountDue:N2}\n" +
+                          $"Total Advance Used: ₹{settlementResult.TotalAdvanceUsed:N2}\n" +
+                          $"Total Cash Needed: ₹{settlementResult.TotalCashNeeded:N2}\n" +
+                          $"Total Interest: ₹{settlementResult.TotalInterest:N2}\n" +
+                          $"Total Discount: ₹{settlementResult.TotalDiscount:N2}\n" +
+                          $"Total Brokerage: ₹{settlementResult.TotalBrokerage:N2}\n" +
+                          $"Unused Advance: ₹{settlementResult.UnusedAdvance:N2}\n" +
+                          $"Can Fully Settle: {(settlementResult.CanFullySettle ? "Yes" : "No")}";
+            
+            MessageBox.Show(summary, "Settlement Calculation Summary", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void BtnAutoAllocate_Click(object? sender, EventArgs e)
+        /// <summary>
+        /// Opens the advance payment selection form
+        /// </summary>
+        private void ShowAdvancePaymentSelectionForm()
         {
-            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
-            var terms = new PaymentTerms
-            {
-                InterestDays = interestDays,
-                DiscountDays = discountDays,
-                DiscountRate = discountRate,
-                InterestRate = interestRate,
-                BrokerageRate = brokerageRate
-            };
-            int? partyId = cmbParty.SelectedValue as int?;
-            int? brokerId = cmbBroker.SelectedValue as int?;
-            if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime paymentDate))
-            {
-                MessageBox.Show("Please enter a valid payment date in dd-mm-yyyy format.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            if (!decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount) || paymentAmount <= 0)
-            {
-                MessageBox.Show("Please enter a valid payment amount before auto-allocating.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtPaymentAmount.Focus();
-                return;
-            }
-
-            var billsToProcess = GetSelectedBillsFromGrid();
-            if (!billsToProcess.Any())
-            {
-                MessageBox.Show("Please select bills to allocate payment to, or check 'Apply to all'.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            dgvOutstandingBills.CellValueChanged -= DgvOutstandingBills_CellValueChanged;
-            ResetGridStyles();
-
-
-            var billIds = billsToProcess.Select(b => b.BillID).ToList();
-            var billDetails = BillService.GetBillsByIDs(billIds);
-            var availableAdvances = AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
             try
             {
-            var allocationSummary = AllocatePaymentToBills(
-                paymentAmount,
-                billsToProcess,
-                availableAdvances,
-                paymentDate,
-                terms
-            );
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
 
-            
-
-            // Show summary information to user
-//             if (allocationSummary.ExcessAmount > 0)
-//             {
-//                 MessageBox.Show($"Excess amount of 
-//   ₹{allocationSummary.ExcessAmount:N2} will be saved as advance payment.", "Excess Amount", MessageBoxButtons.OK,
-//   MessageBoxIcon.Information);
-//             }
-
-            // Update advance payment display if advances were used
-            if (allocationSummary.TotalAdvanceUsed > 0)
+                if (!partyId.HasValue && !brokerId.HasValue)
             {
-                UpdateAdvancePaymentDisplay();
+                    MessageBox.Show("Please select either a party or broker first.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
+
+                using (var selectionForm = new AdvancePaymentSelectionForm(brokerId, partyId))
+                {
+                    if (selectionForm.ShowDialog() == DialogResult.OK)
+                    {
+                        _userSelectedAdvancePayments = selectionForm.SelectedAdvancePayments.ToList();
+                        
+                        // Show confirmation of selected payments
+                        decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+                        string message = $"Selected {_userSelectedAdvancePayments.Count} advance payment(s) with total amount: ₹{totalSelected:N2}";
+                        
+                        if (brokerId.HasValue)
+                        {
+                            message += $"\nBroker ID: {brokerId}";
+                        }
+                        if (partyId.HasValue)
+                        {
+                            message += $"\nParty ID: {partyId}";
+                        }
+                        
+                        MessageBox.Show(message, "Advance Payments Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Update the UI to show selected payments are available
+                        UpdateSelectedAdvancePaymentsDisplay();
+                        
+                        // Update button to show that payments are selected
+                        btnSelectPayments.Text = $"Selected ({_userSelectedAdvancePayments.Count})";
+                        btnSelectPayments.BackColor = Color.LightGreen;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening advance payment selection: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Updates the display to show selected advance payments
+        /// </summary>
+        private void UpdateSelectedAdvancePaymentsDisplay()
+        {
+            if (_userSelectedAdvancePayments.Any())
+            {
+                decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+                // You can add a label or update existing UI elements to show this information
+                // For now, we'll just show it in a tooltip or status message
+                System.Diagnostics.Debug.WriteLine($"User selected {_userSelectedAdvancePayments.Count} advance payments with total: ₹{totalSelected:N2}");
+            }
+        }
+
+        /// <summary>
+        /// Clears all selected advance payments and updates the button state
+        /// </summary>
+        public void ClearSelectedAdvancePayments()
+        {
+            _userSelectedAdvancePayments.Clear();
+            UpdateSelectPaymentsButtonVisibility();
+        }
+
+        /// <summary>
+        /// Updates the visibility of the Select Payments button based on whether advance payments are available
+        /// </summary>
+        private void UpdateSelectPaymentsButtonVisibility()
+        {
+            try
+            {
+                bool hasAdvancePayments = HasAdvancePaymentsAvailable();
+                btnSelectPayments.Visible = hasAdvancePayments;
+                
+                if (_userSelectedAdvancePayments.Any())
+                {
+                    // Show selected payments count
+                    btnSelectPayments.Text = $"Selected ({_userSelectedAdvancePayments.Count})";
+                    btnSelectPayments.BackColor = Color.LightGreen;
+                }
+                else if (hasAdvancePayments)
+                {
+                    btnSelectPayments.Text = "Select Payments (None Selected)";
+                    btnSelectPayments.BackColor = Color.LightBlue;
+                }
+                else
+                {
+                    btnSelectPayments.Text = "No Payments Available";
+                    btnSelectPayments.BackColor = Color.LightGray;
+                }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error during payment allocation: {ex.Message}",        
-                "Allocation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);     
-            return;
-        }
-            dgvOutstandingBills.CellValueChanged += DgvOutstandingBills_CellValueChanged;
-            dgvOutstandingBills.Refresh();
-            UpdateTotalPaymentFromGrid();
-
-            // Update summary to show brokerage
-            // lblBrokerageValue.Text = $"Brokerage: ₹{totalBrokerage:N2}";
-        }
-
-        private void DgvOutstandingBills_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex >= 0 && dgvOutstandingBills.Columns[e.ColumnIndex].Name == "PaymentAllocation")
-            {
-                UpdateTotalPaymentFromGrid();
-                ResetGridStyles();
+                System.Diagnostics.Debug.WriteLine($"Error updating Select Payments button visibility: {ex.Message}");
+                btnSelectPayments.Visible = false;
             }
         }
+
+        /// <summary>
+        /// Checks if advance payments are available for the selected broker/party
+        /// </summary>
+        public bool HasAdvancePaymentsAvailable()
+        {
+            int? partyId = cmbParty.SelectedValue as int?;
+            int? brokerId = cmbBroker.SelectedValue as int?;
+            
+            if (!partyId.HasValue && !brokerId.HasValue)
+                return false;
+
+            try
+            {
+                var availableAdvances = AdvancePaymentService.GetAvailableAdvancePayments(partyId, brokerId);
+                return availableAdvances != null && availableAdvances.Any();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Public method to open advance payment selection (can be called from designer)
+        /// </summary>
+        public void OpenAdvancePaymentSelection()
+        {
+            ShowAdvancePaymentSelectionForm();
+        }
+
+        /// <summary>
+        /// Event handler for the Select Payments button click
+        /// </summary>
+        private void BtnSelectPayments_Click(object? sender, EventArgs e)
+        {
+            OpenAdvancePaymentSelection();
+        }
+
+
+
+        // PaymentAllocation column is now read-only, no need for CellValueChanged event handler
 
         private void UpdateTotalPaymentFromGrid()
         {
@@ -1035,13 +1463,13 @@ namespace SaleBillSystem.NET.Forms
                 if (totalAllocated > currentPaymentAmount)
                 {
                     // If allocated amount is greater than what user entered, update the field
-            txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
+            // txtPaymentAmount.Text = Math.Round(totalAllocated).ToString("F0");
                 }
                 // If user entered more than allocated (excess), keep the original amount and show excess in advance display
                 else if (currentPaymentAmount > totalAllocated)
                 {
                     // Refresh advance display to show the potential excess as advance
-                    UpdateAdvancePaymentDisplay();
+                    // UpdateAdvancePaymentDisplay();
                 }
             }
             else
@@ -1090,7 +1518,8 @@ namespace SaleBillSystem.NET.Forms
                 ChequeAmountFirm2Text = txtChequeAmountFirm2.Text,
                 AdvanceUsed = 0,
                 AdvanceAmount = 0,
-                IsAdvancePayment = false
+                IsAdvancePayment = false,
+                AllocationSummary = _currentAllocationSummary
             };
 
             // Show loading indicator and disable save button to prevent double-clicking
@@ -1106,7 +1535,7 @@ namespace SaleBillSystem.NET.Forms
                 {
                     int paymentId;
                     decimal totalAvailableAdvance;
-                    (paymentId, totalAvailableAdvance) = SavePaymentInBackground(paymentData);
+                    (paymentId, totalAvailableAdvance) = SavePaymentInBackground();
                     e.Result = new { Success = true, PaymentId = paymentId, TotalAvailableAdvance = totalAvailableAdvance };
                 }
                 catch (Exception ex)
@@ -1132,7 +1561,7 @@ namespace SaleBillSystem.NET.Forms
                     
                     // Refresh advance display to show updated amounts after save
                     InvalidateAdvancePaymentCache();
-                    UpdateAdvancePaymentDisplay();
+                    // UpdateAdvancePaymentDisplay();
                     
                     ClearForm();
                 }
@@ -1166,377 +1595,412 @@ namespace SaleBillSystem.NET.Forms
             public decimal AdvanceUsed { get; set; }
             public decimal AdvanceAmount { get; set; }
             public bool IsAdvancePayment { get; set; }
+            public PaymentAllocationSummary AllocationSummary { get; set; }
         }
 
-        private (int, decimal) SavePaymentInBackground(PaymentSaveData data)
+        /// <summary>
+        /// Saves payment entry with all related transactions and advance utilizations
+        /// </summary>
+        private (int, decimal) SavePaymentInBackground()
         {
+            // Validate required data before proceeding
+            if (_lastSettlementResult == null)
+            {
+                throw new InvalidOperationException("No settlement calculation available. Please calculate first.");
+            }
+
             using (var conn = DatabaseManager.GetConnection())
             {
                 conn.Open();
                 var dbTransaction = conn.BeginTransaction();
+                
                 try
                 {
-                    // Determine the party ID for the payment master record
-                    int? partyId = null;
-                    decimal totalAvailableAdvance = 0;
-                    List<AdvancePayment> combinedAvailableAdvances = new List<AdvancePayment>();
-                    if (data.SelectedPartyId.HasValue && data.SelectedPartyId.Value > 0)
+                    // STEP 1: Save the main payment record (cash payment if any)
+                    int? cashPaymentId = null;
+                    if (_lastSettlementResult.TotalCashNeeded > 0)
                     {
-                        // Party is directly selected
-                        partyId = data.SelectedPartyId.Value;
-                     combinedAvailableAdvances.AddRange(AdvancePaymentService.GetAvailableAdvancePayments(partyId, null, 1));
-                    if (combinedAvailableAdvances.Any())
-                    {
-                        totalAvailableAdvance = combinedAvailableAdvances.Sum(a => a.Amount);
-                        System.Diagnostics.Debug.WriteLine($"Found {combinedAvailableAdvances.Count} advance payments totaling {totalAvailableAdvance:C} for PartyID: {partyId}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"No advance payments found for PartyID: {partyId}");
-                    }
-                    }else{
-                        partyId = -1;
-                    }
-                    
+                        // Get form values with null checks
+                        var partyId = cmbParty.SelectedValue as int? ?? 0;
+                        var brokerId = cmbBroker.SelectedValue as int? ?? 0;
+                        var paymentMethod = cmbPaymentMethod.Text ?? "Cash";
+                        var reference = txtReference.Text ?? "";
 
-                    // Determine the broker ID for the payment
-                    int? brokerId = null;
-                    if (data.SelectedBrokerId.HasValue && data.SelectedBrokerId.Value > 0)
-                    {
-                        brokerId = data.SelectedBrokerId.Value;
-                     combinedAvailableAdvances.AddRange(AdvancePaymentService.GetAvailableAdvancePayments(null, brokerId, 1));
-                    if (combinedAvailableAdvances.Any())
-                    {
-                        totalAvailableAdvance = combinedAvailableAdvances.Sum(a => a.Amount);
-                        System.Diagnostics.Debug.WriteLine($"Found {combinedAvailableAdvances.Count} advance payments totaling {totalAvailableAdvance:C} for BrokerID: {brokerId}");
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"No advance payments found for BrokerID: {brokerId}");
-                    }
-                    }else{
-                        brokerId = -1;
-                    }
-                    
-
-                    
-
-                    // Step 1.2: Use FIFO logic to consume advances against bills (not payment amount)
-                    decimal totalBillAmount = data.PaymentsToSave.Sum(p => p.PaymentAllocation);
-                    decimal totalAmountNeeded = totalBillAmount; // Use advances to cover bills, not full payment
-                    decimal advanceUsed = 0;
-                    
-                    if (totalAvailableAdvance > 0 && totalAmountNeeded > 0)
-                    {
-                        // Sort advances by payment date (FIFO - oldest first)
-                        var sortedAdvances = combinedAvailableAdvances.OrderBy(a => a.PaymentDate).ToList();
-                        decimal remainingAmountNeeded = totalAmountNeeded; // Amount still needed to cover bills
-                        
-                        foreach (var advance in sortedAdvances)
+                        // Create advance payment record for cash payment
+                        var cashPayment = new AdvancePayment
                         {
-                            if (remainingAmountNeeded <= 0) break;
-                            
-                            decimal amountToUse = Math.Min(advance.Amount, remainingAmountNeeded);
-                            if (amountToUse > 0)
-                            {
-                                // Create utilization record instead of reducing advance amount
-                                var utilization = new AdvanceUtilization
-                                {
-                                    AdvanceID = advance.AdvanceID,
-                                    PaymentID = 0, // Will be set after PaymentMaster is saved
-                                    AmountUsed = amountToUse,
-                                    UtilizedDate = data.PaymentDate,
-                                    PartyID = advance.PartyID,
-                                    BrokerID = advance.BrokerID,
-                                    CompanyID = 1
-                                };
-                                
-                                // Store for later processing after PaymentMaster is saved
-                                if (!data.AdvanceUtilizations.ContainsKey(advance.AdvanceID))
-                                {
-                                    data.AdvanceUtilizations[advance.AdvanceID] = new List<AdvanceUtilization>();
-                                }
-                                data.AdvanceUtilizations[advance.AdvanceID].Add(utilization);
-                                
-                                advanceUsed += amountToUse;
-                                remainingAmountNeeded -= amountToUse;
-                                
-                                System.Diagnostics.Debug.WriteLine($"Will use {amountToUse:C} from AdvanceID: {advance.AdvanceID} to cover bills, remaining bill amount needed: {remainingAmountNeeded:C}");
-                            }
-                        }
-                        
-                        System.Diagnostics.Debug.WriteLine($"Total advance used against bills: {advanceUsed:C}, remaining bill amount needed: {remainingAmountNeeded:C}");
-                    }
-
-                    // Calculate actual cash payment used (bills - advance used)
-                    decimal actualCashUsed = Math.Max(0, totalBillAmount - advanceUsed);
-                    
-                    // Create a single master record for this payment event (actual cash used, not total payment)
-                    var paymentMaster = new PaymentMaster
-                    {
-                        PartyID = partyId,
-                        BrokerID = brokerId,
-                        PaymentDate = data.PaymentDate,
-                        TotalAmountPaid = Math.Round(data.TotalPaymentAmount), // Only the cash actually used for bills
-                        PaymentMethod = data.PaymentMethod,
-                        Reference = data.Reference,
-                        CompanyID = 1, // Replace with Program.ActiveCompany.CompanyID
-                        ChequeAmountFirm1 = 0,
-                        ChequeAmountFirm2 = 0,
-                        AdvanceUsed = data.AdvanceUsed,
-                        AdvanceAmount = data.AdvanceAmount,
-                        IsAdvancePayment = data.IsAdvancePayment
-                    };
-                    
-                    // If payment method is Cheque, distribute the actual cash used proportionally
-                    if (paymentMaster.PaymentMethod == "Cheque")
-                    {
-                        if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount) && 
-                            decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
-                        {
-                            decimal totalCheque = firm1Amount + firm2Amount;
-                            if (totalCheque > 0 && actualCashUsed > 0)
-                            {
-                                // Distribute actual cash used proportionally based on original firm amounts
-                                decimal firm1Ratio = firm1Amount / totalCheque;
-                                decimal firm2Ratio = firm2Amount / totalCheque;
-                                paymentMaster.ChequeAmountFirm1 = Math.Round(actualCashUsed * firm1Ratio);
-                                paymentMaster.ChequeAmountFirm2 = Math.Round(actualCashUsed * firm2Ratio);
-                                
-                                System.Diagnostics.Debug.WriteLine($"Cheque distribution for actual cash used {actualCashUsed:C}: Firm1={paymentMaster.ChequeAmountFirm1:C}, Firm2={paymentMaster.ChequeAmountFirm2:C}");
-                            }
-                        }
-                    }
-                    decimal excessAmount = 0;
-                    if(advanceUsed < data.TotalPaymentAmount){
-                    excessAmount = data.TotalPaymentAmount - actualCashUsed;
-                    paymentMaster.AdvanceAmount = excessAmount;
-                    paymentMaster.AdvanceUsed = advanceUsed;
-                    paymentMaster.IsAdvancePayment = true;
-                    }
-                    if(excessAmount == 0 && advanceUsed > 0){
-                        paymentMaster.AdvanceAmount = 0;
-                        paymentMaster.AdvanceUsed = advanceUsed;
-                        paymentMaster.IsAdvancePayment = false;
-                    } 
-                    if(excessAmount == 0 && advanceUsed == 0){
-                        paymentMaster.AdvanceAmount = 0;
-                        paymentMaster.AdvanceUsed = 0;
-                        paymentMaster.IsAdvancePayment = false;
-                    }
-                    int paymentId = PaymentService.SavePaymentMaster(paymentMaster, conn, dbTransaction);
-
-                    // Save advance utilization records after payment is saved
-                    foreach (var advanceUtilizationGroup in data.AdvanceUtilizations)
-                    {
-                        foreach (var utilization in advanceUtilizationGroup.Value)
-                        {
-                            utilization.PaymentID = paymentId; // Now we have the PaymentID
-                            bool utilizationSaved = AdvanceUtilizationService.AddUtilization(utilization, conn, dbTransaction);
-                            if (!utilizationSaved)
-                            {
-                                throw new Exception($"Failed to save advance utilization for AdvanceID: {utilization.AdvanceID}");
-                            }
-                            System.Diagnostics.Debug.WriteLine($"Saved utilization: {utilization.AmountUsed:C} from AdvanceID: {utilization.AdvanceID} for PaymentID: {paymentId}");
-                        }
-                    }
-
-                    // OPTIMIZATION: Get all bill details in one query instead of individual calls
-                    var billIds = data.PaymentsToSave.Select(b => b.BillID).ToList();
-                    var billDetails = BillService.GetBillsByIDs(billIds);
-
-                    foreach (var billVm in data.PaymentsToSave)
-                    {
-                        // Use cached bill data instead of individual database calls
-                        var fullBill = billDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
-                        if (fullBill == null) 
-                        {
-                            // Fallback to individual call if batch didn't work
-                            fullBill = BillService.GetBillByID(billVm.BillID);
-                            if (fullBill == null) continue;
-                        }
-
-                        var brokerageAmount = LedgerService.CalculateBrokerage(fullBill, data.BrokerageRate);
-                        var (interest, discount, finalAmount) = LedgerService.CalculateFinalSettlement(fullBill, data.InterestDays, data.InterestRate, data.DiscountDays, data.DiscountRate, data.PaymentDate);
-                        bool isFinalSettlement = billVm.PaymentAllocation >= (billVm.BalanceDue + interest - discount - brokerageAmount);
-
-                        if (isFinalSettlement)
-                        {
-                            if (interest > 0)
-                            {
-                                var interestTx = new Transaction
-                                {
-                                    PaymentID = paymentId,
-                                    PartyID = fullBill.PartyID,
-                                    BillID = fullBill.BillID,
-                                    TransactionDate = data.PaymentDate,
-                                    TransactionType = "Interest",
-                                    Description = $"Interest on Bill No: {fullBill.BillNo}",
-                                    DebitAmount = Math.Round(interest),
-                                    UserID = 1,
-                                    CompanyID = 1
-                                };
-                                LedgerService.AddTransaction(interestTx, conn, dbTransaction);
-                            }
-
-                            if (discount > 0)
-                            {
-                                var discountTx = new Transaction
-                                {
-                                    PaymentID = paymentId,
-                                    PartyID = fullBill.PartyID,
-                                    BillID = fullBill.BillID,
-                                    TransactionDate = data.PaymentDate,
-                                    TransactionType = "Discount",
-                                    Description = $"Discount on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = Math.Round(discount),
-                                    UserID = 1,
-                                    CompanyID = 1
-                                };
-                                LedgerService.AddTransaction(discountTx, conn, dbTransaction);
-                            }
-                            if (brokerageAmount > 0)
-                            {
-                                var brokerageTx = new Transaction
-                                {
-                                    PaymentID = paymentId,
-                                    PartyID = fullBill.PartyID,
-                                    BillID = fullBill.BillID,
-                                    TransactionDate = data.PaymentDate,
-                                    TransactionType = "Brokerage",
-                                    Description = $"Brokerage on Bill No: {fullBill.BillNo}",
-                                    CreditAmount = Math.Round(brokerageAmount),
-                                    UserID = 1,
-                                    CompanyID = 1
-                                };
-                                LedgerService.AddTransaction(brokerageTx, conn, dbTransaction);
-                            }
-                        }
-
-                        var paymentTx = new Transaction
-                        {
-                            PartyID = fullBill.PartyID,
-                            BillID = fullBill.BillID,
-                            PaymentID = paymentId,
-                            TransactionDate = data.PaymentDate,
-                            TransactionType = "Payment",
-                            Description = $"Payment against Bill No: {fullBill.BillNo}",
-                            CreditAmount = Math.Round(billVm.PaymentAllocation),
-                            PaymentMethod = data.PaymentMethod,
-                            Reference = data.Reference,
-                            UserID = 1, // Replace with Program.CurrentUser.UserID
-                            CompanyID = 1 // Replace with Program.ActiveCompany.CompanyID
-                        };
-                        LedgerService.AddTransaction(paymentTx, conn, dbTransaction);
-                    }
-
-                    // Handle excess amount - create new advance payment
-                    // Excess = Total Payment Entered - Actual Cash Used for Bills
-                    
-                    System.Diagnostics.Debug.WriteLine($"Excess calculation: Payment entered {data.TotalPaymentAmount:C} - Cash used {actualCashUsed:C} = Excess {excessAmount:C}");
-                    
-                    if (excessAmount > 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Creating advance payment for excess amount: {excessAmount:C}");
-                        
-                        // Create new advance payment record from excess amount
-                        var excessAdvancePayment = new AdvancePayment
-                        {
-                            PartyID = data.SelectedPartyId > 0 ? data.SelectedPartyId : null,
-                            BrokerID = data.SelectedBrokerId > 0 ? data.SelectedBrokerId : null,
-                            PaymentDate = data.PaymentDate,
-                            Amount = Math.Round(excessAmount),
-                            PaymentMethod = data.PaymentMethod,
-                            Reference = $"Excess from Payment Ref: {data.Reference}",
-                            CompanyID = 1
+                            PartyID = partyId,
+                            BrokerID = brokerId,
+                            PaymentDate = DateTime.Now,
+                            Amount = _lastSettlementResult.TotalCashNeeded,
+                            PaymentMethod = paymentMethod,
+                            Reference = reference,
+                            CompanyID = 1,
+                            CreatedDate = DateTime.Now
                         };
 
-                        // Handle cheque amounts for excess
-                        if (data.PaymentMethod?.Equals("Cheque", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            if (decimal.TryParse(data.ChequeAmountFirm1Text, out decimal firm1Amount) && 
-                                decimal.TryParse(data.ChequeAmountFirm2Text, out decimal firm2Amount))
-                            {
-                                decimal totalCheque = firm1Amount + firm2Amount;
-                                if (totalCheque > 0)
-                                {
-                                    // Distribute excess proportionally to firm amounts
-                                    decimal firm1Ratio = firm1Amount / totalCheque;
-                                    decimal firm2Ratio = firm2Amount / totalCheque;
-                                    excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount * firm1Ratio);
-                                    excessAdvancePayment.ChequeAmountFirm2 = Math.Round(excessAmount * firm2Ratio);
-                                }
-                                else
-                                {
-                                    // Default to Firm1 if no distribution is clear
-                                    excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount);
-                                    excessAdvancePayment.ChequeAmountFirm2 = 0;
-                                }
-                            }
-                            else
-                            {
-                                // Default to Firm1 if parsing fails
-                                excessAdvancePayment.ChequeAmountFirm1 = Math.Round(excessAmount);
-                                excessAdvancePayment.ChequeAmountFirm2 = 0;
-                            }
-                        }
-                        else
-                        {
-                            // For cash or other payment methods, set cheque amounts to 0
-                            excessAdvancePayment.ChequeAmountFirm1 = 0;
-                            excessAdvancePayment.ChequeAmountFirm2 = 0;
-                        }
-
-                        // Add advance payment directly in the same transaction to avoid lock issues
-                        string advanceSql = @"
+                        // Save cash payment directly using the existing transaction
+                        string insertCashPaymentSql = @"
                             INSERT INTO AdvancePayments (PartyID, BrokerID, PaymentDate, Amount, PaymentMethod, Reference, ChequeAmountFirm1, ChequeAmountFirm2, CompanyID, CreatedDate)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-                        using (var advanceCmd = new OleDbCommand(advanceSql, conn, dbTransaction))
+                        var cashPaymentParams = new OleDbParameter[]
                         {
-                            var parameters = new OleDbParameter[]
-                            {
-                                new OleDbParameter("PartyID", OleDbType.Integer) { Value = excessAdvancePayment.PartyID ?? (object)DBNull.Value },
-                                new OleDbParameter("BrokerID", OleDbType.Integer) { Value = excessAdvancePayment.BrokerID ?? (object)DBNull.Value },
-                                new OleDbParameter("PaymentDate", OleDbType.Date) { Value = excessAdvancePayment.PaymentDate },
-                                new OleDbParameter("Amount", OleDbType.Currency) { Value = excessAdvancePayment.Amount },
-                                new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = excessAdvancePayment.PaymentMethod ?? (object)DBNull.Value },
-                                new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = excessAdvancePayment.Reference ?? (object)DBNull.Value },
-                                new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = excessAdvancePayment.ChequeAmountFirm1 },
-                                new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = excessAdvancePayment.ChequeAmountFirm2 },
-                                new OleDbParameter("CompanyID", OleDbType.Integer) { Value = excessAdvancePayment.CompanyID },
-                                new OleDbParameter("CreatedDate", OleDbType.Date) { Value = DateTime.Now }
-                            };
+                            new OleDbParameter("PartyID", OleDbType.Integer) { Value = partyId },
+                            new OleDbParameter("BrokerID", OleDbType.Integer) { Value = brokerId },
+                            new OleDbParameter("PaymentDate", OleDbType.Date) { Value = cashPayment.PaymentDate },
+                            new OleDbParameter("Amount", OleDbType.Currency) { Value = cashPayment.Amount },
+                            new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = cashPayment.PaymentMethod },
+                            new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = cashPayment.Reference },
+                            new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = 0m },
+                            new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = 0m },
+                            new OleDbParameter("CompanyID", OleDbType.Integer) { Value = cashPayment.CompanyID },
+                            new OleDbParameter("CreatedDate", OleDbType.Date) { Value = cashPayment.CreatedDate }
+                        };
 
-                            advanceCmd.Parameters.AddRange(parameters);
-                            
-                            int advanceRows = advanceCmd.ExecuteNonQuery();
-                            if (advanceRows > 0)
+                        using (var insertCmd = new OleDbCommand(insertCashPaymentSql, conn, dbTransaction))
+                        {
+                            insertCmd.Parameters.AddRange(cashPaymentParams);
+                            insertCmd.ExecuteNonQuery();
+                        }
+
+                        // Get the ID of the saved cash payment
+                        string getCashPaymentIdSql = "SELECT @@IDENTITY";
+                        using (var cmd = new OleDbCommand(getCashPaymentIdSql, conn, dbTransaction))
+                        {
+                            cashPaymentId = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+                        
+                        // IMMEDIATELY UTILIZE THE CASH PAYMENT
+                        var cashPaymentUtilization = new AdvanceUtilization
+                        {
+                            AdvanceID = cashPaymentId.Value,
+                            PaymentID = 0,
+                            AmountUsed = _lastSettlementResult.TotalCashNeeded,
+                            UtilizedDate = DateTime.Now,
+                            PartyID = partyId,
+                            BrokerID = brokerId,
+                            CompanyID = 1
+                        };
+                        
+                        // Save the utilization record
+                        AdvanceUtilizationService.AddUtilization(cashPaymentUtilization, conn, dbTransaction);
+                    }
+
+                    // STEP 2: Save all ledger transactions
+                    if (_lastSettlementResult.BillBreakdowns == null || !_lastSettlementResult.BillBreakdowns.Any())
+                    {
+                        throw new InvalidOperationException("No bill breakdowns available for saving.");
+                    }
+
+                    foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
+                    {
+                        // Get form values with null checks (reuse from above)
+                        var partyId = cmbParty.SelectedValue as int? ?? 0;
+                        var brokerId = cmbBroker.SelectedValue as int? ?? 0;
+                        var paymentMethod = cmbPaymentMethod.Text ?? "Cash";
+                        var reference = txtReference.Text ?? "";
+
+                        // Save interest transaction
+                        if (breakdown.Discount > 0)
+                        {
+                            var discountTransaction = new Transaction
                             {
-                                System.Diagnostics.Debug.WriteLine($"Created advance payment for excess: {excessAmount:C}");
+                                PartyID = partyId,
+                                BillID = breakdown.BillID,
+                                PaymentID = cashPaymentId ?? 0,
+                                TransactionDate = _lastSettlementResult.PaymentDate,
+                                TransactionType = "Discount",
+                                Description = $"Discount on Bill {breakdown.BillNo}",
+                                DebitAmount = 0,
+                                CreditAmount = breakdown.Discount,
+                                PaymentMethod = paymentMethod,
+                                Reference = reference,
+                                CompanyID = 1
+                            };
+                            LedgerService.AddTransaction(discountTransaction, conn, dbTransaction);
+                        }
+                        if (breakdown.Interest > 0)
+                        {
+                            var interestTransaction = new Transaction
+                            {
+                                PartyID = partyId,
+                                BillID = breakdown.BillID,
+                                PaymentID = cashPaymentId ?? 0,
+                                TransactionDate = _lastSettlementResult.PaymentDate,
+                                TransactionType = "Interest",
+                                Description = $"Interest on Bill {breakdown.BillNo}",
+                                DebitAmount = breakdown.Interest,
+                                CreditAmount = 0,
+                                PaymentMethod = paymentMethod,
+                                Reference = reference,
+                                CompanyID = 1
+                            };
+                            LedgerService.AddTransaction(interestTransaction, conn, dbTransaction);
+                        }
+
+                        // Save brokerage transaction
+                        if (breakdown.Brokerage > 0)
+                        {
+                            var brokerageTransaction = new Transaction
+                            {
+                                PartyID = partyId,
+                                BillID = breakdown.BillID,
+                                PaymentID = cashPaymentId ?? 0,
+                                TransactionDate = _lastSettlementResult.PaymentDate,
+                                TransactionType = "Brokerage",
+                                Description = $"Brokerage on Bill {breakdown.BillNo}",
+                                DebitAmount = 0,
+                                CreditAmount = breakdown.Brokerage,
+                                PaymentMethod = paymentMethod,
+                                Reference = reference,
+                                CompanyID = 1
+                            };
+                            LedgerService.AddTransaction(brokerageTransaction, conn, dbTransaction);
+                        }
+
+                        // Save payment transaction (cash needed)
+                        if (breakdown.CashNeeded > 0)
+                        {
+                            var paymentTransaction = new Transaction
+                            {
+                                PartyID = partyId,
+                                BillID = breakdown.BillID,
+                                PaymentID = cashPaymentId ?? 0,
+                                TransactionDate = _lastSettlementResult.PaymentDate,
+                                TransactionType = "Payment",
+                                Description = $"Payment against Bill {breakdown.BillNo}",
+                                DebitAmount = 0,
+                                CreditAmount = breakdown.CashNeeded - breakdown.Interest + breakdown.Brokerage + breakdown.Discount,
+                                PaymentMethod = paymentMethod,
+                                Reference = reference,
+                                CompanyID = 1
+                            };
+                            LedgerService.AddTransaction(paymentTransaction, conn, dbTransaction);
+                        }
+
+                        // Save advance utilization records
+                        if (breakdown.AdvanceUtilizations != null && breakdown.AdvanceUtilizations.Any())
+                        {
+                            foreach (var utilization in breakdown.AdvanceUtilizations)
+                            {
+                                // Save utilization record
+                                var advanceUtilization = new AdvanceUtilization
+                                {
+                                    AdvanceID = utilization.AdvanceID,
+                                    PaymentID = cashPaymentId ?? 0,
+                                    AmountUsed = utilization.AmountUsed,
+                                    UtilizedDate = _lastSettlementResult.PaymentDate,
+                                    PartyID = partyId,
+                                    BrokerID = brokerId,
+                                    CompanyID = 1
+                                };
+                                AdvanceUtilizationService.AddUtilization(advanceUtilization, conn, dbTransaction);
+
+                                // ALSO save advance utilization as a ledger transaction
+                                var advancePaymentTransaction = new Transaction
+                                {
+                                    PartyID = partyId,
+                                    BillID = breakdown.BillID,
+                                    PaymentID = utilization.AdvanceID, // Use the advance payment ID
+                                    TransactionDate = utilization.AdvanceDate,
+                                    TransactionType = "Payment",
+                                    Description = $"Payment utilized for Bill {breakdown.BillNo}",
+                                    DebitAmount = 0,
+                                    CreditAmount = utilization.AmountUsed,
+                                    PaymentMethod = "Advance Payment",
+                                    Reference = $"Advance ID: {utilization.AdvanceID}",
+                                    CompanyID = 1
+                                };
+                                LedgerService.AddTransaction(advancePaymentTransaction, conn, dbTransaction);
                             }
                         }
                     }
 
-                    // First commit the ledger transactions
+                    // STEP 3: Update bill statuses to "Paid"
+                    var paidBills = _lastSettlementResult.BillBreakdowns
+                        .Select(b => new BillViewModel { BillID = b.BillID, BillNo = b.BillNo })
+                        .ToList();
+                    UpdateBillStatuses(paidBills);
+
                     dbTransaction.Commit();
-
-                    // Now update bill statuses in a new transaction
-                    UpdateBillStatuses(data.PaymentsToSave);
-
-                    return (paymentId, totalAvailableAdvance); // Return the payment ID for success handling
+                    
+                    // Return the cash payment ID and total amount
+                    return (cashPaymentId ?? 0, _lastSettlementResult.TotalCashNeeded);
                 }
                 catch (Exception ex)
                 {
-                    try
+                    dbTransaction.Rollback();
+                    MessageBox.Show($"Error saving payment: {ex.Message}", "Save Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Saves advance utilization records (which advances were used for which bills)
+        /// </summary>
+
+
+
+        private void HandleCashChequeDistribution(AdvancePayment cashAdvancePayment)
+        {
+            if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1Amount) && 
+                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2Amount))
+            {
+                decimal totalCheque = firm1Amount + firm2Amount;
+                if (totalCheque > 0)
+                {
+                    decimal firm1Ratio = firm1Amount / totalCheque;
+                    decimal firm2Ratio = firm2Amount / totalCheque;
+                    
+                    cashAdvancePayment.ChequeAmountFirm1 = Math.Round(cashAdvancePayment.Amount * firm1Ratio);
+                    cashAdvancePayment.ChequeAmountFirm2 = Math.Round(cashAdvancePayment.Amount * firm2Ratio);
+                }
+            }
+        }
+        private void SaveLedgerTransactions(OleDbConnection conn, OleDbTransaction transaction, int? cashAdvanceId)
+        {
+            if (_lastSettlementResult == null)
+            {
+                throw new Exception("No settlement calculation available. Please calculate first.");
+            }
+            
+            // Get all bill details in one query for efficiency
+            var billIds = _outstandingBills.Where(b => b.PaymentAllocation > 0).Select(b => b.BillID).ToList();
+            var billDetails = BillService.GetBillsByIDs(billIds);
+            
+            foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
+            {
+                var fullBill = billDetails.FirstOrDefault(b => b.BillID == breakdown.BillID);
+                if (fullBill == null) continue;
+                
+                // Save interest transaction if applicable
+                if (breakdown.Interest > 0)
+                {
+                    var interestTransaction = new Transaction
                     {
-                        dbTransaction.Rollback();
-                    }
-                    catch
+                        PaymentID = cashAdvanceId, // Use cash advance ID if cash was needed
+                        PartyID = fullBill.PartyID,
+                        BillID = fullBill.BillID,
+                        TransactionDate = DateTime.Parse(txtPaymentDate.Text),
+                        TransactionType = "Interest",
+                        Description = $"Interest on Bill No: {fullBill.BillNo}",
+                        DebitAmount = Math.Round(breakdown.Interest),
+                        UserID = 1,
+                        CompanyID = 1
+                    };
+                    LedgerService.AddTransaction(interestTransaction, conn, transaction);
+                }
+                
+                // Save brokerage transaction if applicable
+                if (breakdown.Brokerage > 0)
+                {
+                    var brokerageTransaction = new Transaction
                     {
-                        // Ignore rollback errors
+                        PaymentID = cashAdvanceId, // Use cash advance ID if cash was needed
+                        PartyID = fullBill.PartyID,
+                        BillID = fullBill.BillID,
+                        TransactionDate = DateTime.Parse(txtPaymentDate.Text),
+                        TransactionType = "Brokerage",
+                        Description = $"Brokerage on Bill No: {fullBill.BillNo}",
+                        CreditAmount = Math.Round(breakdown.Brokerage),
+                        UserID = 1,
+                        CompanyID = 1
+                    };
+                    LedgerService.AddTransaction(brokerageTransaction, conn, transaction);
+                }
+                
+                // Save payment transaction (cash needed) if applicable
+                if (breakdown.CashNeeded > 0)
+                {
+                    var paymentTransaction = new Transaction
+                    {
+                        PaymentID = cashAdvanceId, // Use cash advance ID for cash payments
+                        PartyID = fullBill.PartyID,
+                        BillID = fullBill.BillID,
+                        TransactionDate = DateTime.Parse(txtPaymentDate.Text),
+                        TransactionType = "Payment",
+                        Description = $"Payment against Bill No: {fullBill.BillNo}",
+                        CreditAmount = Math.Round(breakdown.CashNeeded),
+                        PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
+                        Reference = txtReference.Text,
+                        UserID = 1,
+                        CompanyID = 1
+                    };
+                    LedgerService.AddTransaction(paymentTransaction, conn, transaction);
+                }
+                
+                // Save advance utilization transactions
+                if (breakdown.AdvanceUtilizations != null)
+                {
+                    foreach (var advanceUtil in breakdown.AdvanceUtilizations)
+                    {
+                        var advanceTransaction = new Transaction
+                        {
+                            PaymentID = advanceUtil.AdvanceID, // Use the advance payment ID
+                            PartyID = fullBill.PartyID,
+                            BillID = fullBill.BillID,
+                            TransactionDate = DateTime.Parse(txtPaymentDate.Text),
+                            TransactionType = "Advance",
+                            Description = $"Advance utilization on Bill No: {fullBill.BillNo}",
+                            CreditAmount = Math.Round(advanceUtil.AmountUsed),
+                            PaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash",
+                            Reference = $"Advance ID: {advanceUtil.AdvanceID}",
+                            UserID = 1,
+                            CompanyID = 1
+                        };
+                        LedgerService.AddTransaction(advanceTransaction, conn, transaction);
                     }
-                    throw; // Re-throw to be caught by background worker
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates advance payment entries to mark them as utilized
+        /// </summary>
+        private void UpdateAdvancePaymentEntries(OleDbConnection conn, OleDbTransaction transaction)
+        {
+            if (_userSelectedAdvancePayments == null || !_userSelectedAdvancePayments.Any())
+                return;
+            
+            // Get the settlement result from the last calculation
+            if (_lastSettlementResult == null)
+            {
+                throw new Exception("No settlement calculation available. Please calculate first.");
+            }
+            
+            // Collect all advance utilizations from all bills
+            var allAdvanceUtilizations = new List<AdvanceUtilizationDetail>();
+            foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
+            {
+                if (breakdown.AdvanceUtilizations != null)
+                {
+                    allAdvanceUtilizations.AddRange(breakdown.AdvanceUtilizations);
+                }
+            }
+            
+            // Group utilizations by AdvanceID to get total amount used from each advance
+            var advanceUtilizations = allAdvanceUtilizations
+                .GroupBy(u => u.AdvanceID)
+                .Select(g => new { AdvanceID = g.Key, TotalUsed = g.Sum(u => u.AmountUsed) })
+                .ToList();
+            
+            foreach (var advanceUtil in advanceUtilizations)
+            {
+                // Update the advance payment entry to mark it as fully utilized
+                string updateQuery = @"UPDATE AdvancePayments 
+                                     SET UtilizationStatus = 'Full', 
+                                         RemainingAmount = 0, 
+                                         LastUtilizedDate = ? 
+                                     WHERE AdvanceID = ?";
+                
+                using (var cmd = new OleDbCommand(updateQuery, conn, transaction))
+                {
+                    cmd.Parameters.Add(new OleDbParameter("LastUtilizedDate", DateTime.Now));
+                    cmd.Parameters.Add(new OleDbParameter("AdvanceID", advanceUtil.AdvanceID));
+                    cmd.ExecuteNonQuery();
                 }
             }
         }
@@ -1567,42 +2031,28 @@ namespace SaleBillSystem.NET.Forms
                     {
                         try
                         {
-                            // OPTIMIZATION: Get all due amounts in one query instead of individual calls
+                            // OPTIMIZATION: Update all bills in one batch operation
                             var billIds = paidBills.Select(b => b.BillID).ToList();
-                            var currentBalances = LedgerService.GetAllBillBalances();
-
-                            foreach (var billVm in paidBills)
+                            var placeholders = string.Join(",", billIds.Select((_, i) => "?"));
+                            
+                            string updateSql = $"UPDATE BillMaster SET Status = 'Paid' WHERE BillID IN ({placeholders})";
+                            
+                            using (var cmd = new OleDbCommand(updateSql, conn, trans))
                             {
-                                // Use pre-calculated balance from the batch query
-                                decimal dueAmount = currentBalances.ContainsKey(billVm.BillID) ? currentBalances[billVm.BillID] : 0;
-
-                                // Determine new status based on balance
-                                string newStatus;
-                                if (dueAmount <= 0)
+                                cmd.CommandTimeout = 30;
+                                
+                                // Add parameters for all bill IDs
+                                for (int i = 0; i < billIds.Count; i++)
                                 {
-                                    newStatus = "Paid";
+                                    cmd.Parameters.Add(new OleDbParameter($"BillID{i}", billIds[i]));
                                 }
-                                else if (Math.Round(dueAmount) >= Math.Round(billVm.TotalAmount))
-                                {
-                                    newStatus = "Unpaid";
-                                }
-                                else
-                                {
-                                    newStatus = "Partial";
-                                }
-
-                                // Update the bill status in the database
-                                string updateSql = "UPDATE BillMaster SET Status = ? WHERE BillID = ?";
-                                using (var cmd = new OleDbCommand(updateSql, conn, trans))
-                                {
-                                    cmd.CommandTimeout = 30; // Add timeout
-                                    cmd.Parameters.Add(new OleDbParameter("Status", newStatus));
-                                    cmd.Parameters.Add(new OleDbParameter("BillID", billVm.BillID));
-                                    cmd.ExecuteNonQuery();
-                                }
+                                
+                                cmd.ExecuteNonQuery();
                             }
-
+                            
                             trans.Commit();
+                            
+                            System.Diagnostics.Debug.WriteLine($"Updated {billIds.Count} bills to 'Paid' status");
                         }
                         catch (Exception ex)
                         {
@@ -1868,150 +2318,150 @@ namespace SaleBillSystem.NET.Forms
         /// <summary>
         /// Updates the advance payment display based on selected party and broker
         /// </summary>
-        private void UpdateAdvancePaymentDisplay()
-        {
-            try
-            {
-                int? partyId = cmbParty.SelectedValue as int?;
-                int? brokerId = cmbBroker.SelectedValue as int?;
+        // private void UpdateAdvancePaymentDisplay()
+        // {
+        //     try
+        //     {
+        //         int? partyId = cmbParty.SelectedValue as int?;
+        //         int? brokerId = cmbBroker.SelectedValue as int?;
 
-                // Hide panel if nothing is selected
-                if ((!partyId.HasValue || partyId.Value <= 0) && (!brokerId.HasValue || brokerId.Value <= 0))
-                {
-                    pnlAdvanceDisplay.Visible = false;
-                    return;
-                }
+        //         // Hide panel if nothing is selected
+        //         if ((!partyId.HasValue || partyId.Value <= 0) && (!brokerId.HasValue || brokerId.Value <= 0))
+        //         {
+        //             pnlAdvanceDisplay.Visible = false;
+        //             return;
+        //         }
 
-                // Get advance amounts by payment method
-                var advanceAmounts = GetAdvanceAmountsByPaymentMethod(partyId, brokerId);
+        //         // Get advance amounts by payment method
+        //         var advanceAmounts = GetAdvanceAmountsByPaymentMethod(partyId, brokerId);
                 
-                // Calculate excess amount using the same logic as save process
-                decimal excessAmount = 0;
-                string selectedPaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
+        //         // Calculate excess amount using the same logic as save process
+        //         decimal excessAmount = 0;
+        //         string selectedPaymentMethod = cmbPaymentMethod.SelectedItem?.ToString() ?? "Cash";
                 
-                if (decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount))
-                {
-                    decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
+        //         if (decimal.TryParse(txtPaymentAmount.Text, out decimal paymentAmount))
+        //         {
+        //             decimal totalAllocated = _outstandingBills.Sum(b => b.PaymentAllocation);
                     
-                    if (paymentAmount > 0 && totalAllocated > 0)
-                    {
-                        // Calculate how much advance would be used against bills (FIFO simulation)
-                        decimal totalAdvanceAvailable = advanceAmounts.Cash + advanceAmounts.Firm1 + advanceAmounts.Firm2;
-                        decimal advanceUsedAgainstBills = Math.Min(totalAdvanceAvailable, totalAllocated);
+        //             if (paymentAmount > 0 && totalAllocated > 0)
+        //             {
+        //                 // Calculate how much advance would be used against bills (FIFO simulation)
+        //                 decimal totalAdvanceAvailable = advanceAmounts.Cash + advanceAmounts.Firm1 + advanceAmounts.Firm2;
+        //                 decimal advanceUsedAgainstBills = Math.Min(totalAdvanceAvailable, totalAllocated);
                         
-                        // Remove used advances from display (they will be consumed)
-                        if (advanceUsedAgainstBills > 0)
-                        {
-                            // Simulate FIFO consumption to remove used amounts from display
-                            decimal remainingToRemove = advanceUsedAgainstBills;
+        //                 // Remove used advances from display (they will be consumed)
+        //                 if (advanceUsedAgainstBills > 0)
+        //                 {
+        //                     // Simulate FIFO consumption to remove used amounts from display
+        //                     decimal remainingToRemove = advanceUsedAgainstBills;
                             
-                            // Remove from Cash first
-                            if (remainingToRemove > 0 && advanceAmounts.Cash > 0)
-                            {
-                                decimal removeFromCash = Math.Min(advanceAmounts.Cash, remainingToRemove);
-                                advanceAmounts.Cash -= removeFromCash;
-                                remainingToRemove -= removeFromCash;
-                            }
+        //                     // Remove from Cash first
+        //                     if (remainingToRemove > 0 && advanceAmounts.Cash > 0)
+        //                     {
+        //                         decimal removeFromCash = Math.Min(advanceAmounts.Cash, remainingToRemove);
+        //                         advanceAmounts.Cash -= removeFromCash;
+        //                         remainingToRemove -= removeFromCash;
+        //                     }
                             
-                            // Remove from Firm1 next
-                            if (remainingToRemove > 0 && advanceAmounts.Firm1 > 0)
-                            {
-                                decimal removeFromFirm1 = Math.Min(advanceAmounts.Firm1, remainingToRemove);
-                                advanceAmounts.Firm1 -= removeFromFirm1;
-                                remainingToRemove -= removeFromFirm1;
-                            }
+        //                     // Remove from Firm1 next
+        //                     if (remainingToRemove > 0 && advanceAmounts.Firm1 > 0)
+        //                     {
+        //                         decimal removeFromFirm1 = Math.Min(advanceAmounts.Firm1, remainingToRemove);
+        //                         advanceAmounts.Firm1 -= removeFromFirm1;
+        //                         remainingToRemove -= removeFromFirm1;
+        //                     }
                             
-                            // Remove from Firm2 last
-                            if (remainingToRemove > 0 && advanceAmounts.Firm2 > 0)
-                            {
-                                decimal removeFromFirm2 = Math.Min(advanceAmounts.Firm2, remainingToRemove);
-                                advanceAmounts.Firm2 -= removeFromFirm2;
-                                remainingToRemove -= removeFromFirm2;
-                            }
-                        }
+        //                     // Remove from Firm2 last
+        //                     if (remainingToRemove > 0 && advanceAmounts.Firm2 > 0)
+        //                     {
+        //                         decimal removeFromFirm2 = Math.Min(advanceAmounts.Firm2, remainingToRemove);
+        //                         advanceAmounts.Firm2 -= removeFromFirm2;
+        //                         remainingToRemove -= removeFromFirm2;
+        //                     }
+        //                 }
                         
-                        // Calculate actual cash that would be used for bills
-                        decimal actualCashUsed = Math.Max(0, totalAllocated - advanceUsedAgainstBills);
+        //                 // Calculate actual cash that would be used for bills
+        //                 decimal actualCashUsed = Math.Max(0, totalAllocated - advanceUsedAgainstBills);
                         
-                        // Excess = Payment Entered - Cash Actually Used
-                        if (paymentAmount > actualCashUsed)
-                        {
-                            excessAmount = paymentAmount - actualCashUsed;
+        //                 // Excess = Payment Entered - Cash Actually Used
+        //                 if (paymentAmount > actualCashUsed)
+        //                 {
+        //                     excessAmount = paymentAmount - actualCashUsed;
                             
-                            System.Diagnostics.Debug.WriteLine($"Display calculation: Payment {paymentAmount:C}, Bills {totalAllocated:C}, Advance used {advanceUsedAgainstBills:C}, Cash used {actualCashUsed:C}, Excess {excessAmount:C}");
-                        }
-                    }
-                    else if (paymentAmount > totalAllocated)
-                    {
-                        // Fallback for when no bills are allocated
-                        excessAmount = paymentAmount - totalAllocated;
+        //                     System.Diagnostics.Debug.WriteLine($"Display calculation: Payment {paymentAmount:C}, Bills {totalAllocated:C}, Advance used {advanceUsedAgainstBills:C}, Cash used {actualCashUsed:C}, Excess {excessAmount:C}");
+        //                 }
+        //             }
+        //             else if (paymentAmount > totalAllocated)
+        //             {
+        //                 // Fallback for when no bills are allocated
+        //                 excessAmount = paymentAmount - totalAllocated;
                         
-                    }
+        //             }
                     
-                    // Add excess to the appropriate advance category based on payment method (if any excess exists)
-                    if (excessAmount > 0)
-                    {
-                        if (selectedPaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
-                        {
-                            advanceAmounts.Cash += excessAmount;
-                        }
-                        else if (selectedPaymentMethod.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // For cheque payments, distribute excess based on firm amounts ratio
-                            if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1) && 
-                                decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2))
-                            {
-                                decimal totalCheque = firm1 + firm2;
-                                if (totalCheque > 0 && Math.Abs(totalCheque - paymentAmount) < 0.01m)
-                                {
-                                    // Distribute excess proportionally
-                                    decimal firm1Ratio = firm1 / totalCheque;
-                                    decimal firm2Ratio = firm2 / totalCheque;
-                                    advanceAmounts.Firm1 += excessAmount * firm1Ratio;
-                                    advanceAmounts.Firm2 += excessAmount * firm2Ratio;
-                                }
-                                else
-                                {
-                                    // Default to equal split or add to Firm1
-                                    advanceAmounts.Firm1 += excessAmount;
-                                }
-                            }
-                            else
-                            {
-                                // Default to adding excess to Firm1
-                                advanceAmounts.Firm1 += excessAmount;
-                            }
-                        }
-                    }
-                }
+        //             // Add excess to the appropriate advance category based on payment method (if any excess exists)
+        //             if (excessAmount > 0)
+        //             {
+        //                 if (selectedPaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
+        //                 {
+        //                     advanceAmounts.Cash += excessAmount;
+        //                 }
+        //                 else if (selectedPaymentMethod.Equals("Cheque", StringComparison.OrdinalIgnoreCase))
+        //                 {
+        //                     // For cheque payments, distribute excess based on firm amounts ratio
+        //                     if (decimal.TryParse(txtChequeAmountFirm1.Text, out decimal firm1) && 
+        //                         decimal.TryParse(txtChequeAmountFirm2.Text, out decimal firm2))
+        //                     {
+        //                         decimal totalCheque = firm1 + firm2;
+        //                         if (totalCheque > 0 && Math.Abs(totalCheque - paymentAmount) < 0.01m)
+        //                         {
+        //                             // Distribute excess proportionally
+        //                             decimal firm1Ratio = firm1 / totalCheque;
+        //                             decimal firm2Ratio = firm2 / totalCheque;
+        //                             advanceAmounts.Firm1 += excessAmount * firm1Ratio;
+        //                             advanceAmounts.Firm2 += excessAmount * firm2Ratio;
+        //                         }
+        //                         else
+        //                         {
+        //                             // Default to equal split or add to Firm1
+        //                             advanceAmounts.Firm1 += excessAmount;
+        //                         }
+        //                     }
+        //                     else
+        //                     {
+        //                         // Default to adding excess to Firm1
+        //                         advanceAmounts.Firm1 += excessAmount;
+        //                     }
+        //                 }
+        //             }
+        //         }
                 
-                // Update labels
-                lblAdvanceCash.Text = $"Cash: ₹{advanceAmounts.Cash:N2}";
-                lblAdvanceFirm1.Text = $"Firm1: ₹{advanceAmounts.Firm1:N2}";
-                lblAdvanceFirm2.Text = $"Firm2: ₹{advanceAmounts.Firm2:N2}";
+        //         // Update labels
+        //         lblAdvanceCash.Text = $"Cash: ₹{advanceAmounts.Cash:N2}";
+        //         lblAdvanceFirm1.Text = $"Firm1: ₹{advanceAmounts.Firm1:N2}";
+        //         lblAdvanceFirm2.Text = $"Firm2: ₹{advanceAmounts.Firm2:N2}";
 
-                // Update title to show if there's excess
-                if (excessAmount > 0)
-                {
-                    lblAdvanceTitle.Text = $"Advance Avail (+ ₹{excessAmount:N2} excess):";
-                    lblAdvanceTitle.ForeColor = Color.Red; // Highlight excess
-                }
-                else
-                {
-                    lblAdvanceTitle.Text = "Advance Avail:";
-                    lblAdvanceTitle.ForeColor = Color.Black; // Default color
-                }
+        //         // Update title to show if there's excess
+        //         if (excessAmount > 0)
+        //         {
+        //             lblAdvanceTitle.Text = $"Advance Avail (+ ₹{excessAmount:N2} excess):";
+        //             lblAdvanceTitle.ForeColor = Color.Red; // Highlight excess
+        //         }
+        //         else
+        //         {
+        //             lblAdvanceTitle.Text = "Advance Avail:";
+        //             lblAdvanceTitle.ForeColor = Color.Black; // Default color
+        //         }
 
-                // Show panel if there are any advances or excess
-                bool hasAdvances = advanceAmounts.Cash > 0 || advanceAmounts.Firm1 > 0 || advanceAmounts.Firm2 > 0;
-                pnlAdvanceDisplay.Visible = hasAdvances;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error updating advance payment display: {ex.Message}");
-                pnlAdvanceDisplay.Visible = false;
-            }
-        }
+        //         // Show panel if there are any advances or excess
+        //         bool hasAdvances = advanceAmounts.Cash > 0 || advanceAmounts.Firm1 > 0 || advanceAmounts.Firm2 > 0;
+        //         pnlAdvanceDisplay.Visible = hasAdvances;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         System.Diagnostics.Debug.WriteLine($"Error updating advance payment display: {ex.Message}");
+        //         pnlAdvanceDisplay.Visible = false;
+        //     }
+        // }
 
         /// <summary>
         /// Gets advance amounts broken down by payment method using cache
@@ -2148,283 +2598,413 @@ namespace SaleBillSystem.NET.Forms
         /// <summary>
         /// Main payment allocation orchestrator - coordinates the entire payment allocation process
         /// </summary>
-        public PaymentAllocationSummary AllocatePaymentToBills(
-            decimal totalPaymentAmount,
-            List<BillViewModel> billsToProcess,
-            List<AdvancePayment> availableAdvances,
-            DateTime paymentDate,
-            PaymentTerms terms)
-        {
-            var summary = new PaymentAllocationSummary
-            {
-                TotalPaymentAmount = totalPaymentAmount,
-                BillResults = new List<BillPaymentResult>(),
-                AdvanceUtilizations = new List<AdvanceUtilization>()
-            };
+        // public PaymentAllocationSummary AllocatePaymentToBills(
+        // decimal totalPaymentAmount,
+        // List<BillViewModel> billsToProcess,
+        // List<AdvancePayment> availableAdvances,
+        // DateTime paymentDate,
+        // PaymentTerms terms)
+        // {
+        //     var summary = new PaymentAllocationSummary
+        //     {
+        //         TotalPaymentAmount = totalPaymentAmount,
+        //         BillResults = new List<BillPaymentResult>()
+        //     };
 
-            // Validate inputs
-            if (billsToProcess == null || !billsToProcess.Any())
-            {
-                throw new ArgumentException("No bills provided for payment allocation");
-            }
+        //     // Validate inputs
+        //     ValidateInputs(totalPaymentAmount, billsToProcess);
 
-            if (totalPaymentAmount <= 0)
-            {
-                throw new ArgumentException("Payment amount must be greater than zero");
-            }
-
-            // Sort bills by date (oldest first) to ensure proper FIFO processing
-            var sortedBills = billsToProcess.OrderBy(b => b.BillDate).ToList();
+        //     // Create working copies to avoid modifying original data
+        //     var workingAdvances = CloneAdvances(availableAdvances);
+        //     var sortedBills = billsToProcess.OrderBy(b => b.BillDate).ToList();
             
-            // Get full bill details for calculations
-            var billIds = sortedBills.Select(b => b.BillID).ToList();
-            var fullBillDetails = BillService.GetBillsByIDs(billIds);
+        //     // Get full bill details efficiently
+        //     var billIds = sortedBills.Select(b => b.BillID).ToList();
+        //     var fullBillDetails = BillService.GetBillsByIDs(billIds);
+            
+        //     decimal remainingPaymentAmount = totalPaymentAmount;
 
-            decimal remainingPaymentAmount = totalPaymentAmount;
-            var workingAdvances = availableAdvances.ToList(); 
-            // Process each bill in chronological order
-            foreach (var billVm in sortedBills)
-            {
-                if (remainingPaymentAmount <= 0.01m)
-                {
-                    break;
-                }
+        //     // Process each bill in chronological order
+        //     foreach (var billVm in sortedBills)
+        //     {
+        //         if (remainingPaymentAmount <= 0.01m) break;
 
-                // Get full bill details
-                var fullBill = fullBillDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
-                if (fullBill == null)
-                {
-                    fullBill = BillService.GetBillByID(billVm.BillID);
-                    if (fullBill == null) continue;
-                }
+        //         var fullBill = GetFullBillDetails(billVm, fullBillDetails);
+        //         if (fullBill == null) continue;
 
-                // Process this bill's payment using YOUR existing calculation logic
-                var billResult = ProcessBillPayment(
-                    billVm, 
-                    fullBill, 
-                    remainingPaymentAmount, 
-                    workingAdvances, 
-                    paymentDate, 
-                    terms);
+        //         var billResult = ProcessSingleBillPayment(
+        //             billVm, 
+        //             fullBill, 
+        //             remainingPaymentAmount, 
+        //             workingAdvances, 
+        //             paymentDate, 
+        //             terms);
 
-                // Add to results
-                summary.BillResults.Add(billResult);
+        //         summary.BillResults.Add(billResult);
+        //         remainingPaymentAmount -= billResult.PaymentAllocated;
 
-                // Update remaining payment amount
-                remainingPaymentAmount -= billResult.PaymentAllocated;
+        //         // Update summary totals
+        //         UpdateSummaryTotals(summary, billResult);
+        //     }
 
-                // Update advance utilization tracking
-                if (billResult.AdvanceUsed > 0)
-                {
-                    summary.TotalAdvanceUsed += billResult.AdvanceUsed;
-                }
+        //     // Handle any excess payment amount
+        //     if (remainingPaymentAmount > 0.01m)
+        //     {
+        //         summary.ExcessAmount = remainingPaymentAmount;
+        //     }
 
-                // Update cash usage tracking
-                if (billResult.CashUsed > 0)
-                {
-                    summary.TotalCashUsed += billResult.CashUsed;
-                }
+        //     // Create advance utilization records for successfully processed advances
+        //     summary.AdvanceUtilizations = CreateAdvanceUtilizationRecords(summary.BillResults, paymentDate);
 
-                // Update totals
-                summary.TotalDiscountEarned += billResult.DiscountEarned;
-                summary.TotalInterestCharged += billResult.InterestCharged;
-                summary.TotalBrokerageCharged += billResult.BrokerageCharged;
-            }
+        //     return summary;
+        // }
 
-            // Handle excess amount (if any)
-            if (remainingPaymentAmount > 0.01m)
-            {
-                summary.ExcessAmount = remainingPaymentAmount;
-                
-                // TODO: In Step 3, we'll implement creating advance payment from excess
-                // For now, just track the excess amount
-            }
-
-            return summary;
-        }
 
         /// <summary>
         /// Processes payment allocation for a single bill using your existing calculation logic
         /// </summary>
-        private BillPaymentResult ProcessBillPayment(
-            BillViewModel billVm,
-            Bill fullBill,
-            decimal availablePaymentAmount,
-            List<AdvancePayment> availableAdvances,
-            DateTime paymentDate,
-            PaymentTerms terms)
-        {
-            var result = new BillPaymentResult
-            {
-                BillID = billVm.BillID,
-                BillNo = billVm.BillNo,
-                OriginalBalance = billVm.BalanceDue
-            };
+        // private BillPaymentResult ProcessSingleBillPayment(
+        //     BillViewModel billVm,
+        //     Bill fullBill,
+        //     decimal availablePaymentAmount,
+        //     List<AdvancePayment> workingAdvances,
+        //     DateTime paymentDate,
+        //     PaymentTerms terms)
+        // {
+        //     // Step 1: Calculate what this bill actually needs using your proven method
+        //     var calculationResult = CalculateMixedPaymentAllocation(
+        //         fullBill, 
+        //         billVm, 
+        //         workingAdvances.ToList(), // Pass copy to avoid modification during calculation
+        //         0, // Let it auto-calculate cash requirement
+        //         paymentDate,
+        //         terms.InterestDays,
+        //         terms.InterestRate,
+        //         terms.DiscountDays,
+        //         terms.DiscountRate,
+        //         terms.BrokerageRate);
 
-            // Use YOUR existing CalculateSettlementTillNow method
-            var (interest, discount, adjustedAmount, interestStartDate, brokerage) = 
-                LedgerService.CalculateSettlementTillNow(
-                    fullBill, 
-                    terms.InterestDays, 
-                    terms.InterestRate, 
-                    terms.DiscountDays, 
-                    terms.DiscountRate, 
-                    terms.BrokerageRate);
-
-            // Your adjustedAmount already includes brokerage considerations
-            decimal totalAmountNeeded = adjustedAmount;
+        //     decimal totalAmountNeeded = calculationResult.NetSettlement;
             
-            var advanceResult = ProcessAdvanceUtilization(
-                totalAmountNeeded, 
-                availableAdvances, 
-                billVm, 
-                paymentDate, 
-                interestStartDate,
-                terms);
-            decimal cash = advanceResult.CashNeeded;
-            decimal interest_cash = 0;
-            decimal discount_cash = 0;
-            if(cash>0){
-                if((paymentDate.Date-billVm.BillDate.Date).Days<=terms.DiscountDays){
-                    discount_cash = (terms.DiscountRate/100) * cash;
-                }
-                int overDays = (paymentDate.Date-advanceResult.InterestStartDate.Date).Days;
-                if(overDays>0){
-                    interest_cash = (terms.InterestRate/100) * cash * (overDays / 365m);
-                }
-                cash = cash - discount_cash + interest_cash + advanceResult.InterestUsed - advanceResult.DiscountUsed;
-            }
-            // Determine how much we can allocate to this bill
-            decimal amountToAllocate = Math.Min(availablePaymentAmount, cash);
+        //     // Step 2: Determine how much we can actually pay
+        //     decimal amountWeCanPay = Math.Min(availablePaymentAmount, totalAmountNeeded);
             
-            if (amountToAllocate <= 0.01m)
-            {
-                // No payment can be allocated to this bill
-                result.PaymentAllocated = 0;
-                result.RemainingBalance = totalAmountNeeded;
-                result.AdvanceUsed = 0;
-                result.CashUsed = 0;
-                result.DiscountEarned = 0;
-                result.InterestCharged = 0;
-                result.BrokerageCharged = 0;
-                return result;
-            }   
-            result.InterestCharged = Math.Round(advanceResult.InterestUsed + interest_cash);
-            result.DiscountEarned = Math.Round(advanceResult.DiscountUsed + discount_cash);
-            result.BrokerageCharged = Math.Round(brokerage);            
-            result.AdvanceUsed = advanceResult.AdvanceUsed;
-            result.CashUsed = Math.Round(cash);
+        //     // Step 3: Create the result based on payment capacity
+        //     var result = CreateBillPaymentResult(billVm, totalAmountNeeded, amountWeCanPay, calculationResult);
+            
+        //     // Step 4: Only consume advances if we can make meaningful payment
+        //     if (result.Status == PaymentStatus.FullyPaid)
+        //     {
+        //         // Full payment - consume advances as calculated
+        //         result.AdvanceAllocations = ConsumeAdvancesForFullPayment(
+        //             workingAdvances, calculationResult.AdvanceBreakdown);
+        //     }
+        //     else if (result.Status == PaymentStatus.PartiallyPaid)
+        //     {
+        //         // Partial payment - consume advances proportionally
+        //         result.AdvanceAllocations = ConsumeAdvancesProportionally(
+        //             workingAdvances, calculationResult.AdvanceBreakdown, 
+        //             amountWeCanPay / totalAmountNeeded);
+        //     }
+        //     // For NothingPaid status, don't consume any advances
 
-            // Update the bill's payment allocation in the grid
-            billVm.PaymentAllocation = Math.Round(amountToAllocate + advanceResult.AdvanceUsed);
+        //     return result;
+        // }
 
-            // Calculate remaining balance
-            result.PaymentAllocated = amountToAllocate;
-            result.RemainingBalance = (cash - amountToAllocate)>0?(cash - amountToAllocate):0;
+        // private BillPaymentResult CreateBillPaymentResult(
+        // BillViewModel billVm, 
+        // decimal totalNeeded, 
+        // decimal amountPaying, 
+        // PaymentAllocationResult calculationResult)
+        // {
+        //     var result = new BillPaymentResult
+        //     {
+        //         BillID = billVm.BillID,
+        //         BillNo = billVm.BillNo,
+        //         OriginalBalance = billVm.BalanceDue,
+        //         PaymentAllocated = amountPaying
+        //     };
 
-            return result;
-        }
+        //     // Determine payment status
+        //     if (amountPaying <= 0.01m)
+        //     {
+        //         result.Status = PaymentStatus.NothingPaid;
+        //         result.RemainingBalance = totalNeeded;
+        //         return result;
+        //     }
+            
+        //     if (amountPaying >= totalNeeded - 0.01m) // Account for rounding
+        //     {
+        //         result.Status = PaymentStatus.FullyPaid;
+        //         result.RemainingBalance = 0;
+                
+        //         // Use full calculated amounts for complete payment
+        //         result.AdvanceUsed = calculationResult.AdvanceUsed;
+        //         result.CashUsed = calculationResult.CashUsed;
+        //         result.InterestCharged = calculationResult.InterestCharged;
+        //         result.DiscountEarned = calculationResult.DiscountEarned;
+        //         result.BrokerageCharged = calculationResult.BrokerageCharged;
+        //     }
+        //     else
+        //     {
+        //         result.Status = PaymentStatus.PartiallyPaid;
+        //         result.RemainingBalance = totalNeeded - amountPaying;
+                
+        //         // Calculate proportional amounts for partial payment
+        //         decimal ratio = amountPaying / totalNeeded;
+        //         result.AdvanceUsed = Math.Round(calculationResult.AdvanceUsed * ratio, 2);
+        //         result.CashUsed = amountPaying - result.AdvanceUsed;
+        //         result.InterestCharged = Math.Round(calculationResult.InterestCharged * ratio, 2);
+        //         result.DiscountEarned = Math.Round(calculationResult.DiscountEarned * ratio, 2);
+        //         result.BrokerageCharged = Math.Round(calculationResult.BrokerageCharged * ratio, 2);
+        //     }
 
-        private class AdvanceAllocationResult
-        {
-            public decimal AdvanceUsed { get; set; }
-            public decimal RemainingAmount { get; set; }
-        }
+        //     return result;
+        // }
 
+        // private List<AdvanceAllocation> ConsumeAdvancesForFullPayment(
+        //     List<AdvancePayment> workingAdvances,
+        //     List<AdvanceUtilization> advanceBreakdown)
+        // {
+        //     var allocations = new List<AdvanceAllocation>();
+            
+        //     if (advanceBreakdown == null) return allocations;
+
+        //     foreach (var breakdown in advanceBreakdown)
+        //     {
+        //         var advance = workingAdvances.FirstOrDefault(a => a.AdvanceID == breakdown.AdvanceID);
+        //         if (advance != null && advance.Amount >= breakdown.AmountUsed)
+        //         {
+        //             // Create allocation record
+        //             allocations.Add(new AdvanceAllocation
+        //             {
+        //                 AdvanceID = advance.AdvanceID,
+        //                 AmountUsed = breakdown.AmountUsed,
+        //                 AdvanceDate = breakdown.CreatedDate
+        //             });
+
+        //             // Consume from advance
+        //             advance.Amount -= breakdown.AmountUsed;
+                    
+        //             // Remove if fully consumed
+        //             if (advance.Amount <= 0.01m)
+        //             {
+        //                 workingAdvances.Remove(advance);
+        //             }
+        //         }
+        //     }
+
+        //     return allocations;
+        // }
+                
+//         private List<AdvanceAllocation> ConsumeAdvancesProportionally(
+//     List<AdvancePayment> workingAdvances,
+//     List<AdvanceUtilization> advanceBreakdown,
+//     decimal proportionRatio)
+// {
+//     var allocations = new List<AdvanceAllocation>();
+    
+//     if (advanceBreakdown == null || proportionRatio <= 0) return allocations;
+
+//     foreach (var breakdown in advanceBreakdown)
+//     {
+//         var advance = workingAdvances.FirstOrDefault(a => a.AdvanceID == breakdown.AdvanceID);
+//         if (advance != null)
+//         {
+//             decimal proportionalAmount = Math.Round(breakdown.AmountUsed * proportionRatio, 2);
+//             decimal actualAmountToUse = Math.Min(proportionalAmount, advance.Amount);
+
+//             if (actualAmountToUse > 0.01m)
+//             {
+//                 allocations.Add(new AdvanceAllocation
+//                 {
+//                     AdvanceID = advance.AdvanceID,
+//                     AmountUsed = actualAmountToUse,
+//                     AdvanceDate = breakdown.CreatedDate
+//                 });
+
+//                 advance.Amount -= actualAmountToUse;
+                
+//                 if (advance.Amount <= 0.01m)
+//                 {
+//                     workingAdvances.Remove(advance);
+//                 }
+//             }
+//         }
+//     }
+
+//     return allocations;
+// }
+
+// private void ValidateInputs(decimal totalPaymentAmount, List<BillViewModel> billsToProcess)
+// {
+//     if (billsToProcess == null || !billsToProcess.Any())
+//         throw new ArgumentException("No bills provided for payment allocation");
+    
+//     if (totalPaymentAmount <= 0)
+//         throw new ArgumentException("Payment amount must be greater than zero");
+// }
+
+// private List<AdvancePayment> CloneAdvances(List<AdvancePayment> original)
+// {
+//     return original?.Select(a => new AdvancePayment
+//     {
+//         AdvanceID = a.AdvanceID,
+//         Amount = a.Amount,
+//         CreatedDate = a.CreatedDate,
+//         PartyID = a.PartyID,
+//         BrokerID = a.BrokerID
+//         // Copy other necessary properties
+//     }).ToList() ?? new List<AdvancePayment>();
+// }
+
+// private Bill GetFullBillDetails(BillViewModel billVm, List<Bill> fullBillDetails)
+// {
+//     var fullBill = fullBillDetails.FirstOrDefault(b => b.BillID == billVm.BillID);
+//     if (fullBill == null)
+//     {
+//         fullBill = BillService.GetBillByID(billVm.BillID);
+//     }
+//     return fullBill;
+// }
+
+// private void UpdateSummaryTotals(PaymentAllocationSummary summary, BillPaymentResult billResult)
+// {
+//     summary.TotalAdvanceUsed += billResult.AdvanceUsed;
+//     summary.TotalCashUsed += billResult.CashUsed;
+//     summary.TotalDiscountEarned += billResult.DiscountEarned;
+//     summary.TotalInterestCharged += billResult.InterestCharged;
+//     summary.TotalBrokerageCharged += billResult.BrokerageCharged;
+// }
+
+// private List<AdvanceUtilization> CreateAdvanceUtilizationRecords(
+//     List<BillPaymentResult> billResults, 
+//     DateTime paymentDate)
+// {
+//     var utilizations = new List<AdvanceUtilization>();
+    
+//     foreach (var billResult in billResults)
+//     {
+//         foreach (var allocation in billResult.AdvanceAllocations)
+//         {
+//             utilizations.Add(new AdvanceUtilization
+//             {
+//                 AdvanceID = allocation.AdvanceID,
+//                 AmountUsed = allocation.AmountUsed,
+//                 UtilizedDate = paymentDate,
+//                 // PaymentID will be set when payment record is saved
+//                 // Other properties as needed
+//             });
+//         }
+//     }
+    
+//     return utilizations;
+// }
+        
         /// <summary>
         /// Enhanced advance utilization tracking and management
         /// </summary>
-        private AdvanceUtilizationResult ProcessAdvanceUtilization(
-            decimal amountNeeded,
-            List<AdvancePayment> availableAdvances,
-            BillViewModel billVm,
-            DateTime paymentDate,
-            DateTime interestStartDate,
-            PaymentTerms terms)
-        {
-            var result = new AdvanceUtilizationResult();
+        // private AdvanceUtilizationResult ProcessAdvanceUtilization(
+        //     decimal amountNeeded,
+        //     List<AdvancePayment> availableAdvances,
+        //     BillViewModel billVm,
+        //     DateTime paymentDate,
+        //     DateTime interestStartDate,
+        //     PaymentTerms terms,
+        //     decimal interestBearingPrincipal)
+        // {
+        //     var result = new AdvanceUtilizationResult();
             
-            if (availableAdvances == null || !availableAdvances.Any() || amountNeeded <= 0.01m)
-            {
-                result.AdvanceUsed = 0;
-                result.CashNeeded = amountNeeded;
-                result.Utilizations = new List<AdvanceUtilization>();
-                return result;
-            }
+        //     if (availableAdvances == null || !availableAdvances.Any() || amountNeeded <= 0.01m)
+        //     {
+        //         result.AdvanceUsed = 0;
+        //         result.CashNeeded = amountNeeded;
+        //         result.Utilizations = new List<AdvanceUtilization>();
+        //         return result;
+        //     }
 
-            // Sort advances by date (FIFO - oldest first)
-            var sortedAdvances = availableAdvances.OrderBy(a => a.CreatedDate).ToList();
+        //     // Sort advances by date (FIFO - oldest first)
+        //     var sortedAdvances = availableAdvances.OrderBy(a => a.CreatedDate).ToList();
             
-            decimal remainingAmount = amountNeeded;
-            decimal advanceUsed = 0;
-            var utilizations = new List<AdvanceUtilization>();
-            decimal interest_advance = 0;
-            decimal discount_advance = 0;
-            foreach(var adv in sortedAdvances){
-                if(remainingAmount<=0) break;
-                decimal amountToUse = Math.Min(adv.Amount, remainingAmount);
-                if(remainingAmount>0){
-                    if((adv.CreatedDate.Date-billVm.BillDate.Date).Days<=(terms.DiscountDays)){
-                        discount_advance = discount_advance + (amountToUse*terms.DiscountRate)/100;
-                    }
-                    int overDays = (adv.CreatedDate.Date - interestStartDate.Date).Days ;
-                    if(overDays>0){
-                        interest_advance +=  amountToUse * (terms.InterestRate / 100m) * (overDays / 365m);
-                        interestStartDate = adv.CreatedDate;
-                    }
-                    result.AdvanceUsed += amountToUse;
-                    remainingAmount -= amountToUse;
-                }
-            }
-            remainingAmount = result.AdvanceUsed;
-            foreach (var advance in sortedAdvances)
-            {
-                if (remainingAmount <= 0.01m || advance.Amount <= 0.01m)
-                    break;
+        //     decimal remainingAmount = amountNeeded;
+        //     decimal advanceUsed = 0;
+        //     var utilizations = new List<AdvanceUtilization>();
+        //     var advanceAllocations = new List<AdvanceAllocation>();
+        //     decimal interest_advance = 0;
+        //     decimal discount_advance = 0;
+        //     foreach(var adv in sortedAdvances){
+        //         if(remainingAmount<=0) break;
+        //         decimal amountToUse = Math.Min(adv.Amount, remainingAmount);
+        //         if(remainingAmount>0){
+        //             if((adv.CreatedDate.Date-billVm.BillDate.Date).Days<=(terms.DiscountDays)){
+        //                 discount_advance = discount_advance + (amountToUse*terms.DiscountRate)/100;
+        //             }
+        //             int overDays = (adv.CreatedDate.Date - interestStartDate.Date).Days ;
+        //             if(overDays>0){
+        //                 interest_advance +=  interestBearingPrincipal * (terms.InterestRate / 100m) * (overDays / 365m);
+        //                 interestStartDate = adv.CreatedDate;
+        //             }
+        //             result.AdvanceUsed += amountToUse;
+        //             interestBearingPrincipal -= amountToUse;
+        //             remainingAmount -= amountToUse;
+        //             advanceAllocations.Add(new AdvanceAllocation
+        //             {
+        //                 AdvanceUsed = amountToUse,
+        //                 AdvanceStartDate = adv.CreatedDate,
+        //                 AdvanceID = adv.AdvanceID
+        //             });
+        //         }
+        //     }
+        //     remainingAmount = result.AdvanceUsed;
+        //     foreach (var advance in sortedAdvances)
+        //     {
+        //         if (remainingAmount <= 0.01m || advance.Amount <= 0.01m)
+        //             break;
 
-                decimal amountToUse = Math.Min(advance.Amount, remainingAmount);
+        //         decimal amountToUse = Math.Min(advance.Amount, remainingAmount);
                 
-                if (amountToUse > 0)
-                {
-                    // Create utilization record
-                    var utilization = new AdvanceUtilization
-                    {
-                        AdvanceID = advance.AdvanceID,
-                        PaymentID = 0, // Will be set when payment is saved
-                        AmountUsed = amountToUse,
-                        UtilizedDate = paymentDate,
-                        PartyID = advance.PartyID,
-                        BrokerID = advance.BrokerID,
-                        CompanyID = 1, 
-                    };
+        //         if (amountToUse > 0)
+        //         {
+        //             // Create utilization record
+        //             var utilization = new AdvanceUtilization
+        //             {
+        //                 AdvanceID = advance.AdvanceID,
+        //                 PaymentID = 0, // Will be set when payment is saved
+        //                 AmountUsed = amountToUse,
+        //                 UtilizedDate = paymentDate,
+        //                 PartyID = advance.PartyID,
+        //                 BrokerID = advance.BrokerID,
+        //                 CompanyID = 1, 
+        //             };
 
-                    utilizations.Add(utilization);
+        //             utilizations.Add(utilization);
 
-                    // Update advance amount
-                    advance.Amount -= amountToUse;
-                    advanceUsed += amountToUse;
-                    remainingAmount -= amountToUse;
+        //             // Update advance amount
+        //             advance.Amount -= amountToUse;
+        //             advanceUsed += amountToUse;
+        //             remainingAmount -= amountToUse;
 
-                    // Remove fully consumed advances
-                    if (advance.Amount <= 0.01m)
-                    {
-                        availableAdvances.Remove(advance);
-                    }
+        //             // Remove fully consumed advances
+        //             if (advance.Amount <= 0.01m)
+        //             {
+        //                 availableAdvances.Remove(advance);
+        //             }
 
-                    // Log the utilization for debugging
-                    System.Diagnostics.Debug.WriteLine($"Using {amountToUse:C} from AdvanceID: {advance.AdvanceID} for Bill: {billVm.BillNo}");
-                }
-            }
-            remainingAmount =  (amountNeeded - advanceUsed);
+        //             // Log the utilization for debugging
+        //             System.Diagnostics.Debug.WriteLine($"Using {amountToUse:C} from AdvanceID: {advance.AdvanceID} for Bill: {billVm.BillNo}");
+        //         }
+        //     }
+        //     remainingAmount =  (amountNeeded - advanceUsed);
 
-            result.AdvanceUsed = advanceUsed;
-            result.CashNeeded = remainingAmount;
-            result.Utilizations = utilizations;
-            result.InterestUsed = interest_advance;
-            result.DiscountUsed = discount_advance;
-            result.InterestStartDate = interestStartDate;
-            return result;
-        }
+        //     result.AdvanceUsed = advanceUsed;
+        //     result.CashNeeded = remainingAmount;
+        //     result.Utilizations = utilizations;
+        //     result.InterestUsed = interest_advance;
+        //     result.DiscountUsed = discount_advance;
+        //     result.InterestStartDate = interestStartDate;
+        //     result.AdvanceAllocations = advanceAllocations;
+        //     return result;
+        // }
 
         /// <summary>
         /// Calculates interest and discount for advance payments based on bill date
@@ -2441,7 +3021,8 @@ namespace SaleBillSystem.NET.Forms
         {
             public decimal AdvanceUsed { get; set; }
             public decimal CashNeeded { get; set; }
-            public List<AdvanceUtilization> Utilizations { get; set; }
+            public required List<AdvanceUtilization> Utilizations { get; set; }
+            public required List<AdvanceAllocation> AdvanceAllocations { get; set; }
             public decimal InterestUsed { get; set; }
             public decimal DiscountUsed { get; set; }
             public DateTime InterestStartDate { get; set; }
@@ -2450,175 +3031,138 @@ namespace SaleBillSystem.NET.Forms
         /// <summary>
         /// Handles excess payment amounts by creating new advance payments
         /// </summary>
-        private AdvancePayment CreateAdvanceFromExcess(
-            decimal excessAmount,
-            int? partyId,
-            int? brokerId,
-            DateTime paymentDate,
-            string paymentMethod,
-            string reference)
-        {
-            if (excessAmount <= 0.01m)
-                return null;
+        // private AdvancePayment CreateAdvanceFromExcess(
+        //     decimal excessAmount,
+        //     int? partyId,
+        //     int? brokerId,
+        //     DateTime paymentDate,
+        //     string paymentMethod,
+        //     string reference)
+        // {
+        //     if (excessAmount <= 0.01m)
+        //         return null;
 
-            // Create new advance payment record
-            var advancePayment = new AdvancePayment
-            {
-                PartyID = partyId ?? -1,
-                BrokerID = brokerId,
-                PaymentDate = paymentDate,
-                Amount = excessAmount,
-                PaymentMethod = paymentMethod,
-                Reference = $"Excess from payment: {reference}",
-                CompanyID = 1, // TODO: Use Program.ActiveCompany.CompanyID
-                CreatedDate = DateTime.Now,
-            };
+        //     // Create new advance payment record
+        //     var advancePayment = new AdvancePayment
+        //     {
+        //         PartyID = partyId ?? -1,
+        //         BrokerID = brokerId,
+        //         PaymentDate = paymentDate,
+        //         Amount = excessAmount,
+        //         PaymentMethod = paymentMethod,
+        //         Reference = $"Excess from payment: {reference}",
+        //         CompanyID = 1, // TODO: Use Program.ActiveCompany.CompanyID
+        //         CreatedDate = DateTime.Now,
+        //     };
 
-            // Log the creation of advance payment
-            System.Diagnostics.Debug.WriteLine($"Creating advance payment of {excessAmount:C} from excess amount. PartyID: {partyId}, BrokerID: {brokerId}");
+        //     // Log the creation of advance payment
+        //     System.Diagnostics.Debug.WriteLine($"Creating advance payment of {excessAmount:C} from excess amount. PartyID: {partyId}, BrokerID: {brokerId}");
 
-            return advancePayment;
-        }
+        //     return advancePayment;
+        // }
 
         /// <summary>
         /// Processes excess amount and creates advance payment if needed
         /// </summary>
-        private ExcessHandlingResult HandleExcessAmount(
-            decimal excessAmount,
-            int? partyId,
-            int? brokerId,
-            DateTime paymentDate,
-            string paymentMethod,
-            string reference,
-            PaymentAllocationSummary summary)
-        {
-            var result = new ExcessHandlingResult();
+        // private ExcessHandlingResult HandleExcessAmount(
+        //     decimal excessAmount,
+        //     int? partyId,
+        //     int? brokerId,
+        //     DateTime paymentDate,
+        //     string paymentMethod,
+        //     string reference,
+        //     PaymentAllocationSummary summary)
+        // {
+        //     var result = new ExcessHandlingResult();
 
-            if (excessAmount <= 0.01m)
-            {
-                result.HasExcess = false;
-                result.ExcessAmount = 0;
-                result.AdvancePayment = null;
-                return result;
-            }
+        //     if (excessAmount <= 0.01m)
+        //     {
+        //         result.HasExcess = false;
+        //         result.ExcessAmount = 0;
+        //         result.AdvancePayment = null;
+        //         return result;
+        //     }
 
-            result.HasExcess = true;
-            result.ExcessAmount = excessAmount;
+        //     result.HasExcess = true;
+        //     result.ExcessAmount = excessAmount;
 
-            // Create advance payment from excess
-            var advancePayment = CreateAdvanceFromExcess(
-                excessAmount, 
-                partyId, 
-                brokerId, 
-                paymentDate, 
-                paymentMethod, 
-                reference);
+        //     // Create advance payment from excess
+        //     var advancePayment = CreateAdvanceFromExcess(
+        //         excessAmount, 
+        //         partyId, 
+        //         brokerId, 
+        //         paymentDate, 
+        //         paymentMethod, 
+        //         reference);
 
-            if (advancePayment != null)
-            {
-                result.AdvancePayment = advancePayment;
+        //     if (advancePayment != null)
+        //     {
+        //         result.AdvancePayment = advancePayment;
                 
-                // Add to summary for tracking
-                summary.ExcessAmount = excessAmount;
+        //         // Add to summary for tracking
+        //         summary.ExcessAmount = excessAmount;
                 
-                // Log the excess handling
-                System.Diagnostics.Debug.WriteLine($"Excess amount {excessAmount:C} converted to advance payment. AdvanceID will be assigned when saved.");
+        //         // Log the excess handling
+        //         System.Diagnostics.Debug.WriteLine($"Excess amount {excessAmount:C} converted to advance payment. AdvanceID will be assigned when saved.");
                 
-                // Update the summary to reflect the advance payment
-                summary.TotalAdvanceUsed += excessAmount; // This represents the new advance created
-            }
+        //         // Update the summary to reflect the advance payment
+        //         summary.TotalAdvanceUsed += excessAmount; // This represents the new advance created
+        //     }
 
-            return result;
-        }
+        //     return result;
+        // }
 
         /// <summary>
         /// Validates the complete payment allocation
         /// </summary>
-        private PaymentValidationResult ValidatePaymentAllocation(
-            PaymentAllocationSummary summary,
-            decimal originalPaymentAmount)
-        {
-            var result = new PaymentValidationResult();
-
-            // Check if all amounts add up correctly
-            decimal calculatedTotal = summary.TotalAdvanceUsed + summary.TotalCashUsed + summary.ExcessAmount;
-            decimal difference = Math.Abs(originalPaymentAmount - calculatedTotal);
-
-            if (difference > 0.01m)
-            {
-                result.IsValid = false;
-                result.ValidationMessage = $"Payment allocation mismatch. Expected: {originalPaymentAmount:C}, Calculated: {calculatedTotal:C}, Difference: {difference:C}";
-                return result;
-            }
-
-            // Check if all bills are properly allocated
-            if (summary.BillResults.Any(b => b.PaymentAllocated < 0))
-            {
-                result.IsValid = false;
-                result.ValidationMessage = "Some bills have negative payment allocations";
-                return result;
-            }
-
-            // Check if advance utilizations are valid
-            if (summary.AdvanceUtilizations.Any(u => u.AmountUsed <= 0))
-            {
-                result.IsValid = false;
-                result.ValidationMessage = "Some advance utilizations have invalid amounts";
-                return result;
-            }
-
-            result.IsValid = true;
-            result.ValidationMessage = "Payment allocation is valid";
-            return result;
-        }
 
         /// <summary>
         /// Creates a comprehensive summary report for the payment allocation
         /// </summary>
-        private PaymentSummaryReport CreatePaymentSummaryReport(
-            PaymentAllocationSummary summary,
-            int? partyId,
-            int? brokerId,
-            string paymentMethod,
-            string reference)
-        {
-            var report = new PaymentSummaryReport
-            {
-                PaymentDate = summary.BillResults.FirstOrDefault()?.PaymentDate ?? DateTime.Now,
-                PartyID = partyId,
-                BrokerID = brokerId,
-                PaymentMethod = paymentMethod,
-                Reference = reference,
-                TotalPaymentAmount = summary.TotalPaymentAmount,
-                TotalAdvanceUsed = summary.TotalAdvanceUsed,
-                TotalCashUsed = summary.TotalCashUsed,
-                TotalDiscountEarned = summary.TotalDiscountEarned,
-                TotalInterestCharged = summary.TotalInterestCharged,
-                TotalBrokerageCharged = summary.TotalBrokerageCharged,
-                ExcessAmount = summary.ExcessAmount,
-                BillCount = summary.BillResults.Count,
-                FullyPaidBills = summary.BillResults.Count(b => b.IsFullyPaid),
-                PartiallyPaidBills = summary.BillResults.Count(b => b.IsPartiallyPaid),
-                AdvanceUtilizationCount = summary.AdvanceUtilizations.Count
-            };
+        // private PaymentSummaryReport CreatePaymentSummaryReport(
+        //     PaymentAllocationSummary summary,
+        //     int? partyId,
+        //     int? brokerId,
+        //     string paymentMethod,
+        //     string reference)
+        // {
+        //     var report = new PaymentSummaryReport
+        //     {
+        //         PaymentDate = summary.BillResults.FirstOrDefault()?.PaymentDate ?? DateTime.Now,
+        //         PartyID = partyId,
+        //         BrokerID = brokerId,
+        //         PaymentMethod = paymentMethod,
+        //         Reference = reference,
+        //         TotalPaymentAmount = summary.TotalPaymentAmount,
+        //         TotalAdvanceUsed = summary.TotalAdvanceUsed,
+        //         TotalCashUsed = summary.TotalCashUsed,
+        //         TotalDiscountEarned = summary.TotalDiscountEarned,
+        //         TotalInterestCharged = summary.TotalInterestCharged,
+        //         TotalBrokerageCharged = summary.TotalBrokerageCharged,
+        //         ExcessAmount = summary.ExcessAmount,
+        //         BillCount = summary.BillResults.Count,
+        //         FullyPaidBills = summary.BillResults.Count(b => b.IsFullyPaid),
+        //         PartiallyPaidBills = summary.BillResults.Count(b => b.IsPartiallyPaid),
+        //         AdvanceUtilizationCount = summary.AdvanceUtilizations.Count
+        //     };
 
-            // Add bill details
-            report.BillDetails = summary.BillResults.Select(b => new BillSummaryDetail
-            {
-                BillNo = b.BillNo,
-                OriginalBalance = b.OriginalBalance,
-                PaymentAllocated = b.PaymentAllocated,
-                RemainingBalance = b.RemainingBalance,
-                AdvanceUsed = b.AdvanceUsed,
-                CashUsed = b.CashUsed,
-                DiscountEarned = b.DiscountEarned,
-                InterestCharged = b.InterestCharged,
-                BrokerageCharged = b.BrokerageCharged,
-                IsFullyPaid = b.IsFullyPaid
-            }).ToList();
+        //     // Add bill details
+        //     report.BillDetails = summary.BillResults.Select(b => new BillSummaryDetail
+        //     {
+        //         BillNo = b.BillNo,
+        //         OriginalBalance = b.OriginalBalance,
+        //         PaymentAllocated = b.PaymentAllocated,
+        //         RemainingBalance = b.RemainingBalance,
+        //         AdvanceUsed = b.AdvanceUsed,
+        //         CashUsed = b.CashUsed,
+        //         DiscountEarned = b.DiscountEarned,
+        //         InterestCharged = b.InterestCharged,
+        //         BrokerageCharged = b.BrokerageCharged,
+        //         IsFullyPaid = b.IsFullyPaid
+        //     }).ToList();
 
-            return report;
-        }
+        //     return report;
+        // }
 
         /// <summary>
         /// Result of excess amount handling
@@ -2627,7 +3171,7 @@ namespace SaleBillSystem.NET.Forms
         {
             public bool HasExcess { get; set; }
             public decimal ExcessAmount { get; set; }
-            public AdvancePayment AdvancePayment { get; set; }
+            public AdvancePayment? AdvancePayment { get; set; }
         }
 
         /// <summary>
@@ -2636,7 +3180,7 @@ namespace SaleBillSystem.NET.Forms
         private class PaymentValidationResult
         {
             public bool IsValid { get; set; }
-            public string ValidationMessage { get; set; }
+            public required string ValidationMessage { get; set; }
         }
 
         /// <summary>
@@ -2647,8 +3191,8 @@ namespace SaleBillSystem.NET.Forms
             public DateTime PaymentDate { get; set; }
             public int? PartyID { get; set; }
             public int? BrokerID { get; set; }
-            public string PaymentMethod { get; set; }
-            public string Reference { get; set; }
+            public required string PaymentMethod { get; set; }
+            public required string Reference { get; set; }
             public decimal TotalPaymentAmount { get; set; }
             public decimal TotalAdvanceUsed { get; set; }
             public decimal TotalCashUsed { get; set; }
@@ -2660,7 +3204,7 @@ namespace SaleBillSystem.NET.Forms
             public int FullyPaidBills { get; set; }
             public int PartiallyPaidBills { get; set; }
             public int AdvanceUtilizationCount { get; set; }
-            public List<BillSummaryDetail> BillDetails { get; set; } = new List<BillSummaryDetail>();
+            public required List<BillSummaryDetail> BillDetails { get; set; } = new List<BillSummaryDetail>();
         }
 
         /// <summary>
@@ -2668,7 +3212,7 @@ namespace SaleBillSystem.NET.Forms
         /// </summary>
         private class BillSummaryDetail
         {
-            public string BillNo { get; set; }
+            public required string BillNo { get; set; }
             public decimal OriginalBalance { get; set; }
             public decimal PaymentAllocated { get; set; }
             public decimal RemainingBalance { get; set; }
@@ -2679,5 +3223,428 @@ namespace SaleBillSystem.NET.Forms
             public decimal BrokerageCharged { get; set; }
             public bool IsFullyPaid { get; set; }
         }
+
+        /// <summary>
+        /// DEBUG: Shows detailed payment allocation information
+        /// </summary>
+        private void ShowPaymentAllocationDetails(PaymentAllocationSummary allocationSummary)
+        {
+        //     var details = new System.Text.StringBuilder();
+        //     details.AppendLine("=== PAYMENT ALLOCATION DETAILS ===\n");
+            
+        //     details.AppendLine($"Total Payment Amount: ₹{allocationSummary.TotalPaymentAmount:N2}");
+        //     details.AppendLine($"Total Cash Used: ₹{allocationSummary.TotalCashUsed:N2}");
+        //     details.AppendLine($"Total Advance Used: ₹{allocationSummary.TotalAdvanceUsed:N2}");
+        //     details.AppendLine($"Total Discount Earned: ₹{allocationSummary.TotalDiscountEarned:N2}");
+        //     details.AppendLine($"Total Interest Charged: ₹{allocationSummary.TotalInterestCharged:N2}");
+        //     details.AppendLine($"Total Brokerage Charged: ₹{allocationSummary.TotalBrokerageCharged:N2}");
+        //     details.AppendLine($"Excess Amount: ₹{allocationSummary.ExcessAmount:N2}");
+        //     details.AppendLine($"Bills Processed: {allocationSummary.BillResults?.Count ?? 0}\n");
+
+        //     if (allocationSummary.BillResults != null && allocationSummary.BillResults.Any())
+        //     {
+        //         details.AppendLine("=== BILL-WISE BREAKDOWN ===");
+        //         foreach (var billResult in allocationSummary.BillResults)
+        //         {
+        //             details.AppendLine($"\nBill ID: {billResult.BillID}");
+        //             details.AppendLine($"  Payment Allocated: ₹{billResult.PaymentAllocated:N2}");
+        //             details.AppendLine($"  Cash Used: ₹{billResult.CashUsed:N2}");
+        //             details.AppendLine($"  Advance Used: ₹{billResult.AdvanceUsed:N2}");
+        //             details.AppendLine($"  Discount Earned: ₹{billResult.DiscountEarned:N2}");
+        //             details.AppendLine($"  Interest Charged: ₹{billResult.InterestCharged:N2}");
+        //             details.AppendLine($"  Brokerage Charged: ₹{billResult.BrokerageCharged:N2}");
+        //             details.AppendLine($"  Remaining Balance: ₹{billResult.RemainingBalance:N2}");
+                    
+        //             if (billResult.AdvanceAllocations != null && billResult.AdvanceAllocations.Any())
+        //             {
+        //                 details.AppendLine($"  Advance Allocations ({billResult.AdvanceAllocations.Count}):");
+        //                 foreach (var advance in billResult.AdvanceAllocations)
+        //                 {
+        //                     details.AppendLine($"    - Used: ₹{advance.AdvanceUsed:N2}, Start Date: {advance.AdvanceStartDate:dd-MM-yyyy}");
+        //                 }
+        //             }
+        //         }
+        //     }
+
+        //     MessageBox.Show(details.ToString(), "Payment Allocation Debug Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// DEBUG: Shows detailed payment allocation result for individual bills
+        /// </summary>
+        // private void ShowPaymentAllocationResultDetails(PaymentAllocationResult result, string billNo)
+        // {
+        //     var details = new System.Text.StringBuilder();
+        //     details.AppendLine($"=== PAYMENT ALLOCATION RESULT FOR BILL {billNo} ===\n");
+            
+        //     details.AppendLine($"Advance Used: ₹{result.AdvanceUsed:N2}");
+        //     details.AppendLine($"Cash Used: ₹{result.CashUsed:N2}");
+        //     details.AppendLine($"Discount Earned: ₹{result.DiscountEarned:N2}");
+        //     details.AppendLine($"Interest Charged: ₹{result.InterestCharged:N2}");
+        //     details.AppendLine($"Brokerage Charged: ₹{result.BrokerageCharged:N2}");
+        //     details.AppendLine($"Net Settlement: ₹{result.NetSettlement:N2}");
+            
+        //     if (result.AdvanceBreakdown != null && result.AdvanceBreakdown.Any())
+        //     {
+        //         details.AppendLine($"\n=== ADVANCE BREAKDOWN ({result.AdvanceBreakdown.Count} utilizations) ===");
+        //         foreach (var advance in result.AdvanceBreakdown)
+        //         {
+        //             details.AppendLine($"- AdvanceID: {advance.AdvanceID}");
+        //             details.AppendLine($"  Amount Used: ₹{advance.AmountUsed:N2}");
+        //             details.AppendLine($"  Payment Date (used for calc): {advance.CreatedDate:dd-MM-yyyy}");
+        //             details.AppendLine($"  Utilized Date: {advance.UtilizedDate:dd-MM-yyyy}");
+        //             details.AppendLine();
+        //         }
+        //     }
+        //     else
+        //     {
+        //         details.AppendLine("\n=== NO ADVANCE BREAKDOWN ===");
+        //     }
+
+        //     MessageBox.Show(details.ToString(), $"Payment Allocation Result - Bill {billNo}", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        // }
+
+        #region Settlement Calculation Logic
+
+        /// <summary>
+        /// Calculates settlement requirements for multiple bills with advance payments
+        /// </summary>
+        private SettlementCalculationResult CalculateSettlementRequirement(
+            List<BillViewModel> billsToSettle,
+            List<AdvancePayment> availableAdvances,
+            DateTime settlementDate,
+            int interestDays, 
+            decimal interestRate,
+            int discountDays, 
+            decimal discountRate,
+            decimal brokerageRate)
+        {
+            decimal totalAdvanceUsed = 0;
+            decimal totalCashNeeded = 0;
+            decimal totalInterest = 0;
+            decimal totalDiscount = 0;
+            decimal totalBrokerage = 0;
+            var billBreakdowns = new List<BillSettlementBreakdown>();
+            
+            // Use user-selected advance payments if available, otherwise use all available advances
+            var advancesToUse = _userSelectedAdvancePayments.Any() ? _userSelectedAdvancePayments : availableAdvances;
+            
+            // Create working copy of advances for consumption simulation
+            var workingAdvances = advancesToUse.Select(a => new AdvancePayment
+            {
+                AdvanceID = a.AdvanceID,
+                Amount = a.Amount,
+                PaymentDate = a.PaymentDate,
+                PartyID = a.PartyID,
+                BrokerID = a.BrokerID
+            }).OrderBy(a => a.PaymentDate).ToList(); // FIFO order
+
+            foreach (var billVm in billsToSettle)
+            {
+                var billResult = CalculateIndividualBillWithAdvances(
+                    billVm, workingAdvances, settlementDate, 
+                    interestDays, interestRate, discountDays, discountRate, brokerageRate);
+                    decimal prevTotalUsedAdvance = billResult.AdvanceUsed;
+                foreach( var advance in workingAdvances.Where(a => a.Amount > 0).OrderBy(a => a.PaymentDate)){
+                    if(prevTotalUsedAdvance >= advance.Amount){
+                        prevTotalUsedAdvance -= advance.Amount;
+                        workingAdvances.Remove(advance);
+                    }
+                    else{
+                        advance.Amount -= prevTotalUsedAdvance;
+                    }
+                 }
+
+                totalAdvanceUsed += billResult.AdvanceUsed;
+                totalCashNeeded += billResult.CashNeeded;
+                totalInterest += billResult.Interest;
+                totalDiscount += billResult.Discount;
+                totalBrokerage += billResult.Brokerage;
+
+                billBreakdowns.Add(new BillSettlementBreakdown
+                {
+                    BillID = billVm.BillID,
+                    BillNo = billVm.BillNo,
+                    AmountDue = billResult.TotalDue,
+                    AdvanceUsed = billResult.AdvanceUsed,
+                    CashNeeded = billResult.CashNeeded,
+                    Interest = billResult.Interest,
+                    Discount = billResult.Discount,
+                    Brokerage = billResult.Brokerage,
+                    InterestPeriods = billResult.InterestPeriods,
+                    AdvanceUtilizations = billResult.AdvanceUtilizations
+                });
+            }
+
+            decimal totalAdvanceAvailable = availableAdvances.Sum(a => a.Amount);
+            decimal unusedAdvance = totalAdvanceAvailable - totalAdvanceUsed;
+
+            return new SettlementCalculationResult
+            {
+                TotalAmountDue = totalAdvanceUsed + totalCashNeeded,
+                TotalAdvanceUsed = totalAdvanceUsed,
+                TotalCashNeeded = totalCashNeeded,
+                TotalInterest = totalInterest,
+                TotalDiscount = totalDiscount,
+                TotalBrokerage = totalBrokerage,
+                AdvanceAvailable = totalAdvanceAvailable,
+                UnusedAdvance = unusedAdvance,
+                CanFullySettle = totalCashNeeded <= 0.01m,
+                BillBreakdowns = billBreakdowns,
+                PaymentDate = settlementDate
+            };
+        }
+
+        /// <summary>
+        /// Calculates settlement for an individual bill with advance payments
+        /// </summary>
+        private IndividualBillSettlementResult CalculateIndividualBillWithAdvances(
+    BillViewModel billVm,
+    List<AdvancePayment> workingAdvances,
+    DateTime settlementDate,
+    int interestDays,
+    decimal interestRate,
+    int discountDays,
+    decimal discountRate,
+    decimal brokerageRate)
+{
+    // Create timeline with NO advances - just settlement date for interest calculation
+    var paymentEvents = new List<PaymentEvent>
+    {
+        new PaymentEvent
+        {
+            Date = settlementDate,
+            Amount = 0,
+            Type = "Settlement",
+            IsHistorical = false,
+            AdvanceId = 0
+        }
+    };
+
+    foreach (var advance in workingAdvances.Where(a => a.Amount > 0))
+{
+    paymentEvents.Add(new PaymentEvent
+    {
+        Date = advance.PaymentDate,
+        Amount = advance.Amount,
+        Type = "Payment", // Change from "Advance" to "Payment"
+        IsHistorical = false,
+        AdvanceId = advance.AdvanceID
+    });
+}
+
+    // Calculate what bill needs (without advances applied)
+    var timeline = CalculateTimelineForBill(
+        billVm, paymentEvents, interestDays, interestRate, 
+        discountDays, discountRate, brokerageRate);
+
+    // Now apply advances to settle the bill
+    decimal totalNeeded = timeline.FinalAmountDue;
+    decimal totalAvailableAdvance = workingAdvances.Sum(a => a.Amount);
+    decimal unusedAdvance = totalAvailableAdvance - timeline.PreviousUsed;
+    if(unusedAdvance >= totalNeeded){
+        timeline.PreviousUsed += totalNeeded;
+        totalNeeded = 0;
+    }else{
+        timeline.PreviousUsed += unusedAdvance;
+        totalNeeded -= unusedAdvance;
+    }
+    decimal totalUsedAdvance = timeline.PreviousUsed;
+    decimal remainingAmountNeeded = totalNeeded + totalUsedAdvance;
+    var utilizationDetails = new List<AdvanceUtilizationDetail>();
+    foreach (var advance in workingAdvances.OrderBy(a => a.PaymentDate))
+    {
+        if (advance.Amount <= 0 || remainingAmountNeeded <= 0) break;
+
+        decimal amountToUse = Math.Min(advance.Amount, remainingAmountNeeded);
+        
+        if (amountToUse > 0)
+        {
+            // Track this utilization
+            utilizationDetails.Add(new AdvanceUtilizationDetail
+            {
+                AdvanceID = advance.AdvanceID,
+                BillID = billVm.BillID,
+                AmountUsed = amountToUse,
+                AdvanceDate = advance.PaymentDate,
+                UtilizationDate = settlementDate,
+                PaymentMethod = advance.PaymentMethod ?? "Cash",
+                Reference = advance.Reference ?? ""
+            });
+            remainingAmountNeeded -= amountToUse;
+            advance.Amount -= amountToUse; // Consume from advance
+        }
+    }
+
+    return new IndividualBillSettlementResult
+    {
+        TotalDue = totalNeeded,
+        AdvanceUsed = timeline.PreviousUsed,
+        CashNeeded = totalNeeded,
+        Interest = timeline.TotalInterest,
+        Discount = timeline.TotalDiscount,
+        Brokerage = timeline.Brokerage,
+        InterestPeriods = timeline.InterestPeriods,
+        AdvanceUtilizations = utilizationDetails
+    };
+}
+
+        /// <summary>
+        /// Calculates timeline for a bill with payment events
+        /// </summary>
+        private BillTimelineResult CalculateTimelineForBill(
+            BillViewModel billVm,
+            List<PaymentEvent> events,
+            int interestDays,
+            decimal interestRate,
+            int discountDays,
+            decimal discountRate,
+            decimal brokerageRate)
+        {
+            DateTime billDate = billVm.BillDate;
+            DateTime dueDate = billDate.AddDays(interestDays);
+            DateTime discountDueDate = billDate.AddDays(discountDays);
+            
+            decimal principalBalance = billVm.TotalAmount;
+            decimal brokerage = principalBalance * brokerageRate / 100m;
+            principalBalance -= brokerage; // Reduce principal by brokerage if applicable
+            
+            decimal totalInterest = 0;
+            decimal totalDiscount = 0;
+            DateTime currentInterestDate = dueDate;
+            var interestPeriods = new List<InterestPeriod>();
+            events = events.OrderBy(e => e.Date).ToList();
+            decimal previousUsed = 0;
+            foreach (var paymentEvent in events)
+            {
+                // Calculate interest from last date to this event
+                if (paymentEvent.Date > dueDate && principalBalance > 0)
+                {
+                    int periodDays = (paymentEvent.Date.Date - currentInterestDate.Date).Days;
+                    if (periodDays > 0)
+                    {
+                        decimal periodInterest = principalBalance * (interestRate / 100m) * (periodDays / 365m);
+                        totalInterest += periodInterest;
+                        
+                        interestPeriods.Add(new InterestPeriod
+                        {
+                            StartDate = currentInterestDate,
+                            EndDate = paymentEvent.Date,
+                            Days = periodDays,
+                            Principal = principalBalance,
+                            Interest = periodInterest
+                        });
+                    }
+                    currentInterestDate = paymentEvent.Date;
+                }
+
+                // Calculate discount if within discount period
+                if (paymentEvent.Date <= discountDueDate && paymentEvent.Amount > 0)
+                {
+                    decimal paymentDiscount = Math.Min(paymentEvent.Amount, principalBalance) * (discountRate / 100m);
+                    totalDiscount += paymentDiscount;
+                }
+
+                // Apply payment to principal (only for actual payment events, not settlement marker)
+                previousUsed += Math.Min(paymentEvent.Amount, principalBalance);
+                if (paymentEvent.Type != "Settlement" && paymentEvent.Amount > 0)
+                {
+                    principalBalance -= Math.Min(paymentEvent.Amount, principalBalance);
+                }
+
+                if (principalBalance <= 0) break;
+            }
+
+            return new BillTimelineResult
+            {
+                FinalAmountDue = Math.Max(0, principalBalance) + totalInterest - totalDiscount,
+                TotalInterest = totalInterest,
+                TotalDiscount = totalDiscount,
+                Brokerage = brokerage,
+                PreviousUsed = previousUsed,
+                InterestPeriods = interestPeriods
+            };
+        }
+
+        #endregion
+
+        #region Supporting Classes
+
+        /// <summary>
+        /// Result of settlement calculation for an individual bill
+        /// </summary>
+        public class IndividualBillSettlementResult
+        {
+            public decimal TotalDue { get; set; }
+            public decimal AdvanceUsed { get; set; }
+            public decimal CashNeeded { get; set; }
+            public decimal Interest { get; set; }
+            public decimal Discount { get; set; }
+            public decimal Brokerage { get; set; }
+            public List<InterestPeriod> InterestPeriods { get; set; }
+            public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
+
+        }
+
+        /// <summary>
+        /// Timeline calculation result for a bill
+        /// </summary>
+        public class BillTimelineResult
+        {
+            public decimal FinalAmountDue { get; set; }
+            public decimal TotalInterest { get; set; }
+            public decimal TotalDiscount { get; set; }
+            public decimal Brokerage { get; set; }
+            public decimal PreviousUsed {get;set;}
+            public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
+        }
+
+        /// <summary>
+        /// Complete settlement calculation result for multiple bills
+        /// </summary>
+        public class SettlementCalculationResult
+        {
+            public decimal TotalAmountDue { get; set; }
+            public decimal TotalAdvanceUsed { get; set; }
+            public decimal TotalCashNeeded { get; set; }
+            public decimal TotalInterest { get; set; }
+            public decimal TotalDiscount { get; set; }
+            public decimal TotalBrokerage { get; set; }
+            public decimal AdvanceAvailable { get; set; }
+            public decimal UnusedAdvance { get; set; }
+            public bool CanFullySettle { get; set; }
+            public DateTime PaymentDate { get; set; }
+            public List<BillSettlementBreakdown> BillBreakdowns { get; set; } = new List<BillSettlementBreakdown>();
+            public int? PartyID { get; set; }
+            public int? BrokerID { get; set; }
+        }
+
+        /// <summary>
+        /// Breakdown of settlement for a specific bill
+        /// </summary>
+        public class BillSettlementBreakdown
+        {
+            public int BillID { get; set; }
+            public string BillNo { get; set; }
+            public decimal AmountDue { get; set; }
+            public decimal AdvanceUsed { get; set; }
+            public decimal CashNeeded { get; set; }
+            public decimal Interest { get; set; }
+            public decimal Discount { get; set; }
+            public decimal Brokerage { get; set; }
+            public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
+            public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
+        }
+        public class AdvanceUtilizationDetail
+        {
+            public int AdvanceID { get; set; }
+            public int BillID { get; set; }
+            public decimal AmountUsed { get; set; }
+            public DateTime AdvanceDate { get; set; }
+            public DateTime UtilizationDate { get; set; }
+            public string PaymentMethod { get; set; } = string.Empty;
+            public string Reference { get; set; } = string.Empty;
+        }
+        #endregion
     }
 }

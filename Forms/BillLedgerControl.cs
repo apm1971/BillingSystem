@@ -39,6 +39,16 @@ namespace SaleBillSystem.NET.Forms
         private Button btnPrevLedgerPage;
         private Button btnNextLedgerPage;
         private Label lblLedgerPageInfo;
+        
+        // Payment status filter controls
+        private ComboBox cmbPaymentStatus;
+        private Label lblPaymentStatus;
+        
+        // Date range filter controls
+        private DateTimePicker dtpFromDate;
+        private Label lblFromDate;
+        private DateTimePicker dtpToDate;
+        private Label lblToDate;
 
 
         public BillLedgerControl()
@@ -161,6 +171,13 @@ namespace SaleBillSystem.NET.Forms
         {
             if (_allBills == null) return;
 
+            // Check if any filters are applied
+            if (IsAnyFilterApplied())
+            {
+                ApplyAllFilters();
+                return;
+            }
+
             int startIndex = (_currentBillPage - 1) * _billPageSize;
             var currentPageItems = _allBills.Skip(startIndex).Take(_billPageSize).ToList();
 
@@ -172,6 +189,33 @@ namespace SaleBillSystem.NET.Forms
             btnPrevBillPage.Enabled = _currentBillPage > 1;
             btnNextBillPage.Enabled = _currentBillPage < GetTotalBillPages();
             lblBillPageInfo.Text = $"Page {_currentBillPage} of {GetTotalBillPages()} ({_allBills.Count} bills)";
+        }
+
+        private bool IsAnyFilterApplied()
+        {
+            // Check payment status filter
+            if (cmbPaymentStatus.SelectedValue != null && cmbPaymentStatus.SelectedValue.ToString() != "All")
+                return true;
+
+            // Check date range filters
+            if (dtpFromDate.Value != dtpFromDate.MinDate || dtpToDate.Value != dtpToDate.MaxDate)
+                return true;
+
+            return false;
+        }
+
+        private void ClearAllFilters()
+        {
+            // Reset payment status filter
+            cmbPaymentStatus.SelectedIndex = 0; // "All"
+            
+            // Reset date range filters to default values
+            dtpFromDate.Value = DateTime.Today.AddMonths(-1);
+            dtpToDate.Value = DateTime.Today;
+            
+            // Refresh the display
+            _currentBillPage = 1;
+            DisplayCurrentBillPage();
         }
 
         private void BtnPrevLedgerPage_Click(object sender, EventArgs e)
@@ -280,6 +324,15 @@ namespace SaleBillSystem.NET.Forms
                 cmbBroker.DataSource = BrokerService.GetAllBrokers();
                 cmbBroker.DisplayMember = "BrokerName";
                 cmbBroker.ValueMember = "BrokerID";
+                
+                // Initialize payment status filter
+                var paymentStatuses = new List<string> { "All", "Paid", "Partial", "Unpaid" };
+                cmbPaymentStatus.DataSource = paymentStatuses;
+                cmbPaymentStatus.SelectedIndex = 0; // Default to "All"
+                
+                // Initialize date range filters
+                dtpFromDate.Value = DateTime.Today.AddMonths(-1); // Default to 1 month ago
+                dtpToDate.Value = DateTime.Today; // Default to today
             }
             catch (Exception ex)
             {
@@ -295,6 +348,7 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.KeyDown += DgvBills_KeyDown;
             btnPrint.Click += BtnPrint_Click;
             btnRefresh.Click += BtnRefresh_Click;
+            btnClearFilters.Click += btnClearFilters_Click;
         }
 
         private void ClearForm()
@@ -321,6 +375,26 @@ namespace SaleBillSystem.NET.Forms
             LoadBillsBasedOnSelection();
         }
 
+        private void cmbPaymentStatus_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            ApplyPaymentStatusFilter();
+        }
+
+        private void dtpFromDate_ValueChanged(object? sender, EventArgs e)
+        {
+            ApplyDateRangeFilter();
+        }
+
+        private void dtpToDate_ValueChanged(object? sender, EventArgs e)
+        {
+            ApplyDateRangeFilter();
+        }
+
+        private void btnClearFilters_Click(object? sender, EventArgs e)
+        {
+            ClearAllFilters();
+        }
+
         private void LoadBillsBasedOnSelection()
         {
             int? partyId = cmbParty.SelectedValue as int?;
@@ -338,8 +412,77 @@ namespace SaleBillSystem.NET.Forms
             {
                 LoadAllBills();
             }
+            
+            // Apply payment status filter after loading bills
+            ApplyPaymentStatusFilter();
         }
         
+        private void ApplyPaymentStatusFilter()
+        {
+            ApplyAllFilters();
+        }
+
+        private void ApplyDateRangeFilter()
+        {
+            ApplyAllFilters();
+        }
+
+        private void ApplyAllFilters()
+        {
+            if (_allBills == null) return;
+
+            var filteredBills = _allBills.AsEnumerable();
+
+            // Apply payment status filter
+            if (cmbPaymentStatus.SelectedValue != null && cmbPaymentStatus.SelectedValue.ToString() != "All")
+            {
+                string selectedStatus = cmbPaymentStatus.SelectedValue.ToString();
+                filteredBills = filteredBills.Where(b => b.Status == selectedStatus);
+            }
+
+            // Apply date range filter
+            if (dtpFromDate.Value != dtpFromDate.MinDate)
+            {
+                filteredBills = filteredBills.Where(b => b.BillDate >= dtpFromDate.Value.Date);
+            }
+
+            if (dtpToDate.Value != dtpToDate.MaxDate)
+            {
+                filteredBills = filteredBills.Where(b => b.BillDate <= dtpToDate.Value.Date);
+            }
+
+            var finalFilteredBills = filteredBills.ToList();
+            
+            // Update pagination for filtered results
+            _currentBillPage = 1;
+            DisplayFilteredBills(finalFilteredBills);
+        }
+
+        private void DisplayFilteredBills(List<Bill> filteredBills)
+        {
+            if (filteredBills == null || !filteredBills.Any())
+            {
+                dgvBills.DataSource = null;
+                btnPrevBillPage.Enabled = false;
+                btnNextBillPage.Enabled = false;
+                lblBillPageInfo.Text = "No bills found";
+                return;
+            }
+
+            int startIndex = (_currentBillPage - 1) * _billPageSize;
+            var currentPageItems = filteredBills.Skip(startIndex).Take(_billPageSize).ToList();
+
+            // Update data source with filtered items
+            dgvBills.DataSource = null;
+            dgvBills.DataSource = currentPageItems;
+
+            // Update pagination controls
+            int totalPages = (int)Math.Ceiling(filteredBills.Count / (double)_billPageSize);
+            btnPrevBillPage.Enabled = _currentBillPage > 1;
+            btnNextBillPage.Enabled = _currentBillPage < totalPages;
+            lblBillPageInfo.Text = $"Page {_currentBillPage} of {totalPages} ({filteredBills.Count} bills)";
+        }
+
         private void LoadAllBills()
         {
             try

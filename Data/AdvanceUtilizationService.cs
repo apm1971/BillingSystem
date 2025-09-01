@@ -32,7 +32,7 @@ namespace SaleBillSystem.NET.Data
                 var parameters = new OleDbParameter[]
                 {
                     new OleDbParameter("AdvanceID", OleDbType.Integer) { Value = utilization.AdvanceID },
-                    new OleDbParameter("PaymentID", OleDbType.Integer) { Value = utilization.PaymentID },
+                    new OleDbParameter("PaymentID", OleDbType.Integer) { Value = utilization.PaymentID > 0 ? utilization.PaymentID : (object)DBNull.Value },
                     new OleDbParameter("AmountUsed", OleDbType.Currency) { Value = utilization.AmountUsed },
                     new OleDbParameter("UtilizedDate", OleDbType.Date) { Value = utilization.UtilizedDate },
                     new OleDbParameter("PartyID", OleDbType.Integer) { Value = utilization.PartyID ?? (object)DBNull.Value },
@@ -78,13 +78,17 @@ namespace SaleBillSystem.NET.Data
                 string sql = @"
                     SELECT au.UtilizationID, au.AdvanceID, au.PaymentID, au.AmountUsed, au.UtilizedDate, 
                            au.PartyID, au.BrokerID, au.CompanyID, au.CreatedDate,
-                           pm.PartyName, bm.BrokerName, pay.Reference as PaymentReference,
+                           pm.PartyName, bm.BrokerName, 
+                           CASE 
+                               WHEN au.PaymentID IS NOT NULL AND au.PaymentID > 0 THEN 
+                                   (SELECT Reference FROM AdvancePayments WHERE AdvanceID = au.PaymentID)
+                               ELSE 'N/A'
+                           END as PaymentReference,
                            ap.Reference as OriginalAdvanceReference, ap.Amount as OriginalAdvanceAmount, ap.PaymentDate as OriginalAdvanceDate
                     FROM (((AdvanceUtilization au
                     LEFT JOIN PartyMaster pm ON au.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON au.BrokerID = bm.BrokerID)
-                    LEFT JOIN PaymentMaster pay ON au.PaymentID = pay.PaymentID)
-                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID
+                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID)
                     WHERE au.AdvanceID = ? AND au.CompanyID = ?
                     ORDER BY au.UtilizedDate DESC";
 
@@ -122,13 +126,17 @@ namespace SaleBillSystem.NET.Data
                 string sql = @"
                     SELECT au.UtilizationID, au.AdvanceID, au.PaymentID, au.AmountUsed, au.UtilizedDate, 
                            au.PartyID, au.BrokerID, au.CompanyID, au.CreatedDate,
-                           pm.PartyName, bm.BrokerName, pay.Reference as PaymentReference,
+                           pm.PartyName, bm.BrokerName, 
+                           CASE 
+                               WHEN au.PaymentID IS NOT NULL AND au.PaymentID > 0 THEN 
+                                   (SELECT Reference FROM AdvancePayments WHERE AdvanceID = au.PaymentID)
+                               ELSE 'N/A'
+                           END as PaymentReference,
                            ap.Reference as OriginalAdvanceReference, ap.Amount as OriginalAdvanceAmount, ap.PaymentDate as OriginalAdvanceDate
                     FROM (((AdvanceUtilization au
                     LEFT JOIN PartyMaster pm ON au.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON au.BrokerID = bm.BrokerID)
-                    LEFT JOIN PaymentMaster pay ON au.PaymentID = pay.PaymentID)
-                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID
+                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID)
                     WHERE au.PaymentID = ? AND au.CompanyID = ?
                     ORDER BY au.UtilizedDate DESC";
 
@@ -194,13 +202,17 @@ namespace SaleBillSystem.NET.Data
                 string sql = @"
                     SELECT au.UtilizationID, au.AdvanceID, au.PaymentID, au.AmountUsed, au.UtilizedDate, 
                            au.PartyID, au.BrokerID, au.CompanyID, au.CreatedDate,
-                           pm.PartyName, bm.BrokerName, pay.Reference as PaymentReference,
+                           pm.PartyName, bm.BrokerName, 
+                           CASE 
+                               WHEN au.PaymentID IS NOT NULL AND au.PaymentID > 0 THEN 
+                                   (SELECT Reference FROM AdvancePayments WHERE AdvanceID = au.PaymentID)
+                               ELSE 'N/A'
+                           END as PaymentReference,
                            ap.Reference as OriginalAdvanceReference, ap.Amount as OriginalAdvanceAmount, ap.PaymentDate as OriginalAdvanceDate
                     FROM (((AdvanceUtilization au
                     LEFT JOIN PartyMaster pm ON au.PartyID = pm.PartyID)
                     LEFT JOIN BrokerMaster bm ON au.BrokerID = bm.BrokerID)
-                    LEFT JOIN PaymentMaster pay ON au.PaymentID = pay.PaymentID)
-                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID
+                    LEFT JOIN AdvancePayments ap ON au.AdvanceID = ap.AdvanceID)
                     WHERE au.CompanyID = ?";
 
                 var parametersList = new List<OleDbParameter>

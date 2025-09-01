@@ -148,20 +148,20 @@ namespace SaleBillSystem.NET.Forms
             var paymentsMenu = new ToolStripMenuItem("&Payments");
             paymentsMenu.Font = menuFont;
 
-            var paymentEntryItem = new ToolStripMenuItem("&Payment Entry");
+            var paymentEntryItem = new ToolStripMenuItem("&Settlement Entry");
             paymentEntryItem.Font = menuFont;
             paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
 
-            var paymentListItem = new ToolStripMenuItem("&Payment List");
-            paymentListItem.Font = menuFont;
-            paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };
+            // var paymentListItem = new ToolStripMenuItem("&Payment List");
+            // paymentListItem.Font = menuFont;
+            // paymentListItem.Click += (s, e) => { ShowControl(new PaymentListControl()); };
 
-            var advancePaymentItem = new ToolStripMenuItem("&Advance Payment");
+            var advancePaymentItem = new ToolStripMenuItem("&Payment Entry");
             advancePaymentItem.Font = menuFont;
             advancePaymentItem.Click += (s, e) => { ShowControl(new AdvancePaymentEntryControl()); };
 
             paymentsMenu.DropDownItems.Add(paymentEntryItem);
-            paymentsMenu.DropDownItems.Add(paymentListItem);
+            // paymentsMenu.DropDownItems.Add(paymentListItem);
             paymentsMenu.DropDownItems.Add(advancePaymentItem);
 
             // === UTILITIES MENU ===

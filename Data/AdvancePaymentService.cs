@@ -34,7 +34,7 @@ namespace SaleBillSystem.NET.Data
                     new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = advancePayment.ChequeAmountFirm1 },
                     new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = advancePayment.ChequeAmountFirm2 },
                     new OleDbParameter("CompanyID", OleDbType.Integer) { Value = advancePayment.CompanyID },
-                    new OleDbParameter("CreatedDate", OleDbType.Date) { Value = DateTime.Now }
+                    new OleDbParameter("CreatedDate", OleDbType.Date) { Value = advancePayment.CreatedDate }
                 };
 
                 int rowsAffected = DatabaseManager.ExecuteNonQuery(sql, parameters);

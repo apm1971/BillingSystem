@@ -14,9 +14,9 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                // Round the transaction amounts to ensure consistent integer values
-                transaction.DebitAmount = Math.Round(transaction.DebitAmount);
-                transaction.CreditAmount = Math.Round(transaction.CreditAmount);
+                // Round the transaction amounts to 2 decimal places for CURRENCY data type
+                transaction.DebitAmount = Math.Round(transaction.DebitAmount, 2);
+                transaction.CreditAmount = Math.Round(transaction.CreditAmount, 2);
                 
                 string sql = @"
                     INSERT INTO TransactionLedger 
@@ -25,18 +25,18 @@ namespace SaleBillSystem.NET.Data
 
                 var parameters = new OleDbParameter[]
                 {
-                    new OleDbParameter("PartyID", transaction.PartyID),
-                    new OleDbParameter("BillID", transaction.BillID ?? (object)DBNull.Value),
-                    new OleDbParameter("PaymentID", transaction.PaymentID ?? (object)DBNull.Value),
-                    new OleDbParameter("TransactionDate", transaction.TransactionDate),
-                    new OleDbParameter("TransactionType", transaction.TransactionType),
-                    new OleDbParameter("Description", transaction.Description ?? (object)DBNull.Value),
-                    new OleDbParameter("DebitAmount", transaction.DebitAmount),
-                    new OleDbParameter("CreditAmount", transaction.CreditAmount),
-                    new OleDbParameter("PaymentMethod", transaction.PaymentMethod ?? (object)DBNull.Value),
-                    new OleDbParameter("Reference", transaction.Reference ?? (object)DBNull.Value),
-                    new OleDbParameter("UserID", transaction.UserID ?? (object)DBNull.Value),
-                    new OleDbParameter("CompanyID", transaction.CompanyID)
+                    new OleDbParameter("PartyID", OleDbType.Integer) { Value = transaction.PartyID },
+                    new OleDbParameter("BillID", OleDbType.Integer) { Value = transaction.BillID ?? (object)DBNull.Value },
+                    new OleDbParameter("PaymentID", OleDbType.Integer) { Value = transaction.PaymentID ?? (object)DBNull.Value },
+                    new OleDbParameter("TransactionDate", OleDbType.Date) { Value = transaction.TransactionDate },
+                    new OleDbParameter("TransactionType", OleDbType.VarChar, 50) { Value = transaction.TransactionType ?? (object)DBNull.Value },
+                    new OleDbParameter("Description", OleDbType.LongVarChar) { Value = transaction.Description ?? (object)DBNull.Value },
+                    new OleDbParameter("DebitAmount", OleDbType.Currency) { Value = transaction.DebitAmount },
+                    new OleDbParameter("CreditAmount", OleDbType.Currency) { Value = transaction.CreditAmount },
+                    new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = transaction.PaymentMethod ?? (object)DBNull.Value },
+                    new OleDbParameter("Reference", OleDbType.VarChar, 100) { Value = transaction.Reference ?? (object)DBNull.Value },
+                    new OleDbParameter("UserID", OleDbType.Integer) { Value = transaction.UserID ?? (object)DBNull.Value },
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = transaction.CompanyID }
                 };
 
                 using (var cmd = new OleDbCommand(sql, conn, trans))
@@ -81,7 +81,10 @@ namespace SaleBillSystem.NET.Data
         /// </summary>
         /// <param name="paymentDate">The date the final settlement is occurring.</param>
         /// <returns>A tuple containing the calculated interest, discount, and the final payable amount.</returns>
-        public static (decimal interest, decimal discount, decimal finalAmountDue) CalculateFinalSettlement(
+        /// 
+        /// 
+        /// 
+        public static (decimal interest, decimal discount, decimal finalAmountDue,decimal interestBearingPrincipal) CalculateFinalSettlement(
             Bill bill,
             int interestDays, 
             decimal interestRate, 
@@ -100,7 +103,7 @@ namespace SaleBillSystem.NET.Data
             DateTime discountDueDate = bill.BillDate.AddDays(discountDays);
             // Find past payments made on time for discount
             decimal pastEarlyPayments = transactions
-                .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date <= discountDueDate.Date)
+                .Where(t => (t.TransactionType == "Payment" || t.TransactionType == "Advance") && t.TransactionDate.Date <= discountDueDate.Date)
                 .Sum(t => t.CreditAmount);
             
             totalAmountEligibleForDiscount += pastEarlyPayments;
@@ -114,15 +117,15 @@ namespace SaleBillSystem.NET.Data
             earnedDiscount = totalAmountEligibleForDiscount * (discountRate / 100m);
 
             // 2. Calculate Interest
+            decimal interestBearingPrincipal = bill.TotalAmount - pastEarlyPayments;
             if (paymentDate.Date > effectiveDueDate.Date)
             {
                 // Logic to calculate interest on overdue balances
-                decimal interestBearingPrincipal = bill.TotalAmount - pastEarlyPayments;
                 DateTime interestStartDate = effectiveDueDate;
 
                 // Loop through late payments to calculate interest in stages
                 var latePayments = transactions
-                    .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date > effectiveDueDate.Date)
+                    .Where(t => (t.TransactionType == "Payment" || t.TransactionType == "Advance") && t.TransactionDate.Date > effectiveDueDate.Date)
                     .OrderBy(t => t.TransactionDate);
 
                 foreach (var payment in latePayments)
@@ -147,10 +150,10 @@ namespace SaleBillSystem.NET.Data
             // 3. Calculate Final Amount
             decimal finalAmountDue = currentBalance - earnedDiscount + accruedInterest;
             
-            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0));
+            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0), interestBearingPrincipal);
         }
 
-        public static (decimal interest, decimal discount, decimal finalAmountDue,DateTime InterestStartDate,decimal brokerage) CalculateSettlementTillNow(
+        public static (decimal interest, decimal discount, decimal finalAmountDue,DateTime InterestStartDate,decimal brokerage,decimal interestBearingPrincipal) CalculateSettlementTillNow(
             Bill bill,
             int interestDays, 
             decimal interestRate, 
@@ -170,7 +173,7 @@ namespace SaleBillSystem.NET.Data
             DateTime discountDueDate = bill.BillDate.AddDays(discountDays);
             // Find past payments made on time for discount
             decimal pastEarlyPayments = transactions
-                .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date <= discountDueDate.Date)
+                .Where(t => (t.TransactionType == "Payment" || t.TransactionType == "Advance") && t.TransactionDate.Date <= discountDueDate.Date)
                 .Sum(t => t.CreditAmount);
             
             totalAmountEligibleForDiscount += pastEarlyPayments;
@@ -187,7 +190,7 @@ namespace SaleBillSystem.NET.Data
 
                 // Loop through late payments to calculate interest in stages
                 var latePayments = transactions
-                    .Where(t => t.TransactionType == "Payment" && t.TransactionDate.Date > effectiveDueDate.Date)
+                    .Where(t => (t.TransactionType == "Payment" || t.TransactionType == "Advance") && t.TransactionDate.Date > effectiveDueDate.Date)
                     .OrderBy(t => t.TransactionDate);
 
                 foreach (var payment in latePayments)
@@ -205,7 +208,7 @@ namespace SaleBillSystem.NET.Data
             // 3. Calculate Final Amount
             decimal finalAmountDue = currentBalance - earnedDiscount + accruedInterest;
             
-            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0),interestStartDate, bill.TotalAmount*brokerageRate/100);
+            return (Math.Round(accruedInterest, 0), Math.Round(earnedDiscount, 0), Math.Round(finalAmountDue, 0),interestStartDate, bill.TotalAmount*brokerageRate/100,interestBearingPrincipal);
         }
         private static Transaction MapRowToTransaction(DataRow row)
         {

@@ -23,7 +23,7 @@ namespace SaleBillSystem.NET.Utils
             html.AppendLine("<head>");
             html.AppendLine("    <meta charset='UTF-8'>");
             html.AppendLine("    <meta name='viewport' content='width=device-width, initial-scale=1.0'>");
-            html.AppendLine("    <title>Payment Settlement Report</title>");
+            html.AppendLine("    <title>FIFO Settlement Report</title>");
             html.AppendLine(GetCSSStyles());
             html.AppendLine("</head>");
             html.AppendLine("<body>");
@@ -69,106 +69,78 @@ namespace SaleBillSystem.NET.Utils
             return @"
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        .report-container {
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 10px;
             background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
+            color: black;
+            font-size: 12px;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            border-bottom: 2px solid black;
+            padding: 5px 0;
+            margin-bottom: 10px;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            font-weight: 300;
-        }
-        .header .subtitle {
-            margin: 10px 0 0 0;
             font-size: 16px;
-            opacity: 0.9;
-        }
-        .company-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
         }
         .section {
-            padding: 25px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .section:last-child {
-            border-bottom: none;
+            margin-bottom: 10px;
+            border-bottom: 1px solid black;
+            padding-bottom: 5px;
         }
         .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #007bff;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .summary-card {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
-        }
-        .summary-card h3 {
-            margin: 0 0 10px 0;
             font-size: 14px;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-decoration: underline;
         }
-        .summary-card .value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #495057;
+        .horizontal-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
         }
-        .summary-card.positive .value {
-            color: #28a745;
+        .horizontal-row .label {
+            font-weight: bold;
+            min-width: 120px;
         }
-        .summary-card.negative .value {
-            color: #dc3545;
+        .horizontal-row .value {
+            text-align: right;
+            flex: 1;
         }
-        .summary-card.warning .value {
-            color: #ffc107;
+        .two-column {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .column {
+            flex: 1;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin: 5px 0;
+            font-size: 11px;
         }
         th, td {
-            padding: 12px;
+            padding: 3px 5px;
             text-align: left;
-            border-bottom: 1px solid #dee2e6;
+            border: 1px solid black;
         }
         th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .amount {
+            text-align: right;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
         }
         tr:hover {
             background-color: #f8f9fa;

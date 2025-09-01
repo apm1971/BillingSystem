@@ -453,14 +453,14 @@ namespace SaleBillSystem.NET.Forms
             public List<PaymentAllocation> PaymentAllocations { get; set; } = new List<PaymentAllocation>();
         }
 
-        public class InterestPeriod
-        {
-            public DateTime StartDate { get; set; }
-            public DateTime EndDate { get; set; }
-            public int Days { get; set; }
-            public decimal Principal { get; set; }
-            public decimal Interest { get; set; }
-        }
+        // public class InterestPeriod
+        // {
+        //     public DateTime StartDate { get; set; }
+        //     public DateTime EndDate { get; set; }
+        //     public int Days { get; set; }
+        //     public decimal Principal { get; set; }
+        //     public decimal Interest { get; set; }
+        // }
 
         public class DiscountDetail
         {
@@ -3779,101 +3779,95 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         //     MessageBox.Show(details.ToString(), $"Payment Allocation Result - Bill {billNo}", MessageBoxButtons.OK, MessageBoxIcon.Information);
         // }
 
-        #region Settlement Calculation Logic
 
         /// <summary>
         /// Calculates settlement requirements for multiple bills with advance payments
         /// </summary>
         private SettlementCalculationResult CalculateSettlementRequirement(
-            List<BillViewModel> billsToSettle,
-            List<AdvancePayment> availableAdvances,
-            DateTime settlementDate,
-            int interestDays, 
-            decimal interestRate,
-            int discountDays, 
-            decimal discountRate,
-            decimal brokerageRate)
+    List<BillViewModel> billsToSettle,
+    List<AdvancePayment> availableAdvances,
+    DateTime settlementDate,
+    int interestDays,
+    decimal interestRate,
+    int discountDays,
+    decimal discountRate,
+    decimal brokerageRate)
+{
+    decimal totalAdvanceUsed = 0;
+    decimal totalCashNeeded = 0;
+    decimal totalInterest = 0;
+    decimal totalDiscount = 0;
+    decimal totalBrokerage = 0;
+    var billBreakdowns = new List<BillSettlementBreakdown>();
+    
+    // Use user-selected advances or all available advances
+    var advancesToUse = _userSelectedAdvancePayments.Any() 
+        ? _userSelectedAdvancePayments 
+        : availableAdvances;
+    
+    // Create working copy of advances for consumption tracking
+    var workingAdvances = advancesToUse.Select(a => new AdvancePayment
+    {
+        AdvanceID = a.AdvanceID,
+        Amount = a.Amount,
+        PaymentDate = a.PaymentDate,
+        PartyID = a.PartyID,
+        BrokerID = a.BrokerID,
+        PaymentMethod = a.PaymentMethod,
+        Reference = a.Reference
+    }).OrderBy(a => a.PaymentDate).ToList(); // FIFO order
+
+    // Process each bill
+    foreach (var billVm in billsToSettle.OrderBy(b => b.BillDate))
+    {
+        var billResult = CalculateIndividualBillSettlement(
+            billVm, workingAdvances, settlementDate,
+            interestDays, interestRate, discountDays, discountRate, brokerageRate);
+
+        totalAdvanceUsed += billResult.AdvanceUsed;
+        totalCashNeeded += billResult.CashNeeded;
+        totalInterest += billResult.Interest;
+        totalDiscount += billResult.Discount;
+        totalBrokerage += billResult.Brokerage;
+
+        billBreakdowns.Add(new BillSettlementBreakdown
         {
-            decimal totalAdvanceUsed = 0;
-            decimal totalCashNeeded = 0;
-            decimal totalInterest = 0;
-            decimal totalDiscount = 0;
-            decimal totalBrokerage = 0;
-            var billBreakdowns = new List<BillSettlementBreakdown>();
-            
-            // Use user-selected advance payments if available, otherwise use all available advances
-            var advancesToUse = _userSelectedAdvancePayments.Any() ? _userSelectedAdvancePayments : availableAdvances;
-            
-            // Create working copy of advances for consumption simulation
-            var workingAdvances = advancesToUse.Select(a => new AdvancePayment
-            {
-                AdvanceID = a.AdvanceID,
-                Amount = a.Amount,
-                PaymentDate = a.PaymentDate,
-                PartyID = a.PartyID,
-                BrokerID = a.BrokerID
-            }).OrderBy(a => a.PaymentDate).ToList(); // FIFO order
+            BillID = billVm.BillID,
+            BillNo = billVm.BillNo,
+            AmountDue = billResult.TotalDue,
+            AdvanceUsed = billResult.AdvanceUsed,
+            CashNeeded = billResult.CashNeeded,
+            Interest = billResult.Interest,
+            Discount = billResult.Discount,
+            Brokerage = billResult.Brokerage,
+            AdvanceUtilizations = billResult.AdvanceUtilizations,
+            InterestPeriods = billResult.InterestPeriods
+        });
+    }
 
-            foreach (var billVm in billsToSettle)
-            {
-                var billResult = CalculateIndividualBillWithAdvances(
-                    billVm, workingAdvances, settlementDate, 
-                    interestDays, interestRate, discountDays, discountRate, brokerageRate);
-                    decimal prevTotalUsedAdvance = billResult.AdvanceUsed;
-                foreach( var advance in workingAdvances.Where(a => a.Amount > 0).OrderBy(a => a.PaymentDate)){
-                    if(prevTotalUsedAdvance >= advance.Amount){
-                        prevTotalUsedAdvance -= advance.Amount;
-                        workingAdvances.Remove(advance);
-                    }
-                    else{
-                        advance.Amount -= prevTotalUsedAdvance;
-                    }
-                 }
+    decimal totalAdvanceAvailable = advancesToUse.Sum(a => a.Amount);
+    decimal unusedAdvance = workingAdvances.Sum(a => a.Amount);
 
-                totalAdvanceUsed += billResult.AdvanceUsed;
-                totalCashNeeded += billResult.CashNeeded;
-                totalInterest += billResult.Interest;
-                totalDiscount += billResult.Discount;
-                totalBrokerage += billResult.Brokerage;
+    return new SettlementCalculationResult
+    {
+        TotalAmountDue = billsToSettle.Sum(b => b.TotalAmount) + totalInterest - totalDiscount,
+        TotalAdvanceUsed = totalAdvanceUsed,
+        TotalCashNeeded = totalCashNeeded,
+        TotalInterest = totalInterest,
+        TotalDiscount = totalDiscount,
+        TotalBrokerage = totalBrokerage,
+        AdvanceAvailable = totalAdvanceAvailable,
+        UnusedAdvance = unusedAdvance,
+        CanFullySettle = totalCashNeeded <= 0.01m,
+        BillBreakdowns = billBreakdowns,
+        PaymentDate = settlementDate
+    };
+}
 
-                billBreakdowns.Add(new BillSettlementBreakdown
-                {
-                    BillID = billVm.BillID,
-                    BillNo = billVm.BillNo,
-                    AmountDue = billResult.TotalDue,
-                    AdvanceUsed = billResult.AdvanceUsed,
-                    CashNeeded = billResult.CashNeeded,
-                    Interest = billResult.Interest,
-                    Discount = billResult.Discount,
-                    Brokerage = billResult.Brokerage,
-                    InterestPeriods = billResult.InterestPeriods,
-                    AdvanceUtilizations = billResult.AdvanceUtilizations
-                });
-            }
-
-            decimal totalAdvanceAvailable = availableAdvances.Sum(a => a.Amount);
-            decimal unusedAdvance = totalAdvanceAvailable - totalAdvanceUsed;
-
-            return new SettlementCalculationResult
-            {
-                TotalAmountDue = totalAdvanceUsed + totalCashNeeded,
-                TotalAdvanceUsed = totalAdvanceUsed,
-                TotalCashNeeded = totalCashNeeded,
-                TotalInterest = totalInterest,
-                TotalDiscount = totalDiscount,
-                TotalBrokerage = totalBrokerage,
-                AdvanceAvailable = totalAdvanceAvailable,
-                UnusedAdvance = unusedAdvance,
-                CanFullySettle = totalCashNeeded <= 0.01m,
-                BillBreakdowns = billBreakdowns,
-                PaymentDate = settlementDate
-            };
-        }
-
-        /// <summary>
-        /// Calculates settlement for an individual bill with advance payments
-        /// </summary>
-        private IndividualBillSettlementResult CalculateIndividualBillWithAdvances(
+/// <summary>
+/// Calculates settlement for an individual bill with advance payments
+/// </summary>
+private IndividualBillSettlementResult CalculateIndividualBillSettlement(
     BillViewModel billVm,
     List<AdvancePayment> workingAdvances,
     DateTime settlementDate,
@@ -3883,59 +3877,55 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
     decimal discountRate,
     decimal brokerageRate)
 {
-    // Create timeline with NO advances - just settlement date for interest calculation
-    var paymentEvents = new List<PaymentEvent>
+    var interestPeriods = new List<InterestPeriod>();
+    
+    // Calculate base amounts
+    decimal billAmount = billVm.TotalAmount;
+    decimal brokerage = billAmount * brokerageRate / 100m;
+    decimal netBillAmount = billAmount - brokerage;
+    
+    // Calculate interest if settlement is after due date
+    DateTime dueDate = billVm.BillDate.AddDays(interestDays);
+    decimal interest = 0;
+    if (settlementDate > dueDate)
     {
-        new PaymentEvent
-        {
-            Date = settlementDate,
-            Amount = 0,
-            Type = "Settlement",
-            IsHistorical = false,
-            AdvanceId = 0
-        }
-    };
-
-    foreach (var advance in workingAdvances.Where(a => a.Amount > 0))
-{
-    paymentEvents.Add(new PaymentEvent
+        int overdueDays = (settlementDate.Date - dueDate.Date).Days;
+        interest = netBillAmount * (interestRate / 100m) * (overdueDays / 365m);
+         interestPeriods.Add(new InterestPeriod
     {
-        Date = advance.PaymentDate,
-        Amount = advance.Amount,
-        Type = "Payment", // Change from "Advance" to "Payment"
-        IsHistorical = false,
-        AdvanceId = advance.AdvanceID
+        StartDate = dueDate,
+        EndDate = settlementDate,
+        Days = overdueDays,
+        Principal = netBillAmount,
+        Interest = interest
     });
-}
-
-    // Calculate what bill needs (without advances applied)
-    var timeline = CalculateTimelineForBill(
-        billVm, paymentEvents, interestDays, interestRate, 
-        discountDays, discountRate, brokerageRate);
-
-    // Now apply advances to settle the bill
-    decimal totalNeeded = timeline.FinalAmountDue;
-    decimal totalAvailableAdvance = workingAdvances.Sum(a => a.Amount);
-    decimal unusedAdvance = totalAvailableAdvance - timeline.PreviousUsed;
-    if(unusedAdvance >= totalNeeded){
-        timeline.PreviousUsed += totalNeeded;
-        totalNeeded = 0;
-    }else{
-        timeline.PreviousUsed += unusedAdvance;
-        totalNeeded -= unusedAdvance;
     }
-    decimal totalUsedAdvance = timeline.PreviousUsed;
-    decimal remainingAmountNeeded = totalNeeded + totalUsedAdvance;
-    var utilizationDetails = new List<AdvanceUtilizationDetail>();
-    foreach (var advance in workingAdvances.OrderBy(a => a.PaymentDate))
+    
+    // Calculate discount if settlement is within discount period
+    DateTime discountDueDate = billVm.BillDate.AddDays(discountDays);
+    decimal discount = 0;
+    if (settlementDate <= discountDueDate)
     {
-        if (advance.Amount <= 0 || remainingAmountNeeded <= 0) break;
-
-        decimal amountToUse = Math.Min(advance.Amount, remainingAmountNeeded);
+        discount = netBillAmount * (discountRate / 100m);
+    }
+    
+    // Total amount due for this bill
+    decimal totalDue = netBillAmount + interest - discount;
+    
+    // Now allocate advances to this bill
+    decimal remainingDue = totalDue;
+    decimal totalAdvanceUsed = 0;
+    var utilizationDetails = new List<AdvanceUtilizationDetail>();
+    
+    // Use FIFO to consume advances
+    foreach (var advance in workingAdvances.Where(a => a.Amount > 0))
+    {
+        if (remainingDue <= 0) break;
+        
+        decimal amountToUse = Math.Min(advance.Amount, remainingDue);
         
         if (amountToUse > 0)
         {
-            // Track this utilization
             utilizationDetails.Add(new AdvanceUtilizationDetail
             {
                 AdvanceID = advance.AdvanceID,
@@ -3946,180 +3936,99 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 PaymentMethod = advance.PaymentMethod ?? "Cash",
                 Reference = advance.Reference ?? ""
             });
-            remainingAmountNeeded -= amountToUse;
+            
             advance.Amount -= amountToUse; // Consume from advance
+            remainingDue -= amountToUse;
+            totalAdvanceUsed += amountToUse;
         }
     }
-
+    
     return new IndividualBillSettlementResult
     {
-        TotalDue = totalNeeded,
-        AdvanceUsed = timeline.PreviousUsed,
-        CashNeeded = totalNeeded,
-        Interest = timeline.TotalInterest,
-        Discount = timeline.TotalDiscount,
-        Brokerage = timeline.Brokerage,
-        InterestPeriods = timeline.InterestPeriods,
+        TotalDue = totalDue,
+        AdvanceUsed = totalAdvanceUsed,
+        CashNeeded = Math.Max(0, remainingDue),
+        Interest = interest,
+        Discount = discount,
+        Brokerage = brokerage,
+        InterestPeriods = interestPeriods,
         AdvanceUtilizations = utilizationDetails
     };
 }
 
-        /// <summary>
-        /// Calculates timeline for a bill with payment events
-        /// </summary>
-        private BillTimelineResult CalculateTimelineForBill(
-            BillViewModel billVm,
-            List<PaymentEvent> events,
-            int interestDays,
-            decimal interestRate,
-            int discountDays,
-            decimal discountRate,
-            decimal brokerageRate)
+/// <summary>
+/// Result of settlement calculation for an individual bill
+/// </summary>
+public class IndividualBillSettlementResult
+{
+    public decimal TotalDue { get; set; }
+    public decimal AdvanceUsed { get; set; }
+    public decimal CashNeeded { get; set; }
+    public decimal Interest { get; set; }
+    public decimal Discount { get; set; }
+    public decimal Brokerage { get; set; }
+    public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
+    public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
+}
+
+/// <summary>
+/// Complete settlement calculation result for multiple bills
+/// </summary>
+public class SettlementCalculationResult
+{
+    public decimal TotalAmountDue { get; set; }
+    public decimal TotalAdvanceUsed { get; set; }
+    public decimal TotalCashNeeded { get; set; }
+    public decimal TotalInterest { get; set; }
+    public decimal TotalDiscount { get; set; }
+    public decimal TotalBrokerage { get; set; }
+    public decimal AdvanceAvailable { get; set; }
+    public decimal UnusedAdvance { get; set; }
+    public bool CanFullySettle { get; set; }
+    public DateTime PaymentDate { get; set; }
+    public List<BillSettlementBreakdown> BillBreakdowns { get; set; } = new List<BillSettlementBreakdown>();
+    public int? PartyID { get; set; }
+    public int? BrokerID { get; set; }
+}
+
+/// <summary>
+/// Breakdown of settlement for a specific bill
+/// </summary>
+public class BillSettlementBreakdown
+{
+    public int BillID { get; set; }
+    public string BillNo { get; set; }
+    public decimal AmountDue { get; set; }
+    public decimal AdvanceUsed { get; set; }
+    public decimal CashNeeded { get; set; }
+    public decimal Interest { get; set; }
+    public decimal Discount { get; set; }
+    public decimal Brokerage { get; set; }
+    public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
+    public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
+}
+
+/// <summary>
+/// Details of how an advance payment was utilized for a bill
+/// </summary>
+public class AdvanceUtilizationDetail
+{
+    public int AdvanceID { get; set; }
+    public int BillID { get; set; }
+    public decimal AmountUsed { get; set; }
+    public DateTime AdvanceDate { get; set; }
+    public DateTime UtilizationDate { get; set; }
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string Reference { get; set; } = string.Empty;
+}
+ public class InterestPeriod
         {
-            DateTime billDate = billVm.BillDate;
-            DateTime dueDate = billDate.AddDays(interestDays);
-            DateTime discountDueDate = billDate.AddDays(discountDays);
-            
-            decimal principalBalance = billVm.TotalAmount;
-            decimal brokerage = principalBalance * brokerageRate / 100m;
-            principalBalance -= brokerage; // Reduce principal by brokerage if applicable
-            
-            decimal totalInterest = 0;
-            decimal totalDiscount = 0;
-            DateTime currentInterestDate = dueDate;
-            var interestPeriods = new List<InterestPeriod>();
-            events = events.OrderBy(e => e.Date).ToList();
-            decimal previousUsed = 0;
-            foreach (var paymentEvent in events)
-            {
-                // Calculate interest from last date to this event
-                if (paymentEvent.Date > dueDate && principalBalance > 0)
-                {
-                    int periodDays = (paymentEvent.Date.Date - currentInterestDate.Date).Days;
-                    if (periodDays > 0)
-                    {
-                        decimal periodInterest = principalBalance * (interestRate / 100m) * (periodDays / 365m);
-                        totalInterest += periodInterest;
-                        
-                        interestPeriods.Add(new InterestPeriod
-                        {
-                            StartDate = currentInterestDate,
-                            EndDate = paymentEvent.Date,
-                            Days = periodDays,
-                            Principal = principalBalance,
-                            Interest = periodInterest
-                        });
-                    }
-                    currentInterestDate = paymentEvent.Date;
-                }
-
-                // Calculate discount if within discount period
-                if (paymentEvent.Date <= discountDueDate && paymentEvent.Amount > 0)
-                {
-                    decimal paymentDiscount = Math.Min(paymentEvent.Amount, principalBalance) * (discountRate / 100m);
-                    totalDiscount += paymentDiscount;
-                }
-
-                // Apply payment to principal (only for actual payment events, not settlement marker)
-                previousUsed += Math.Min(paymentEvent.Amount, principalBalance);
-                if (paymentEvent.Type != "Settlement" && paymentEvent.Amount > 0)
-                {
-                    principalBalance -= Math.Min(paymentEvent.Amount, principalBalance);
-                }
-
-                if (principalBalance <= 0) break;
-            }
-
-            return new BillTimelineResult
-            {
-                FinalAmountDue = Math.Max(0, principalBalance) + totalInterest - totalDiscount,
-                TotalInterest = totalInterest,
-                TotalDiscount = totalDiscount,
-                Brokerage = brokerage,
-                PreviousUsed = previousUsed,
-                InterestPeriods = interestPeriods
-            };
-        }
-
-        #endregion
-
-        #region Supporting Classes
-
-        /// <summary>
-        /// Result of settlement calculation for an individual bill
-        /// </summary>
-        public class IndividualBillSettlementResult
-        {
-            public decimal TotalDue { get; set; }
-            public decimal AdvanceUsed { get; set; }
-            public decimal CashNeeded { get; set; }
+            public DateTime StartDate { get; set; }
+            public DateTime EndDate { get; set; }
+            public int Days { get; set; }
+            public decimal Principal { get; set; }
             public decimal Interest { get; set; }
-            public decimal Discount { get; set; }
-            public decimal Brokerage { get; set; }
-            public List<InterestPeriod> InterestPeriods { get; set; }
-            public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
-
         }
 
-        /// <summary>
-        /// Timeline calculation result for a bill
-        /// </summary>
-        public class BillTimelineResult
-        {
-            public decimal FinalAmountDue { get; set; }
-            public decimal TotalInterest { get; set; }
-            public decimal TotalDiscount { get; set; }
-            public decimal Brokerage { get; set; }
-            public decimal PreviousUsed {get;set;}
-            public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
-        }
-
-        /// <summary>
-        /// Complete settlement calculation result for multiple bills
-        /// </summary>
-        public class SettlementCalculationResult
-        {
-            public decimal TotalAmountDue { get; set; }
-            public decimal TotalAdvanceUsed { get; set; }
-            public decimal TotalCashNeeded { get; set; }
-            public decimal TotalInterest { get; set; }
-            public decimal TotalDiscount { get; set; }
-            public decimal TotalBrokerage { get; set; }
-            public decimal AdvanceAvailable { get; set; }
-            public decimal UnusedAdvance { get; set; }
-            public bool CanFullySettle { get; set; }
-            public DateTime PaymentDate { get; set; }
-            public List<BillSettlementBreakdown> BillBreakdowns { get; set; } = new List<BillSettlementBreakdown>();
-            public int? PartyID { get; set; }
-            public int? BrokerID { get; set; }
-        }
-
-        /// <summary>
-        /// Breakdown of settlement for a specific bill
-        /// </summary>
-        public class BillSettlementBreakdown
-        {
-            public int BillID { get; set; }
-            public string BillNo { get; set; }
-            public decimal AmountDue { get; set; }
-            public decimal AdvanceUsed { get; set; }
-            public decimal CashNeeded { get; set; }
-            public decimal Interest { get; set; }
-            public decimal Discount { get; set; }
-            public decimal Brokerage { get; set; }
-            public List<InterestPeriod> InterestPeriods { get; set; } = new List<InterestPeriod>();
-            public List<AdvanceUtilizationDetail> AdvanceUtilizations { get; set; } = new List<AdvanceUtilizationDetail>();
-        }
-        public class AdvanceUtilizationDetail
-        {
-            public int AdvanceID { get; set; }
-            public int BillID { get; set; }
-            public decimal AmountUsed { get; set; }
-            public DateTime AdvanceDate { get; set; }
-            public DateTime UtilizationDate { get; set; }
-            public string PaymentMethod { get; set; } = string.Empty;
-            public string Reference { get; set; } = string.Empty;
-        }
-        #endregion
     }
 }

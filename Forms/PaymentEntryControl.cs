@@ -1771,7 +1771,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                                 TransactionType = "Payment",
                                 Description = $"Payment against Bill {breakdown.BillNo}",
                                 DebitAmount = 0,
-                                CreditAmount = breakdown.CashNeeded - breakdown.Interest + breakdown.Brokerage + breakdown.Discount,
+                                CreditAmount = breakdown.CashNeeded,
                                 PaymentMethod = paymentMethod,
                                 Reference = reference,
                                 CompanyID = 1

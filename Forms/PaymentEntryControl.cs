@@ -26,6 +26,10 @@ namespace SaleBillSystem.NET.Forms
         // User-selected advance payments
         private List<AdvancePayment> _userSelectedAdvancePayments = new List<AdvancePayment>();
         private SettlementCalculationResult? _lastSettlementResult = null;
+        
+        // Unused advance reversal tracking
+        private bool _shouldRevertUnusedAdvances = false;
+        private List<UnusedAdvanceDetail> _unusedAdvancesToRevert = new List<UnusedAdvanceDetail>();
 
         // Background loading state
         private System.ComponentModel.BackgroundWorker _advanceLoadingWorker;
@@ -566,6 +570,10 @@ namespace SaleBillSystem.NET.Forms
 
             // Clear user-selected advance payments
             _userSelectedAdvancePayments.Clear();
+
+            // Clear unused advance reversal tracking
+            _shouldRevertUnusedAdvances = false;
+            _unusedAdvancesToRevert.Clear();
 
             // Hide advance payment display
             // UpdateAdvancePaymentDisplay();
@@ -1138,6 +1146,15 @@ namespace SaleBillSystem.NET.Forms
         return;
     }
 
+    // Clear previously allocated amounts in grid before new calculation
+    foreach (var bill in _outstandingBills)
+    {
+        bill.PaymentAllocation = 0;
+    }
+    
+    // Reset grid styles to remove previous highlighting
+    ResetGridStyles();
+
     // Show advance payment status
     if (_userSelectedAdvancePayments.Any())
     {
@@ -1449,6 +1466,68 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
             OpenAdvancePaymentSelection();
         }
 
+        /// <summary>
+        /// Gets details of unused advance payments for reversal dialog
+        /// </summary>
+        private List<UnusedAdvanceDetail> GetUnusedAdvanceDetails()
+        {
+            var unusedAdvances = new List<UnusedAdvanceDetail>();
+            
+            if (_lastSettlementResult == null || _userSelectedAdvancePayments == null || !_userSelectedAdvancePayments.Any())
+                return unusedAdvances;
+
+            // Get all advance utilizations from the settlement result
+            var allUtilizations = new List<AdvanceUtilizationDetail>();
+            foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
+            {
+                if (breakdown.AdvanceUtilizations != null)
+                {
+                    allUtilizations.AddRange(breakdown.AdvanceUtilizations);
+                }
+            }
+
+            // Group utilizations by AdvanceID to get total used amount
+            var utilizationTotals = allUtilizations
+                .GroupBy(u => u.AdvanceID)
+                .ToDictionary(g => g.Key, g => g.Sum(u => u.AmountUsed));
+
+            // Check each selected advance payment for unused amounts
+            foreach (var advance in _userSelectedAdvancePayments)
+            {
+                decimal usedAmount = utilizationTotals.ContainsKey(advance.AdvanceID) 
+                    ? utilizationTotals[advance.AdvanceID] 
+                    : 0;
+                
+                decimal unusedAmount = advance.Amount - usedAmount;
+                
+                if (unusedAmount > 0.01m)
+                {
+                    // Get broker name
+                    string brokerName = "Unknown Broker";
+                    if (advance.BrokerID.HasValue)
+                    {
+                        var broker = _brokers.FirstOrDefault(b => b.BrokerID == advance.BrokerID.Value);
+                        brokerName = broker?.BrokerName ?? "Unknown Broker";
+                    }
+
+                    unusedAdvances.Add(new UnusedAdvanceDetail
+                    {
+                        AdvanceID = advance.AdvanceID,
+                        BrokerName = brokerName,
+                        OriginalAmount = advance.Amount,
+                        UsedAmount = usedAmount,
+                        UnusedAmount = unusedAmount,
+                        PaymentDate = advance.PaymentDate,
+                        Reference = advance.Reference ?? "",
+                        BrokerID = advance.BrokerID ?? 0,
+                        PartyID = advance.PartyID ?? 0
+                    });
+                }
+            }
+
+            return unusedAdvances;
+        }
+
 
 
         // PaymentAllocation column is now read-only, no need for CellValueChanged event handler
@@ -1497,6 +1576,27 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
             {
                 MessageBox.Show("No payments have been allocated to any bills.", "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+
+            // Check for unused advance payments and ask user if they want to revert them
+            if (_lastSettlementResult != null && _lastSettlementResult.UnusedAdvance > 0.01m)
+            {
+                var unusedAdvances = GetUnusedAdvanceDetails();
+                if (unusedAdvances.Any())
+                {
+                    using (var reversalForm = new UnusedAdvanceReversalForm(unusedAdvances))
+                    {
+                        var dialogResult = reversalForm.ShowDialog();
+                        if (dialogResult == DialogResult.Cancel)
+                        {
+                            return; // User cancelled the save operation
+                        }
+                        
+                        // Store the user's decision for use during save
+                        _shouldRevertUnusedAdvances = reversalForm.ShouldRevertUnusedAdvances;
+                        _unusedAdvancesToRevert = reversalForm.UnusedAdvances;
+                    }
+                }
             }
 
             // CRITICAL FIX: Capture all UI values BEFORE starting background thread
@@ -1823,6 +1923,19 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                         .ToList();
                     UpdateBillStatuses(paidBills);
 
+                    // STEP 4: Handle unused advance reversals if user requested
+                    if (_shouldRevertUnusedAdvances && _unusedAdvancesToRevert.Any())
+                    {
+                        try
+                        {
+                            ProcessUnusedAdvanceReversals(_unusedAdvancesToRevert, conn, dbTransaction);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"Failed to process unused advance reversals: {ex.Message}", ex);
+                        }
+                    }
+
                     dbTransaction.Commit();
                     
                     // Return the cash payment ID and total amount
@@ -2013,6 +2126,91 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         #endregion
 
         #region Bill Status Update
+
+        /// <summary>
+        /// Processes unused advance reversals by creating negative advance payments and ledger transactions
+        /// </summary>
+        private void ProcessUnusedAdvanceReversals(List<UnusedAdvanceDetail> unusedAdvances, OleDbConnection conn, OleDbTransaction transaction)
+        {
+            foreach (var unusedAdvance in unusedAdvances)
+            {
+                // Create a negative advance payment record (reversal)
+                var reversalAdvance = new AdvancePayment
+                {
+                    PartyID = unusedAdvance.PartyID,
+                    BrokerID = unusedAdvance.BrokerID,
+                    PaymentDate = _lastSettlementResult.PaymentDate,
+                    Amount = -unusedAdvance.UnusedAmount, // Negative amount for reversal
+                    PaymentMethod = "Reversal",
+                    Reference = $"Reversal of unused advance from AdvanceID: {unusedAdvance.AdvanceID}",
+                    CompanyID = 1,
+                    CreatedDate = DateTime.Now
+                };
+
+                // Insert the reversal advance payment
+                string insertReversalSql = @"
+                    INSERT INTO AdvancePayments (PartyID, BrokerID, PaymentDate, Amount, PaymentMethod, Reference, ChequeAmountFirm1, ChequeAmountFirm2, CompanyID, CreatedDate)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+                var reversalParams = new OleDbParameter[]
+                {
+                    new OleDbParameter("PartyID", OleDbType.Integer) { Value = reversalAdvance.PartyID },
+                    new OleDbParameter("BrokerID", OleDbType.Integer) { Value = reversalAdvance.BrokerID },
+                    new OleDbParameter("PaymentDate", OleDbType.Date) { Value = reversalAdvance.PaymentDate },
+                    new OleDbParameter("Amount", OleDbType.Currency) { Value = reversalAdvance.Amount },
+                    new OleDbParameter("PaymentMethod", OleDbType.VarChar, 50) { Value = reversalAdvance.PaymentMethod },
+                    new OleDbParameter("Reference", OleDbType.VarChar, 255) { Value = reversalAdvance.Reference },
+                    new OleDbParameter("ChequeAmountFirm1", OleDbType.Currency) { Value = 0m },
+                    new OleDbParameter("ChequeAmountFirm2", OleDbType.Currency) { Value = 0m },
+                    new OleDbParameter("CompanyID", OleDbType.Integer) { Value = reversalAdvance.CompanyID },
+                    new OleDbParameter("CreatedDate", OleDbType.Date) { Value = reversalAdvance.CreatedDate }
+                };
+
+                using (var insertCmd = new OleDbCommand(insertReversalSql, conn, transaction))
+                {
+                    insertCmd.Parameters.AddRange(reversalParams);
+                    insertCmd.ExecuteNonQuery();
+                }
+
+                // Get the ID of the reversal advance payment
+                string getReversalIdSql = "SELECT @@IDENTITY";
+                int reversalAdvanceId;
+                using (var cmd = new OleDbCommand(getReversalIdSql, conn, transaction))
+                {
+                    reversalAdvanceId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // Note: No ledger transaction needed for reversal - just the negative advance payment
+
+                // Create utilization record for the unused portion of the ORIGINAL advance
+                var originalAdvanceUtilization = new AdvanceUtilization
+                {
+                    AdvanceID = unusedAdvance.AdvanceID, // Original advance ID
+                    PaymentID = 0,
+                    AmountUsed = unusedAdvance.UnusedAmount, // Unused amount from original advance
+                    UtilizedDate = _lastSettlementResult.PaymentDate,
+                    PartyID = unusedAdvance.PartyID,
+                    BrokerID = unusedAdvance.BrokerID,
+                    CompanyID = 1
+                };
+
+                AdvanceUtilizationService.AddUtilization(originalAdvanceUtilization, conn, transaction);
+
+                // Create utilization record for the reversal (marking it as used immediately)
+                var reversalUtilization = new AdvanceUtilization
+                {
+                    AdvanceID = reversalAdvanceId,
+                    PaymentID = 0,
+                    AmountUsed = Math.Abs(reversalAdvance.Amount), // Positive amount for utilization
+                    UtilizedDate = _lastSettlementResult.PaymentDate,
+                    PartyID = unusedAdvance.PartyID,
+                    BrokerID = unusedAdvance.BrokerID,
+                    CompanyID = 1
+                };
+
+                AdvanceUtilizationService.AddUtilization(reversalUtilization, conn, transaction);
+            }
+        }
 
         /// <summary>
         /// Updates the status of bills after payment transactions are saved - OPTIMIZED

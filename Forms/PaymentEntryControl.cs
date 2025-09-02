@@ -1612,7 +1612,12 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
             }
 
             // Convert advance utilizations
-            foreach (var advance in _userSelectedAdvancePayments)
+            // Sort the user selected advance payments by PaymentDate, then by AdvanceID for consistent report order
+            var sortedAdvances = _userSelectedAdvancePayments
+                .OrderBy(a => a.PaymentDate)
+                .ThenBy(a => a.AdvanceID)
+                .ToList();
+            foreach (var advance in sortedAdvances)
             {
                 var advanceUtil = new AdvanceUtilizationReport
                 {
@@ -1627,7 +1632,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 };
 
                 // Find which bills use this advance
-                foreach (var breakdown in _lastSettlementResult.BillBreakdowns)
+                foreach (var breakdown in _lastSettlementResult.BillBreakdowns.OrderBy(b => b.BillID))
                 {
                     var util = breakdown.AdvanceUtilizations.FirstOrDefault(u => u.AdvanceID == advance.AdvanceID);
                     if (util != null)

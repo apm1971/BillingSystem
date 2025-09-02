@@ -335,19 +335,22 @@ namespace SaleBillSystem.NET.Forms
         private void PopulateDataGridView()
         {
             // Create a list with selection property using our custom class
-            var advancePaymentsWithSelection = _allAdvancePayments.Select(ap => new AdvancePaymentRow
-            {
-                AdvanceID = ap.AdvanceID,
-                PaymentDate = ap.PaymentDate,
-                Amount = ap.Amount,
-                PaymentMethod = ap.PaymentMethod ?? string.Empty,
-                Reference = ap.Reference ?? string.Empty,
-                PartyName = GetPartyName(ap.PartyID),
-                BrokerName = GetBrokerName(ap.BrokerID),
-                IsSelected = false, // Default to not selected
-                PartyID = ap.PartyID,
-                BrokerID = ap.BrokerID
-            }).ToList();
+            // Sort by payment date in descending order (newest first)
+            var advancePaymentsWithSelection = _allAdvancePayments
+                .OrderBy(ap => ap.PaymentDate)
+                .Select(ap => new AdvancePaymentRow
+                {
+                    AdvanceID = ap.AdvanceID,
+                    PaymentDate = ap.PaymentDate,
+                    Amount = ap.Amount,
+                    PaymentMethod = ap.PaymentMethod ?? string.Empty,
+                    Reference = ap.Reference ?? string.Empty,
+                    PartyName = GetPartyName(ap.PartyID),
+                    BrokerName = GetBrokerName(ap.BrokerID),
+                    IsSelected = false, // Default to not selected
+                    PartyID = ap.PartyID,
+                    BrokerID = ap.BrokerID
+                }).ToList();
 
             dgvAdvancePayments.DataSource = advancePaymentsWithSelection;
         }

@@ -24,14 +24,14 @@ namespace SaleBillSystem.NET.Forms
             cmbParty = new ComboBox();
             lblParty = new Label();
             pnlEntry = new Panel();
-            btnDelete = new Button();
-            btnClear = new Button();
-            btnSave = new Button();
             pnlChequeDetails = new Panel();
             txtChequeAmountFirm2 = new TextBox();
             lblChequeAmountFirm2 = new Label();
             txtChequeAmountFirm1 = new TextBox();
             lblChequeAmountFirm1 = new Label();
+            btnDelete = new Button();
+            btnClear = new Button();
+            btnSave = new Button();
             txtReference = new TextBox();
             lblReference = new Label();
             cmbPaymentMethod = new ComboBox();
@@ -134,45 +134,6 @@ namespace SaleBillSystem.NET.Forms
             pnlEntry.Size = new Size(1178, 160);
             pnlEntry.TabIndex = 1;
             // 
-            // btnClear
-            // 
-            btnClear.BackColor = Color.LightGray;
-            btnClear.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnClear.Location = new Point(835, 115);
-            btnClear.Margin = new Padding(4);
-            btnClear.Name = "btnClear";
-            btnClear.Size = new Size(100, 30);
-            btnClear.TabIndex = 5;
-            btnClear.Text = "&Clear";
-            toolTip1.SetToolTip(btnClear, "Clear all fields and reset the form");
-            btnClear.UseVisualStyleBackColor = false;
-            // 
-            // btnSave
-            // 
-            btnSave.BackColor = Color.LightGreen;
-            btnSave.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnSave.Location = new Point(725, 115);
-            btnSave.Margin = new Padding(4);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(100, 30);
-            btnSave.TabIndex = 4;
-            btnSave.Text = "&Save";
-            toolTip1.SetToolTip(btnSave, "Save the advance payment entry (Ctrl+S)");
-            btnSave.UseVisualStyleBackColor = false;
-            // 
-            // btnDelete
-            // 
-            btnDelete.BackColor = Color.LightCoral;
-            btnDelete.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            btnDelete.Location = new Point(945, 115);
-            btnDelete.Margin = new Padding(4);
-            btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(100, 30);
-            btnDelete.TabIndex = 6;
-            btnDelete.Text = "&Delete";
-            toolTip1.SetToolTip(btnDelete, "Delete selected advance payment (Del)");
-            btnDelete.UseVisualStyleBackColor = false;
-            // 
             // pnlChequeDetails
             // 
             pnlChequeDetails.Controls.Add(txtChequeAmountFirm2);
@@ -200,7 +161,7 @@ namespace SaleBillSystem.NET.Forms
             lblChequeAmountFirm2.AutoSize = true;
             lblChequeAmountFirm2.Location = new Point(270, 10);
             lblChequeAmountFirm2.Name = "lblChequeAmountFirm2";
-            lblChequeAmountFirm2.Size = new Size(94, 15);
+            lblChequeAmountFirm2.Size = new Size(90, 15);
             lblChequeAmountFirm2.TabIndex = 0;
             lblChequeAmountFirm2.Text = "Firm 2 Amount:";
             // 
@@ -219,14 +180,53 @@ namespace SaleBillSystem.NET.Forms
             lblChequeAmountFirm1.AutoSize = true;
             lblChequeAmountFirm1.Location = new Point(20, 10);
             lblChequeAmountFirm1.Name = "lblChequeAmountFirm1";
-            lblChequeAmountFirm1.Size = new Size(94, 15);
+            lblChequeAmountFirm1.Size = new Size(90, 15);
             lblChequeAmountFirm1.TabIndex = 0;
             lblChequeAmountFirm1.Text = "Firm 1 Amount:";
+            // 
+            // btnDelete
+            // 
+            btnDelete.BackColor = Color.LightCoral;
+            btnDelete.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnDelete.Location = new Point(945, 115);
+            btnDelete.Margin = new Padding(4);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(100, 30);
+            btnDelete.TabIndex = 6;
+            btnDelete.Text = "&Delete";
+            toolTip1.SetToolTip(btnDelete, "Delete selected advance payment (Del)");
+            btnDelete.UseVisualStyleBackColor = false;
+            // 
+            // btnClear
+            // 
+            btnClear.BackColor = Color.LightGray;
+            btnClear.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnClear.Location = new Point(835, 115);
+            btnClear.Margin = new Padding(4);
+            btnClear.Name = "btnClear";
+            btnClear.Size = new Size(100, 30);
+            btnClear.TabIndex = 5;
+            btnClear.Text = "&Clear";
+            toolTip1.SetToolTip(btnClear, "Clear all fields and reset the form");
+            btnClear.UseVisualStyleBackColor = false;
+            // 
+            // btnSave
+            // 
+            btnSave.BackColor = Color.LightGreen;
+            btnSave.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnSave.Location = new Point(725, 115);
+            btnSave.Margin = new Padding(4);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(100, 30);
+            btnSave.TabIndex = 4;
+            btnSave.Text = "&Save";
+            toolTip1.SetToolTip(btnSave, "Save the advance payment entry (Ctrl+S)");
+            btnSave.UseVisualStyleBackColor = false;
             // 
             // txtReference
             // 
             txtReference.CharacterCasing = CharacterCasing.Upper;
-            txtReference.Location = new Point(725, 38);
+            txtReference.Location = new Point(579, 42);
             txtReference.Margin = new Padding(4);
             txtReference.MaxLength = 255;
             txtReference.Name = "txtReference";
@@ -237,10 +237,10 @@ namespace SaleBillSystem.NET.Forms
             // lblReference
             // 
             lblReference.AutoSize = true;
-            lblReference.Location = new Point(650, 42);
+            lblReference.Location = new Point(579, 19);
             lblReference.Margin = new Padding(4, 0, 4, 0);
             lblReference.Name = "lblReference";
-            lblReference.Size = new Size(64, 15);
+            lblReference.Size = new Size(62, 15);
             lblReference.TabIndex = 0;
             lblReference.Text = "Reference:";
             // 
@@ -248,7 +248,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             cmbPaymentMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbPaymentMethod.FormattingEnabled = true;
-            cmbPaymentMethod.Location = new Point(480, 38);
+            cmbPaymentMethod.Location = new Point(394, 39);
             cmbPaymentMethod.Margin = new Padding(4);
             cmbPaymentMethod.Name = "cmbPaymentMethod";
             cmbPaymentMethod.Size = new Size(150, 23);
@@ -258,10 +258,10 @@ namespace SaleBillSystem.NET.Forms
             // lblPaymentMethod
             // 
             lblPaymentMethod.AutoSize = true;
-            lblPaymentMethod.Location = new Point(370, 42);
+            lblPaymentMethod.Location = new Point(394, 19);
             lblPaymentMethod.Margin = new Padding(4, 0, 4, 0);
             lblPaymentMethod.Name = "lblPaymentMethod";
-            lblPaymentMethod.Size = new Size(101, 15);
+            lblPaymentMethod.Size = new Size(102, 15);
             lblPaymentMethod.TabIndex = 0;
             lblPaymentMethod.Text = "Payment Method:";
             // 
@@ -283,7 +283,7 @@ namespace SaleBillSystem.NET.Forms
             // lblAmount
             // 
             lblAmount.AutoSize = true;
-            lblAmount.Location = new Point(175, 42);
+            lblAmount.Location = new Point(235, 19);
             lblAmount.Margin = new Padding(4, 0, 4, 0);
             lblAmount.Name = "lblAmount";
             lblAmount.Size = new Size(54, 15);
@@ -292,7 +292,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             // txtPaymentDate
             // 
-            txtPaymentDate.Location = new Point(102, 38);
+            txtPaymentDate.Location = new Point(66, 38);
             txtPaymentDate.Margin = new Padding(4);
             txtPaymentDate.MaxLength = 10;
             txtPaymentDate.Name = "txtPaymentDate";
@@ -304,10 +304,10 @@ namespace SaleBillSystem.NET.Forms
             // lblPaymentDate
             // 
             lblPaymentDate.AutoSize = true;
-            lblPaymentDate.Location = new Point(15, 42);
+            lblPaymentDate.Location = new Point(66, 19);
             lblPaymentDate.Margin = new Padding(4, 0, 4, 0);
             lblPaymentDate.Name = "lblPaymentDate";
-            lblPaymentDate.Size = new Size(85, 15);
+            lblPaymentDate.Size = new Size(84, 15);
             lblPaymentDate.TabIndex = 0;
             lblPaymentDate.Text = "Payment Date:";
             // 

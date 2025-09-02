@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using SaleBillSystem.NET.Services;
 
 namespace SaleBillSystem.NET.Forms
 {
@@ -1849,6 +1850,9 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 {
                     MessageBox.Show($"Payment(s) saved successfully! Total available advance: {result.TotalAvailableAdvance:C}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
+                    // Save the payment report data
+                    SavePaymentReportData(result.PaymentId);
+                    
                     // Show payment trace with print option
                     ShowPaymentTraceAfterSave(result.PaymentId);
                     
@@ -2625,6 +2629,35 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         #endregion
 
         #region Payment Trace After Save
+
+        /// <summary>
+        /// Saves the payment report data to the database for later retrieval
+        /// </summary>
+        private void SavePaymentReportData(int paymentId)
+        {
+            try
+            {
+                if (_lastSettlementResult == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Cannot save report data: no settlement result available");
+                    return;
+                }
+
+                // Create the report data (same as generate report)
+                var reportData = CreatePaymentReportData();
+                
+                // Save to database using the PaymentReportService
+                PaymentReportService.SavePaymentReport(paymentId, reportData);
+                
+                System.Diagnostics.Debug.WriteLine($"Payment report data saved successfully for PaymentID: {paymentId}");
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't show to user since payment was already successful
+                System.Diagnostics.Debug.WriteLine($"Error saving payment report data: {ex.Message}");
+                // Could optionally log to a file or error tracking system
+            }
+        }
 
         private void ShowPaymentTraceAfterSave(int paymentId)
         {

@@ -164,6 +164,16 @@ namespace SaleBillSystem.NET.Forms
             // paymentsMenu.DropDownItems.Add(paymentListItem);
             paymentsMenu.DropDownItems.Add(advancePaymentItem);
 
+            // === REPORTS MENU ===
+            var reportsMenu = new ToolStripMenuItem("&Reports");
+            reportsMenu.Font = menuFont;
+
+            var paymentReportsItem = new ToolStripMenuItem("&Payment Reports");
+            paymentReportsItem.Font = menuFont;
+            paymentReportsItem.Click += (s, e) => { ShowControl(new PaymentReportsControl()); };
+
+            reportsMenu.DropDownItems.Add(paymentReportsItem);
+
             // === UTILITIES MENU ===
             var utilitiesMenu = new ToolStripMenuItem("&Utilities");
             utilitiesMenu.Font = menuFont;
@@ -178,6 +188,7 @@ namespace SaleBillSystem.NET.Forms
             mainMenuStrip.Items.Add(mastersMenu);
             mainMenuStrip.Items.Add(billsMenu);
             mainMenuStrip.Items.Add(paymentsMenu);
+            mainMenuStrip.Items.Add(reportsMenu);
             mainMenuStrip.Items.Add(utilitiesMenu);
 
             // Add Transactions, Reports, etc. menus here

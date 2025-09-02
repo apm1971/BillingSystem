@@ -37,6 +37,9 @@
     <Compile Update="Forms\PaymentReportForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\PaymentReportsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Forms\PaymentTraceForm.cs">
       <SubType>Form</SubType>
     </Compile>

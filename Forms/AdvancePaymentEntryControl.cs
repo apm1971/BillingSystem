@@ -41,7 +41,7 @@ namespace SaleBillSystem.NET.Forms
             // Setup payment method combo box
             cmbPaymentMethod.Items.AddRange(new string[] 
             { 
-                "Cash", "Cheque", "Bank Transfer", "Online", "UPI", "Other" 
+                "Cash", "Cheque"
             });
             cmbPaymentMethod.SelectedIndex = 0; // Default to Cash
             

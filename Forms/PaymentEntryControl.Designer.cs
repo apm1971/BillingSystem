@@ -488,6 +488,7 @@ namespace SaleBillSystem.NET.Forms
             txtPaymentAmount.Location = new Point(777, 22);
             txtPaymentAmount.Margin = new Padding(4);
             txtPaymentAmount.Name = "txtPaymentAmount";
+            txtPaymentAmount.ReadOnly = true;
             txtPaymentAmount.Size = new Size(175, 22);
             txtPaymentAmount.TabIndex = 6;
             // 

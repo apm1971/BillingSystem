@@ -17,279 +17,301 @@ namespace SaleBillSystem.NET.Forms
 
         private void InitializeComponent()
         {
-            this.splitContainer = new System.Windows.Forms.SplitContainer();
-            this.gbBills = new System.Windows.Forms.GroupBox();
-            this.dgvBills = new System.Windows.Forms.DataGridView();
-            this.pnlTop = new System.Windows.Forms.Panel();
-            this.cmbParty = new System.Windows.Forms.ComboBox();
-            this.lblParty = new System.Windows.Forms.Label();
-            this.cmbBroker = new System.Windows.Forms.ComboBox();
-            this.lblBroker = new System.Windows.Forms.Label();
-            this.cmbPaymentStatus = new System.Windows.Forms.ComboBox();
-            this.lblPaymentStatus = new System.Windows.Forms.Label();
-            this.dtpFromDate = new System.Windows.Forms.DateTimePicker();
-            this.lblFromDate = new System.Windows.Forms.Label();
-            this.dtpToDate = new System.Windows.Forms.DateTimePicker();
-            this.lblToDate = new System.Windows.Forms.Label();
-            this.gbLedger = new System.Windows.Forms.GroupBox();
-            this.dgvLedger = new System.Windows.Forms.DataGridView();
-            this.pnlButtons = new System.Windows.Forms.Panel();
-            this.btnRefresh = new System.Windows.Forms.Button();
-            this.btnPrint = new System.Windows.Forms.Button();
-            this.btnClearFilters = new System.Windows.Forms.Button();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).BeginInit();
-            this.splitContainer.Panel1.SuspendLayout();
-            this.splitContainer.Panel2.SuspendLayout();
-            this.splitContainer.SuspendLayout();
-            this.gbBills.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvBills)).BeginInit();
-            this.pnlTop.SuspendLayout();
-            this.gbLedger.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvLedger)).BeginInit();
-            this.pnlButtons.SuspendLayout();
-            this.SuspendLayout();
+            splitContainer = new SplitContainer();
+            gbBills = new GroupBox();
+            dgvBills = new DataGridView();
+            pnlTop = new Panel();
+            dtpToDate = new DateTimePicker();
+            lblToDate = new Label();
+            dtpFromDate = new DateTimePicker();
+            lblFromDate = new Label();
+            cmbPaymentStatus = new ComboBox();
+            lblPaymentStatus = new Label();
+            cmbBroker = new ComboBox();
+            lblBroker = new Label();
+            cmbParty = new ComboBox();
+            lblParty = new Label();
+            gbLedger = new GroupBox();
+            dgvLedger = new DataGridView();
+            pnlButtons = new Panel();
+            btnRefresh = new Button();
+            btnPrint = new Button();
+            btnClearFilters = new Button();
+            ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
+            splitContainer.Panel1.SuspendLayout();
+            splitContainer.Panel2.SuspendLayout();
+            splitContainer.SuspendLayout();
+            gbBills.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvBills).BeginInit();
+            pnlTop.SuspendLayout();
+            gbLedger.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dgvLedger).BeginInit();
+            pnlButtons.SuspendLayout();
+            SuspendLayout();
             // 
             // splitContainer
             // 
-            this.splitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer.Location = new System.Drawing.Point(10, 10);
-            this.splitContainer.Name = "splitContainer";
-            this.splitContainer.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            splitContainer.Dock = DockStyle.Fill;
+            splitContainer.Location = new Point(12, 12);
+            splitContainer.Margin = new Padding(4, 3, 4, 3);
+            splitContainer.Name = "splitContainer";
+            splitContainer.Orientation = Orientation.Horizontal;
             // 
             // splitContainer.Panel1
             // 
-            this.splitContainer.Panel1.Controls.Add(this.gbBills);
+            splitContainer.Panel1.Controls.Add(gbBills);
             // 
             // splitContainer.Panel2
             // 
-            this.splitContainer.Panel2.Controls.Add(this.gbLedger);
-            this.splitContainer.Size = new System.Drawing.Size(964, 491);
-            this.splitContainer.SplitterDistance = 230;
-            this.splitContainer.TabIndex = 0;
+            splitContainer.Panel2.Controls.Add(gbLedger);
+            splitContainer.Size = new Size(1370, 565);
+            splitContainer.SplitterDistance = 264;
+            splitContainer.SplitterWidth = 5;
+            splitContainer.TabIndex = 0;
             // 
             // gbBills
             // 
-            this.gbBills.Controls.Add(this.dgvBills);
-            this.gbBills.Controls.Add(this.pnlTop);
-            this.gbBills.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gbBills.Location = new System.Drawing.Point(0, 0);
-            this.gbBills.Name = "gbBills";
-            this.gbBills.Padding = new System.Windows.Forms.Padding(10);
-            this.gbBills.Size = new System.Drawing.Size(964, 230);
-            this.gbBills.TabIndex = 0;
-            this.gbBills.TabStop = false;
-            this.gbBills.Text = "Bill Selection";
+            gbBills.Controls.Add(dgvBills);
+            gbBills.Controls.Add(pnlTop);
+            gbBills.Dock = DockStyle.Fill;
+            gbBills.Location = new Point(0, 0);
+            gbBills.Margin = new Padding(4, 3, 4, 3);
+            gbBills.Name = "gbBills";
+            gbBills.Padding = new Padding(12);
+            gbBills.Size = new Size(1370, 264);
+            gbBills.TabIndex = 0;
+            gbBills.TabStop = false;
+            gbBills.Text = "Bill Selection";
             // 
             // dgvBills
             // 
-            this.dgvBills.AllowUserToAddRows = false;
-            this.dgvBills.AllowUserToDeleteRows = false;
-            this.dgvBills.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvBills.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvBills.Location = new System.Drawing.Point(10, 63);
-            this.dgvBills.Name = "dgvBills";
-            this.dgvBills.ReadOnly = true;
-            this.dgvBills.Size = new System.Drawing.Size(944, 157);
-            this.dgvBills.TabIndex = 1;
+            dgvBills.AllowUserToAddRows = false;
+            dgvBills.AllowUserToDeleteRows = false;
+            dgvBills.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvBills.Dock = DockStyle.Fill;
+            dgvBills.Location = new Point(12, 74);
+            dgvBills.Margin = new Padding(4, 3, 4, 3);
+            dgvBills.Name = "dgvBills";
+            dgvBills.ReadOnly = true;
+            dgvBills.Size = new Size(1346, 178);
+            dgvBills.TabIndex = 1;
             // 
             // pnlTop
             // 
-            this.pnlTop.Controls.Add(this.dtpToDate);
-            this.pnlTop.Controls.Add(this.lblToDate);
-            this.pnlTop.Controls.Add(this.dtpFromDate);
-            this.pnlTop.Controls.Add(this.lblFromDate);
-            this.pnlTop.Controls.Add(this.cmbPaymentStatus);
-            this.pnlTop.Controls.Add(this.lblPaymentStatus);
-            this.pnlTop.Controls.Add(this.cmbBroker);
-            this.pnlTop.Controls.Add(this.lblBroker);
-            this.pnlTop.Controls.Add(this.cmbParty);
-            this.pnlTop.Controls.Add(this.lblParty);
-            this.pnlTop.Dock = System.Windows.Forms.DockStyle.Top;
-            this.pnlTop.Location = new System.Drawing.Point(10, 23);
-            this.pnlTop.Name = "pnlTop";
-            this.pnlTop.Size = new System.Drawing.Size(944, 40);
-            this.pnlTop.TabIndex = 0;
-            // 
-            // cmbParty
-            // 
-            this.cmbParty.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.cmbParty.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cmbParty.FormattingEnabled = true;
-            this.cmbParty.Location = new System.Drawing.Point(88, 9);
-            this.cmbParty.Name = "cmbParty";
-            this.cmbParty.Size = new System.Drawing.Size(250, 21);
-            this.cmbParty.TabIndex = 0;
-            // 
-            // lblParty
-            // 
-            this.lblParty.AutoSize = true;
-            this.lblParty.Location = new System.Drawing.Point(3, 12);
-            this.lblParty.Name = "lblParty";
-            this.lblParty.Size = new System.Drawing.Size(79, 13);
-            this.lblParty.TabIndex = 0;
-            this.lblParty.Text = "Select a Party:";
-            // 
-            // cmbBroker
-            // 
-            this.cmbBroker.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
-            this.cmbBroker.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cmbBroker.FormattingEnabled = true;
-            this.cmbBroker.Location = new System.Drawing.Point(450, 9);
-            this.cmbBroker.Name = "cmbBroker";
-            this.cmbBroker.Size = new System.Drawing.Size(250, 21);
-            this.cmbBroker.TabIndex = 1;
-            // 
-            // lblBroker
-            // 
-            this.lblBroker.AutoSize = true;
-            this.lblBroker.Location = new System.Drawing.Point(365, 12);
-            this.lblBroker.Name = "lblBroker";
-            this.lblBroker.Size = new System.Drawing.Size(79, 13);
-            this.lblBroker.TabIndex = 0;
-            this.lblBroker.Text = "Select a Broker:";
-            // 
-            // cmbPaymentStatus
-            // 
-            this.cmbPaymentStatus.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbPaymentStatus.FormattingEnabled = true;
-            this.cmbPaymentStatus.Location = new System.Drawing.Point(750, 9);
-            this.cmbPaymentStatus.Name = "cmbPaymentStatus";
-            this.cmbPaymentStatus.Size = new System.Drawing.Size(120, 21);
-            this.cmbPaymentStatus.TabIndex = 5;
-            this.cmbPaymentStatus.SelectedIndexChanged += new System.EventHandler(this.cmbPaymentStatus_SelectedIndexChanged);
-            // 
-            // lblPaymentStatus
-            // 
-            this.lblPaymentStatus.AutoSize = true;
-            this.lblPaymentStatus.Location = new System.Drawing.Point(720, 12);
-            this.lblPaymentStatus.Name = "lblPaymentStatus";
-            this.lblPaymentStatus.Size = new System.Drawing.Size(24, 13);
-            this.lblPaymentStatus.TabIndex = 4;
-            this.lblPaymentStatus.Text = "Status:";
-            // 
-            // dtpFromDate
-            // 
-            this.dtpFromDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.dtpFromDate.Location = new System.Drawing.Point(900, 9);
-            this.dtpFromDate.Name = "dtpFromDate";
-            this.dtpFromDate.Size = new System.Drawing.Size(100, 20);
-            this.dtpFromDate.TabIndex = 6;
-            this.dtpFromDate.ValueChanged += new System.EventHandler(this.dtpFromDate_ValueChanged);
-            // 
-            // lblFromDate
-            // 
-            this.lblFromDate.AutoSize = true;
-            this.lblFromDate.Location = new System.Drawing.Point(880, 12);
-            this.lblFromDate.Name = "lblFromDate";
-            this.lblFromDate.Size = new System.Drawing.Size(14, 13);
-            this.lblFromDate.TabIndex = 6;
-            this.lblFromDate.Text = "From:";
+            pnlTop.Controls.Add(dtpToDate);
+            pnlTop.Controls.Add(lblToDate);
+            pnlTop.Controls.Add(dtpFromDate);
+            pnlTop.Controls.Add(lblFromDate);
+            pnlTop.Controls.Add(cmbPaymentStatus);
+            pnlTop.Controls.Add(lblPaymentStatus);
+            pnlTop.Controls.Add(cmbBroker);
+            pnlTop.Controls.Add(lblBroker);
+            pnlTop.Controls.Add(cmbParty);
+            pnlTop.Controls.Add(lblParty);
+            pnlTop.Dock = DockStyle.Top;
+            pnlTop.Location = new Point(12, 28);
+            pnlTop.Margin = new Padding(4, 3, 4, 3);
+            pnlTop.Name = "pnlTop";
+            pnlTop.Size = new Size(1346, 46);
+            pnlTop.TabIndex = 0;
             // 
             // dtpToDate
             // 
-            this.dtpToDate.Format = System.Windows.Forms.DateTimePickerFormat.Short;
-            this.dtpToDate.Location = new System.Drawing.Point(1050, 9);
-            this.dtpToDate.Name = "dtpToDate";
-            this.dtpToDate.Size = new System.Drawing.Size(100, 20);
-            this.dtpToDate.TabIndex = 7;
-            this.dtpToDate.ValueChanged += new System.EventHandler(this.dtpToDate_ValueChanged);
+            dtpToDate.Format = DateTimePickerFormat.Short;
+            dtpToDate.Location = new Point(1211, 10);
+            dtpToDate.Margin = new Padding(4, 3, 4, 3);
+            dtpToDate.Name = "dtpToDate";
+            dtpToDate.Size = new Size(116, 23);
+            dtpToDate.TabIndex = 7;
+            dtpToDate.ValueChanged += dtpToDate_ValueChanged;
             // 
             // lblToDate
             // 
-            this.lblToDate.AutoSize = true;
-            this.lblToDate.Location = new System.Drawing.Point(1030, 12);
-            this.lblToDate.Name = "lblToDate";
-            this.lblToDate.Size = new System.Drawing.Size(14, 13);
-            this.lblToDate.TabIndex = 7;
-            this.lblToDate.Text = "To:";
+            lblToDate.AutoSize = true;
+            lblToDate.Location = new Point(1181, 14);
+            lblToDate.Margin = new Padding(4, 0, 4, 0);
+            lblToDate.Name = "lblToDate";
+            lblToDate.Size = new Size(22, 15);
+            lblToDate.TabIndex = 7;
+            lblToDate.Text = "To:";
+            // 
+            // dtpFromDate
+            // 
+            dtpFromDate.Format = DateTimePickerFormat.Short;
+            dtpFromDate.Location = new Point(1034, 8);
+            dtpFromDate.Margin = new Padding(4, 3, 4, 3);
+            dtpFromDate.Name = "dtpFromDate";
+            dtpFromDate.Size = new Size(116, 23);
+            dtpFromDate.TabIndex = 6;
+            dtpFromDate.ValueChanged += dtpFromDate_ValueChanged;
+            // 
+            // lblFromDate
+            // 
+            lblFromDate.AutoSize = true;
+            lblFromDate.Location = new Point(988, 13);
+            lblFromDate.Margin = new Padding(4, 0, 4, 0);
+            lblFromDate.Name = "lblFromDate";
+            lblFromDate.Size = new Size(38, 15);
+            lblFromDate.TabIndex = 6;
+            lblFromDate.Text = "From:";
+            // 
+            // cmbPaymentStatus
+            // 
+            cmbPaymentStatus.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbPaymentStatus.FormattingEnabled = true;
+            cmbPaymentStatus.Location = new Point(830, 10);
+            cmbPaymentStatus.Margin = new Padding(4, 3, 4, 3);
+            cmbPaymentStatus.Name = "cmbPaymentStatus";
+            cmbPaymentStatus.Size = new Size(115, 23);
+            cmbPaymentStatus.TabIndex = 5;
+            cmbPaymentStatus.SelectedIndexChanged += cmbPaymentStatus_SelectedIndexChanged;
+            // 
+            // lblPaymentStatus
+            // 
+            lblPaymentStatus.AutoSize = true;
+            lblPaymentStatus.Location = new Point(771, 13);
+            lblPaymentStatus.Margin = new Padding(4, 0, 4, 0);
+            lblPaymentStatus.Name = "lblPaymentStatus";
+            lblPaymentStatus.Size = new Size(42, 15);
+            lblPaymentStatus.TabIndex = 4;
+            lblPaymentStatus.Text = "Status:";
+            // 
+            // cmbBroker
+            // 
+            cmbBroker.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbBroker.AutoCompleteSource = AutoCompleteSource.ListItems;
+            cmbBroker.FormattingEnabled = true;
+            cmbBroker.Location = new Point(525, 10);
+            cmbBroker.Margin = new Padding(4, 3, 4, 3);
+            cmbBroker.Name = "cmbBroker";
+            cmbBroker.Size = new Size(192, 23);
+            cmbBroker.TabIndex = 1;
+            // 
+            // lblBroker
+            // 
+            lblBroker.AutoSize = true;
+            lblBroker.Location = new Point(426, 14);
+            lblBroker.Margin = new Padding(4, 0, 4, 0);
+            lblBroker.Name = "lblBroker";
+            lblBroker.Size = new Size(87, 15);
+            lblBroker.TabIndex = 0;
+            lblBroker.Text = "Select a Broker:";
+            // 
+            // cmbParty
+            // 
+            cmbParty.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbParty.AutoCompleteSource = AutoCompleteSource.ListItems;
+            cmbParty.FormattingEnabled = true;
+            cmbParty.Location = new Point(103, 10);
+            cmbParty.Margin = new Padding(4, 3, 4, 3);
+            cmbParty.Name = "cmbParty";
+            cmbParty.Size = new Size(238, 23);
+            cmbParty.TabIndex = 0;
+            // 
+            // lblParty
+            // 
+            lblParty.AutoSize = true;
+            lblParty.Location = new Point(4, 14);
+            lblParty.Margin = new Padding(4, 0, 4, 0);
+            lblParty.Name = "lblParty";
+            lblParty.Size = new Size(80, 15);
+            lblParty.TabIndex = 0;
+            lblParty.Text = "Select a Party:";
             // 
             // gbLedger
             // 
-            this.gbLedger.Controls.Add(this.dgvLedger);
-            this.gbLedger.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.gbLedger.Location = new System.Drawing.Point(0, 0);
-            this.gbLedger.Name = "gbLedger";
-            this.gbLedger.Padding = new System.Windows.Forms.Padding(10);
-            this.gbLedger.Size = new System.Drawing.Size(964, 257);
-            this.gbLedger.TabIndex = 0;
-            this.gbLedger.TabStop = false;
-            this.gbLedger.Text = "Transaction History";
+            gbLedger.Controls.Add(dgvLedger);
+            gbLedger.Dock = DockStyle.Fill;
+            gbLedger.Location = new Point(0, 0);
+            gbLedger.Margin = new Padding(4, 3, 4, 3);
+            gbLedger.Name = "gbLedger";
+            gbLedger.Padding = new Padding(12);
+            gbLedger.Size = new Size(1370, 296);
+            gbLedger.TabIndex = 0;
+            gbLedger.TabStop = false;
+            gbLedger.Text = "Transaction History";
             // 
             // dgvLedger
             // 
-            this.dgvLedger.AllowUserToAddRows = false;
-            this.dgvLedger.AllowUserToDeleteRows = false;
-            this.dgvLedger.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvLedger.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvLedger.Location = new System.Drawing.Point(10, 23);
-            this.dgvLedger.Name = "dgvLedger";
-            this.dgvLedger.ReadOnly = true;
-            this.dgvLedger.Size = new System.Drawing.Size(944, 224);
-            this.dgvLedger.TabIndex = 0;
+            dgvLedger.AllowUserToAddRows = false;
+            dgvLedger.AllowUserToDeleteRows = false;
+            dgvLedger.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvLedger.Dock = DockStyle.Fill;
+            dgvLedger.Location = new Point(12, 28);
+            dgvLedger.Margin = new Padding(4, 3, 4, 3);
+            dgvLedger.Name = "dgvLedger";
+            dgvLedger.ReadOnly = true;
+            dgvLedger.Size = new Size(1346, 256);
+            dgvLedger.TabIndex = 0;
             // 
             // pnlButtons
             // 
-            this.pnlButtons.Controls.Add(this.btnRefresh);
-            this.pnlButtons.Controls.Add(this.btnPrint);
-            this.pnlButtons.Controls.Add(this.btnClearFilters);
-            this.pnlButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.pnlButtons.Location = new System.Drawing.Point(0, 257);
-            this.pnlButtons.Name = "pnlButtons";
-            this.pnlButtons.Size = new System.Drawing.Size(964, 50);
-            this.pnlButtons.TabIndex = 1;
+            pnlButtons.Controls.Add(btnRefresh);
+            pnlButtons.Controls.Add(btnPrint);
+            pnlButtons.Controls.Add(btnClearFilters);
+            pnlButtons.Dock = DockStyle.Bottom;
+            pnlButtons.Location = new Point(12, 577);
+            pnlButtons.Margin = new Padding(4, 3, 4, 3);
+            pnlButtons.Name = "pnlButtons";
+            pnlButtons.Size = new Size(1370, 58);
+            pnlButtons.TabIndex = 1;
             // 
             // btnRefresh
             // 
-            this.btnRefresh.Location = new System.Drawing.Point(20, 10);
-            this.btnRefresh.Name = "btnRefresh";
-            this.btnRefresh.Size = new System.Drawing.Size(100, 30);
-            this.btnRefresh.TabIndex = 1;
-            this.btnRefresh.Text = "Refresh (F5)";
-            this.btnRefresh.UseVisualStyleBackColor = true;
+            btnRefresh.Location = new Point(23, 12);
+            btnRefresh.Margin = new Padding(4, 3, 4, 3);
+            btnRefresh.Name = "btnRefresh";
+            btnRefresh.Size = new Size(117, 35);
+            btnRefresh.TabIndex = 1;
+            btnRefresh.Text = "Refresh (F5)";
+            btnRefresh.UseVisualStyleBackColor = true;
             // 
             // btnPrint
             // 
-            this.btnPrint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnPrint.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnPrint.Location = new System.Drawing.Point(140, 10);
-            this.btnPrint.Name = "btnPrint";
-            this.btnPrint.Size = new System.Drawing.Size(100, 30);
-            this.btnPrint.TabIndex = 0;
-            this.btnPrint.Text = "Print";
-            this.btnPrint.UseVisualStyleBackColor = true;
+            btnPrint.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnPrint.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            btnPrint.Location = new Point(246, 12);
+            btnPrint.Margin = new Padding(4, 3, 4, 3);
+            btnPrint.Name = "btnPrint";
+            btnPrint.Size = new Size(117, 35);
+            btnPrint.TabIndex = 0;
+            btnPrint.Text = "Print";
+            btnPrint.UseVisualStyleBackColor = true;
             // 
             // btnClearFilters
             // 
-            this.btnClearFilters.Location = new System.Drawing.Point(260, 10);
-            this.btnClearFilters.Name = "btnClearFilters";
-            this.btnClearFilters.Size = new System.Drawing.Size(100, 30);
-            this.btnClearFilters.TabIndex = 2;
-            this.btnClearFilters.Text = "Clear Filters";
-            this.btnClearFilters.UseVisualStyleBackColor = true;
-            this.btnClearFilters.Click += new System.EventHandler(this.btnClearFilters_Click);
+            btnClearFilters.Location = new Point(1136, 12);
+            btnClearFilters.Margin = new Padding(4, 3, 4, 3);
+            btnClearFilters.Name = "btnClearFilters";
+            btnClearFilters.Size = new Size(117, 35);
+            btnClearFilters.TabIndex = 2;
+            btnClearFilters.Text = "Clear Filters";
+            btnClearFilters.UseVisualStyleBackColor = true;
+            btnClearFilters.Click += btnClearFilters_Click;
             // 
             // BillLedgerControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.splitContainer);
-            this.Controls.Add(this.pnlButtons);
-            this.Name = "BillLedgerControl";
-            this.Padding = new System.Windows.Forms.Padding(10);
-            this.Size = new System.Drawing.Size(984, 561);
-            this.Load += new System.EventHandler(this.BillLedgerControl_Load);
-            this.splitContainer.Panel1.ResumeLayout(false);
-            this.splitContainer.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer)).EndInit();
-            this.splitContainer.ResumeLayout(false);
-            this.gbBills.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvBills)).EndInit();
-            this.pnlTop.ResumeLayout(false);
-            this.pnlTop.PerformLayout();
-            this.gbLedger.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvLedger)).EndInit();
-            this.pnlButtons.ResumeLayout(false);
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            Controls.Add(splitContainer);
+            Controls.Add(pnlButtons);
+            Margin = new Padding(4, 3, 4, 3);
+            Name = "BillLedgerControl";
+            Padding = new Padding(12);
+            Size = new Size(1394, 647);
+            Load += BillLedgerControl_Load;
+            splitContainer.Panel1.ResumeLayout(false);
+            splitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
+            splitContainer.ResumeLayout(false);
+            gbBills.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvBills).EndInit();
+            pnlTop.ResumeLayout(false);
+            pnlTop.PerformLayout();
+            gbLedger.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)dgvLedger).EndInit();
+            pnlButtons.ResumeLayout(false);
+            ResumeLayout(false);
         }
 
         #endregion

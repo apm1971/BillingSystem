@@ -23,10 +23,11 @@ namespace SaleBillSystem.NET.Utils
             html.AppendLine("<head>");
             html.AppendLine("    <meta charset='UTF-8'>");
             html.AppendLine("    <meta name='viewport' content='width=device-width, initial-scale=1.0'>");
-            html.AppendLine("    <title>FIFO Settlement Report</title>");
+            html.AppendLine("    <title>Settlement Report</title>");
             html.AppendLine(GetCSSStyles());
             html.AppendLine("</head>");
             html.AppendLine("<body>");
+            html.AppendLine("    <button class='print-button' onclick='window.print()'>🖨️ Print</button>");
             
             // Report Header
             html.AppendLine(GenerateReportHeader(reportData));
@@ -53,7 +54,7 @@ namespace SaleBillSystem.NET.Utils
             html.AppendLine(GeneratePaymentTerms(reportData));
             
             // Report Footer
-            html.AppendLine(GenerateReportFooter(reportData));
+            // html.AppendLine(GenerateReportFooter(reportData));
             
             html.AppendLine("</body>");
             html.AppendLine("</html>");
@@ -71,41 +72,86 @@ namespace SaleBillSystem.NET.Utils
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 10px;
+            padding: 8px;
             background-color: white;
             color: black;
-            font-size: 12px;
+            font-size: 11px;
+            max-width: 100%;
+        }
+        .report-container {
+            max-width: 210mm;
+            margin: 0 auto;
         }
         .header {
             text-align: center;
             border-bottom: 2px solid black;
-            padding: 5px 0;
-            margin-bottom: 10px;
+            padding: 3px 0;
+            margin-bottom: 8px;
         }
         .header h1 {
             margin: 0;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
         }
+        .header .subtitle {
+            margin: 2px 0 0 0;
+            font-size: 10px;
+        }
+        .company-info {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 10px;
+        }
+        .company-info h2 {
+            margin: 0;
+            font-size: 12px;
+        }
+        .company-info p {
+            margin: 1px 0;
+        }
         .section {
-            margin-bottom: 10px;
-            border-bottom: 1px solid black;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
         }
         .section-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            text-align: center;
             text-decoration: underline;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+        .summary-card {
+            border: 1px solid #ddd;
+            padding: 4px;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .summary-card h3 {
+            margin: 0 0 2px 0;
+            font-size: 10px;
+            font-weight: bold;
+            color: #666;
+        }
+        .summary-card .value {
+            font-size: 11px;
+            font-weight: bold;
         }
         .horizontal-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 2px;
+            font-size: 10px;
         }
         .horizontal-row .label {
             font-weight: bold;
-            min-width: 120px;
+            min-width: 80px;
         }
         .horizontal-row .value {
             text-align: right;
@@ -114,7 +160,7 @@ namespace SaleBillSystem.NET.Utils
         .two-column {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
+            gap: 15px;
         }
         .column {
             flex: 1;
@@ -122,32 +168,23 @@ namespace SaleBillSystem.NET.Utils
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 5px 0;
-            font-size: 11px;
+            margin: 3px 0;
+            font-size: 9px;
         }
         th, td {
-            padding: 3px 5px;
+            padding: 2px 3px;
             text-align: left;
-            border: 1px solid black;
+            border: 1px solid #ccc;
+            vertical-align: top;
         }
         th {
             background-color: #f0f0f0;
             font-weight: bold;
+            font-size: 9px;
         }
         .amount {
             text-align: right;
-        }
-        .total-row {
-            font-weight: bold;
-            background-color: #f0f0f0;
-        }
-        }
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-        .amount {
-            text-align: right;
-            font-weight: 600;
+            font-weight: 500;
         }
         .amount.positive {
             color: #28a745;
@@ -155,10 +192,14 @@ namespace SaleBillSystem.NET.Utils
         .amount.negative {
             color: #dc3545;
         }
+        .total-row {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
         .status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 8px;
             font-weight: 600;
             text-transform: uppercase;
         }
@@ -175,49 +216,108 @@ namespace SaleBillSystem.NET.Utils
             color: #721c24;
         }
         .interest-period {
-            background-color: #e3f2fd;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 10px 0;
+            background-color: #f8f9fa;
+            padding: 4px;
+            border-radius: 3px;
+            margin: 2px 0;
+            font-size: 8px;
         }
         .interest-period h4 {
-            margin: 0 0 10px 0;
-            color: #1976d2;
-            font-size: 14px;
+            margin: 0 0 3px 0;
+            color: #495057;
+            font-size: 9px;
         }
         .interest-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            font-size: 13px;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 3px;
+            font-size: 8px;
         }
         .footer {
             background-color: #f8f9fa;
-            padding: 20px;
+            padding: 5px;
             text-align: center;
             color: #6c757d;
-            font-size: 14px;
+            font-size: 9px;
+            margin-top: 10px;
         }
         .print-button {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 5px 10px;
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 10px;
+            z-index: 1000;
         }
         .print-button:hover {
             background-color: #0056b3;
         }
+        
+        /* Slip-like compact styling */
+        .slip-header {
+            border: 2px solid black;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .compact-info {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 10px;
+            margin-bottom: 5px;
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .compact-info span {
+            white-space: nowrap;
+        }
+        
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            min-width: 150px;
+        }
+        
+        .info-item .label {
+            font-weight: bold;
+        }
+        
         @media print {
-            body { background-color: white; }
-            .report-container { box-shadow: none; }
+            body { 
+                background-color: white; 
+                font-size: 10px;
+            }
+            .report-container { 
+                box-shadow: none; 
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+            }
             .print-button { display: none; }
-            .section { page-break-inside: avoid; }
+            .section { 
+                page-break-inside: avoid; 
+                margin-bottom: 5px;
+            }
+            table {
+                font-size: 8px;
+            }
+            th, td {
+                padding: 1px 2px;
+            }
         }
     </style>";
         }
@@ -254,47 +354,19 @@ namespace SaleBillSystem.NET.Utils
         private static string GeneratePaymentSummary(PaymentReportData data)
         {
             var html = new StringBuilder();
-            html.AppendLine("        <div class='section'>");
-            html.AppendLine("            <h2 class='section-title'>Payment Information</h2>");
-            html.AppendLine("            <div class='summary-grid'>");
+            html.AppendLine("        <div class='compact-info'>");
             
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Payment ID</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentID}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Payment Date</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentDate:dd-MMM-yyyy}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Payment Method</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentMethod}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Total Amount</h3>");
-            html.AppendLine($"                    <div class='value amount positive'>₹{data.TotalPaymentAmount:N2}</div>");
-            html.AppendLine("                </div>");
+            // html.AppendLine($"            <span><strong>Payment ID:</strong> {data.PaymentID}</span>");
+            html.AppendLine($"            <span><strong>Date:</strong> {data.PaymentDate:dd-MMM-yyyy}</span>");
+            html.AppendLine($"            <span><strong>Method:</strong> {data.PaymentMethod}</span>");
+            html.AppendLine($"            <span><strong>Amount:</strong> ₹{data.TotalPaymentAmount:N2}</span>");
             
             if (!string.IsNullOrEmpty(data.PartyName))
-            {
-                html.AppendLine("                <div class='summary-card'>");
-                html.AppendLine("                    <h3>Party</h3>");
-                html.AppendLine($"                    <div class='value'>{data.PartyName}</div>");
-                html.AppendLine("                </div>");
-            }
+                html.AppendLine($"            <span><strong>Party:</strong> {data.PartyName}</span>");
             
             if (!string.IsNullOrEmpty(data.BrokerName))
-            {
-                html.AppendLine("                <div class='summary-card'>");
-                html.AppendLine("                    <h3>Broker</h3>");
-                html.AppendLine($"                    <div class='value'>{data.BrokerName}</div>");
-                html.AppendLine("                </div>");
-            }
+                html.AppendLine($"            <span><strong>Broker:</strong> {data.BrokerName}</span>");
             
-            html.AppendLine("            </div>");
             html.AppendLine("        </div>");
             
             return html.ToString();
@@ -306,49 +378,18 @@ namespace SaleBillSystem.NET.Utils
         private static string GenerateSettlementSummary(PaymentReportData data)
         {
             var html = new StringBuilder();
-            html.AppendLine("        <div class='section'>");
-            html.AppendLine("            <h2 class='section-title'>Settlement Summary</h2>");
-            html.AppendLine("            <div class='summary-grid'>");
+            html.AppendLine("        <div class='compact-info'>");
             
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Total Amount Due</h3>");
-            html.AppendLine($"                    <div class='value amount'>{data.TotalAmountDue:N2}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Advance Used</h3>");
-            html.AppendLine($"                    <div class='value amount positive'>₹{data.TotalAdvanceUsed:N2}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Cash Needed</h3>");
-            html.AppendLine($"                    <div class='value amount'>{data.TotalCashNeeded:N2}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Interest Charged</h3>");
-            html.AppendLine($"                    <div class='value amount negative'>₹{data.TotalInterest:N2}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Discount Earned</h3>");
-            html.AppendLine($"                    <div class='value amount positive'>₹{data.TotalDiscount:N2}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Brokerage</h3>");
-            html.AppendLine($"                    <div class='value amount'>{data.TotalBrokerage:N2}</div>");
-            html.AppendLine("                </div>");
+            html.AppendLine($"            <span><strong>Amount Due:</strong> ₹{data.TotalAmountDue:N0}</span>");
+            html.AppendLine($"            <span><strong>Payments Used:</strong> ₹{data.TotalAdvanceUsed:N0}</span>");
+            html.AppendLine($"            <span><strong>Cash Needed:</strong> ₹{data.TotalCashNeeded:N0}</span>");
+            html.AppendLine($"            <span><strong>Interest:</strong> ₹{data.TotalInterest:N0}</span>");
+            html.AppendLine($"            <span><strong>Discount:</strong> ₹{data.TotalDiscount:N0}</span>");
+            html.AppendLine($"            <span><strong>Brokerage:</strong> ₹{data.TotalBrokerage:N0}</span>");
             
             if (data.UnusedAdvance > 0)
-            {
-                html.AppendLine("                <div class='summary-card warning'>");
-                html.AppendLine("                    <h3>Unused Advance</h3>");
-                html.AppendLine($"                    <div class='value amount'>₹{data.UnusedAdvance:N2}</div>");
-                html.AppendLine("                </div>");
-            }
+                html.AppendLine($"            <span><strong>Unused Advance:</strong> ₹{data.UnusedAdvance:N0}</span>");
             
-            html.AppendLine("            </div>");
             html.AppendLine("        </div>");
             
             return html.ToString();
@@ -373,6 +414,7 @@ namespace SaleBillSystem.NET.Utils
             html.AppendLine("                        <th>Amount Paid</th>");
             html.AppendLine("                        <th>Interest</th>");
             html.AppendLine("                        <th>Discount</th>");
+            html.AppendLine("                        <th>Brokerage</th>");
             html.AppendLine("                        <th>Advance Used</th>");
             html.AppendLine("                        <th>Cash Used</th>");
             html.AppendLine("                        <th>Status</th>");
@@ -390,6 +432,7 @@ namespace SaleBillSystem.NET.Utils
                 html.AppendLine($"                        <td class='amount positive'>₹{bill.AmountPaid:N2}</td>");
                 html.AppendLine($"                        <td class='amount negative'>₹{bill.InterestCharged:N2}</td>");
                 html.AppendLine($"                        <td class='amount positive'>₹{bill.DiscountEarned:N2}</td>");
+                html.AppendLine($"                        <td class='amount'>₹{bill.Brokerage:N2}</td>");
                 html.AppendLine($"                        <td class='amount'>₹{bill.AdvanceUsed:N2}</td>");
                 html.AppendLine($"                        <td class='amount'>₹{bill.CashUsed:N2}</td>");
                 html.AppendLine($"                        <td><span class='status {bill.Status.ToLower()}'>{bill.Status}</span></td>");
@@ -399,7 +442,7 @@ namespace SaleBillSystem.NET.Utils
                 if (bill.InterestPeriods.Count > 0)
                 {
                     html.AppendLine("                    <tr>");
-                    html.AppendLine("                        <td colspan='10'>");
+                    html.AppendLine("                        <td colspan='11'>");
                     html.AppendLine("                            <div class='interest-period'>");
                     html.AppendLine("                                <h4>Interest Calculation Details</h4>");
                     foreach (var period in bill.InterestPeriods)
@@ -432,12 +475,12 @@ namespace SaleBillSystem.NET.Utils
         {
             var html = new StringBuilder();
             html.AppendLine("        <div class='section'>");
-            html.AppendLine("            <h2 class='section-title'>Advance Payment Utilizations</h2>");
+            html.AppendLine("            <h2 class='section-title'>Payments Utilizations</h2>");
             
             html.AppendLine("            <table>");
             html.AppendLine("                <thead>");
             html.AppendLine("                    <tr>");
-            html.AppendLine("                        <th>Advance ID</th>");
+            html.AppendLine("                        <th>Payment ID</th>");
             html.AppendLine("                        <th>Date</th>");
             html.AppendLine("                        <th>Original Amount</th>");
             html.AppendLine("                        <th>Amount Used</th>");
@@ -519,41 +562,13 @@ namespace SaleBillSystem.NET.Utils
         private static string GeneratePaymentTerms(PaymentReportData data)
         {
             var html = new StringBuilder();
-            html.AppendLine("        <div class='section'>");
-            html.AppendLine("            <h2 class='section-title'>Payment Terms Used</h2>");
-            html.AppendLine("            <div class='summary-grid'>");
+            html.AppendLine("        <div class='compact-info'>");
             
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Interest Days</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.InterestDays} days</div>");
-            html.AppendLine("                </div>");
+            html.AppendLine($"            <span><strong>Interest:</strong> {data.PaymentTerms.InterestDays}d @ {data.PaymentTerms.InterestRate}%</span>");
+            html.AppendLine($"            <span><strong>Discount:</strong> {data.PaymentTerms.DiscountDays}d @ {data.PaymentTerms.DiscountRate}%</span>");
+            html.AppendLine($"            <span><strong>Brokerage:</strong> {data.PaymentTerms.BrokerageRate}%</span>");
+            html.AppendLine($"            <span><strong>Terms:</strong> {data.PaymentTerms.TermsSource}</span>");
             
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Interest Rate</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.InterestRate}%</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Discount Days</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.DiscountDays} days</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Discount Rate</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.DiscountRate}%</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Brokerage Rate</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.BrokerageRate}%</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("                <div class='summary-card'>");
-            html.AppendLine("                    <h3>Terms Source</h3>");
-            html.AppendLine($"                    <div class='value'>{data.PaymentTerms.TermsSource}</div>");
-            html.AppendLine("                </div>");
-            
-            html.AppendLine("            </div>");
             html.AppendLine("        </div>");
             
             return html.ToString();

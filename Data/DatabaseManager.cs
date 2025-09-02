@@ -12,6 +12,7 @@ namespace SaleBillSystem.NET.Data
     {
         // Database constants
         private const string DB_FILENAME = "SaleSystem.accdb"; // Changed from .db to .accdb
+        private const string DB_PASSWORD = "SaleSystem@2024"; // Database password
         
         // Static property for custom database path
         public static string CustomDatabasePath { get; private set; }
@@ -31,7 +32,7 @@ namespace SaleBillSystem.NET.Data
                 if (File.Exists(dbPath))
                 {
                     // Temporarily connect to the default database to check for custom path setting
-                    string tempConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                    string tempConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
                     using (OleDbConnection tempConn = new OleDbConnection(tempConnectionString))
                     {
                         try
@@ -88,14 +89,44 @@ namespace SaleBillSystem.NET.Data
                     }
                 }
                 
-                // Set connection string for Access
-                _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                // Set connection string for Access with password
+                _connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
                 
                 // Test connection and upgrade database if needed
                 using (OleDbConnection connection = new OleDbConnection(_connectionString))
                 {
-                    connection.Open();
-                    // UpgradeDatabase(connection);
+                    try
+                    {
+                        connection.Open();
+                        // UpgradeDatabase(connection);
+                    }
+                    catch (Exception connEx)
+                    {
+                        // If connection fails due to password, try to set password on existing database
+                        if (connEx.Message.Contains("password") || connEx.Message.Contains("3031"))
+                        {
+                            System.Windows.Forms.MessageBox.Show(
+                                "Existing database found without password protection. Setting password now...", 
+                                "Database Security Update", 
+                                System.Windows.Forms.MessageBoxButtons.OK, 
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                            
+                            if (SetPasswordOnExistingDatabase(dbPath))
+                            {
+                                // Try connecting again with password
+                                connection.Open();
+                                // UpgradeDatabase(connection);
+                            }
+                            else
+                            {
+                                throw connEx;
+                            }
+                        }
+                        else
+                        {
+                            throw connEx;
+                        }
+                    }
                 }
                 
                 return true;
@@ -126,7 +157,7 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Template doesn't exist, create manually using the connection string
                     // Use Microsoft Access directly - this will require ACE to be installed
-                    string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Engine Type=5";
+                    string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Engine Type=5;Jet OLEDB:Database Password={DB_PASSWORD}";
                     
                     using (OleDbConnection tempConn = new OleDbConnection(connString))
                     {
@@ -149,6 +180,20 @@ namespace SaleBillSystem.NET.Data
                             dynamic catalog = Activator.CreateInstance(catalogType);
                             catalog.Create(connString);
                             
+                            // Set password on the newly created database
+                            if (catalog.ActiveConnection != null)
+                            {
+                                try
+                                {
+                                    catalog.ActiveConnection.Execute($"ALTER DATABASE PASSWORD [{DB_PASSWORD}] NULL", 0);
+                                }
+                                catch (Exception passwordEx)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Note: Could not set password via ALTER: {passwordEx.Message}");
+                                }
+                                catalog.ActiveConnection = null;
+                            }
+                            
                             System.Windows.Forms.MessageBox.Show(
                                 "Database created successfully.",
                                 "Database Created",
@@ -163,7 +208,7 @@ namespace SaleBillSystem.NET.Data
                 }
                 
                 // Connect to the new database and create tables
-                string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
                 using (OleDbConnection conn = new OleDbConnection(connectionString))
                 {
                     conn.Open();
@@ -1377,6 +1422,86 @@ namespace SaleBillSystem.NET.Data
         }
 
         /// <summary>
+        /// Sets password on an existing database that doesn't have one
+        /// </summary>
+        /// <param name="dbPath">Path to the database file</param>
+        /// <returns>True if password was set successfully, false otherwise</returns>
+        public static bool SetPasswordOnExistingDatabase(string dbPath)
+        {
+            try
+            {
+                // First try to connect without password to see if database has no password
+                string connectionStringWithoutPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                
+                using (OleDbConnection testConn = new OleDbConnection(connectionStringWithoutPassword))
+                {
+                    try
+                    {
+                        testConn.Open();
+                        // If we can open without password, it means database has no password
+                        testConn.Close();
+                        
+                        // Now set the password using ADOX
+                        var catalogType = Type.GetTypeFromProgID("ADOX.Catalog");
+                        if (catalogType == null)
+                        {
+                            System.Windows.Forms.MessageBox.Show("ADOX.Catalog not found. Cannot set database password.", "Error", 
+                                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                            return false;
+                        }
+                        
+                        dynamic catalog = Activator.CreateInstance(catalogType);
+                        catalog.ActiveConnection = connectionStringWithoutPassword;
+                        
+                        // Set the password (from NULL to our password)
+                        catalog.ActiveConnection.Execute($"ALTER DATABASE PASSWORD [{DB_PASSWORD}] NULL", 0);
+                        
+                        catalog.ActiveConnection.Close();
+                        catalog.ActiveConnection = null;
+                        
+                        System.Windows.Forms.MessageBox.Show($"Password has been successfully set on the database.\nPassword: {DB_PASSWORD}", 
+                            "Database Password Set", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                        
+                        return true;
+                    }
+                    catch (Exception innerEx)
+                    {
+                        // If connection fails, database might already have a password or other issue
+                        if (innerEx.Message.Contains("password") || innerEx.Message.Contains("3031"))
+                        {
+                            // Database already has a password, check if it's our password
+                            try
+                            {
+                                string connectionStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
+                                using (OleDbConnection passwordConn = new OleDbConnection(connectionStringWithPassword))
+                                {
+                                    passwordConn.Open();
+                                    passwordConn.Close();
+                                    // If this succeeds, database already has our password
+                                    return true;
+                                }
+                            }
+                            catch
+                            {
+                                // Database has a different password
+                                System.Windows.Forms.MessageBox.Show($"Database already has a different password. Cannot change it automatically.\nExpected password: {DB_PASSWORD}", 
+                                    "Database Password Issue", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                                return false;
+                            }
+                        }
+                        throw;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error setting database password: {ex.Message}", "Database Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Initializes all advance payment related database structures
         /// </summary>
         public static void InitializeAdvancePaymentSystem()
@@ -1719,11 +1844,11 @@ namespace SaleBillSystem.NET.Data
                     }
                     else
                     {
-                        System.Windows.Forms.MessageBox.Show(
-                            "Cheque amount columns already exist in AdvancePayments table.",
-                            "Database Update Complete",
-                            System.Windows.Forms.MessageBoxButtons.OK,
-                            System.Windows.Forms.MessageBoxIcon.Information);
+                        // System.Windows.Forms.MessageBox.Show(
+                        //     "Cheque amount columns already exist in AdvancePayments table.",
+                        //     "Database Update Complete",
+                        //     System.Windows.Forms.MessageBoxButtons.OK,
+                        //     System.Windows.Forms.MessageBoxIcon.Information);
                     }
                     
                     return true;

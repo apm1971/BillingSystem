@@ -1164,11 +1164,11 @@ namespace SaleBillSystem.NET.Forms
     {
         decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
         MessageBox.Show($"Using {_userSelectedAdvancePayments.Count} selected advance payments (₹{totalSelected:N2}) for calculation.", 
-            "Advance Payments Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            "Payments Selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
     else
     {
-        MessageBox.Show("No advance payments selected. Calculation will use cash only.", 
+        MessageBox.Show("No  payments selected. Calculation will use cash only.", 
             "Cash Only Calculation", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
@@ -1232,8 +1232,8 @@ namespace SaleBillSystem.NET.Forms
                 debugMessage += "No settlement breakdown available\n";
             }
             
-            System.Windows.Forms.MessageBox.Show(debugMessage, "DEBUG - Payment Calculation", 
-                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+            // System.Windows.Forms.MessageBox.Show(debugMessage, "DEBUG - Payment Calculation", 
+            //     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
 
     // Update grid with settlement results
     foreach (var billBreakdown in settlementResult.BillBreakdowns)
@@ -1267,22 +1267,22 @@ namespace SaleBillSystem.NET.Forms
     lblFinalAmount.Text = $"Total Due: ₹{Math.Round(settlementResult.TotalAmountDue):N0}";
 
                 // Show settlement summary
-            ShowSettlementSummary(settlementResult);
+            // ShowSettlementSummary(settlementResult);
             
             // Show information about advance payments used
-            if (_userSelectedAdvancePayments.Any())
-            {
-                decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
-                decimal totalUsed = settlementResult.TotalAdvanceUsed;
-                decimal unused = totalSelected - totalUsed;
+            // if (_userSelectedAdvancePayments.Any())
+            // {
+            //     decimal totalSelected = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+            //     decimal totalUsed = settlementResult.TotalAdvanceUsed;
+            //     decimal unused = totalSelected - totalUsed;
                 
-                string advanceInfo = $"=== ADVANCE PAYMENT USAGE ===\n\n" +
-                                   $"Total Selected: ₹{totalSelected:N2}\n" +
-                                   $"Total Used: ₹{totalUsed:N2}\n" +
-                                   $"Unused: ₹{unused:N2}";
+            //     string advanceInfo = $"=== ADVANCE PAYMENT USAGE ===\n\n" +
+            //                        $"Total Selected: ₹{totalSelected:N2}\n" +
+            //                        $"Total Used: ₹{totalUsed:N2}\n" +
+            //                        $"Unused: ₹{unused:N2}";
                 
-                MessageBox.Show(advanceInfo, "Advance Payment Usage", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            //     MessageBox.Show(advanceInfo, "Advance Payment Usage", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // }
             
             // Show the Generate Report button after successful calculation
             btnGenerateReport.Visible = true;
@@ -1517,7 +1517,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
             var reportData = new PaymentReportData
             {
                 // Header Information
-                ReportTitle = "FIFO Settlement Calculation",
+                ReportTitle = "Settlement Calculation",
                 ReportDate = DateTime.Now,
                 
                 // Payment Information
@@ -1762,15 +1762,42 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
 
         private void BtnSave_Click(object? sender, EventArgs e)
         {
-            if (!ValidatePayment(out decimal totalPaymentAmount, out DateTime paymentDate)) return;
-            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) return;
+            // Debug: Check if calculation was done first
+            if (_lastSettlementResult == null)
+            {
+                MessageBox.Show("Please click 'Calculate' first to calculate the payment settlement before saving.", "Calculate First", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ValidatePayment(out decimal totalPaymentAmount, out DateTime paymentDate)) 
+            {
+                MessageBox.Show("Payment validation failed. Please check your payment details.", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!ValidateTerms(out int interestDays, out int discountDays, out decimal discountRate, out decimal interestRate, out decimal brokerageRate)) 
+            {
+                MessageBox.Show("Terms validation failed. Please check your interest/discount/brokerage settings.", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             var paymentsToSave = _outstandingBills.Where(b => b.PaymentAllocation > 0).ToList();
             if (!paymentsToSave.Any())
             {
-                MessageBox.Show("No payments have been allocated to any bills.", "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("No payments have been allocated to any bills. Please calculate first to allocate payments.", "Save Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            // Debug: Show what will be saved
+            var message = $"About to save payment with:\n" +
+                         $"• Total Cash Needed: ₹{_lastSettlementResult.TotalCashNeeded:N2}\n" +
+                         $"• Bills to process: {paymentsToSave.Count}\n" +
+                         $"• Party: {cmbParty.Text}\n" +
+                         $"• Broker: {cmbBroker.Text}\n\n" +
+                         $"Continue with save?";
+            
+            var result = MessageBox.Show(message, "Confirm Save", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result != DialogResult.Yes) return;
 
             // Check for unused advance payments and ask user if they want to revert them
             if (_lastSettlementResult != null && _lastSettlementResult.UnusedAdvance > 0.01m)
@@ -1848,13 +1875,13 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 dynamic result = e.Result;
                 if (result.Success)
                 {
-                    MessageBox.Show($"Payment(s) saved successfully! Total available advance: {result.TotalAvailableAdvance:C}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
                     // Save the payment report data
                     SavePaymentReportData(result.PaymentId);
                     
                     // Show payment trace with print option
-                    ShowPaymentTraceAfterSave(result.PaymentId);
+                    // ShowPaymentTraceAfterSave(result.PaymentId);
                     
                     // Refresh advance display to show updated amounts after save
                     InvalidateAdvancePaymentCache();
@@ -2575,9 +2602,15 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 return false;
             }
 
-            if (!decimal.TryParse(txtPaymentAmount.Text, out paymentAmount) || paymentAmount < 0)
+            // Since txtPaymentAmount is now read-only and populated by calculation, 
+            // get the amount from the last settlement result if available
+            if (_lastSettlementResult != null)
             {
-                MessageBox.Show("Payment amount is invalid.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                paymentAmount = _lastSettlementResult.TotalCashNeeded;
+            }
+            else if (!decimal.TryParse(txtPaymentAmount.Text, out paymentAmount) || paymentAmount < 0)
+            {
+                MessageBox.Show("Please calculate the payment first before saving.", "Calculation Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
             if (!DateTime.TryParseExact(txtPaymentDate.Text, "dd-MM-yyyy", null, System.Globalization.DateTimeStyles.None, out paymentDate))
@@ -2633,7 +2666,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         /// <summary>
         /// Saves the payment report data to the database for later retrieval
         /// </summary>
-        private void SavePaymentReportData(int paymentId)
+        private void SavePaymentReportData(int paymentId = 0)
         {
             try
             {
@@ -2647,7 +2680,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 var reportData = CreatePaymentReportData();
                 
                 // Save to database using the PaymentReportService
-                PaymentReportService.SavePaymentReport(paymentId, reportData);
+                PaymentReportService.SavePaymentReport(paymentId == 0 ? reportData.PaymentID : paymentId, reportData);
                 
                 System.Diagnostics.Debug.WriteLine($"Payment report data saved successfully for PaymentID: {paymentId}");
             }

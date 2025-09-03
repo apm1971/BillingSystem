@@ -105,6 +105,7 @@ namespace SaleBillSystem.NET.Models
     public class AdvanceUtilizationDetail
     {
         public int AdvanceID { get; set; }
+        public int? UtilizationID { get; set; }
         public DateTime AdvanceDate { get; set; }
         public decimal AdvanceAmount { get; set; }
         public decimal AmountUsed { get; set; }
@@ -119,6 +120,7 @@ namespace SaleBillSystem.NET.Models
     public class AdvanceUtilizationReport
     {
         public int AdvanceID { get; set; }
+        // public int? UtilizationID { get; set; } 
         public DateTime AdvanceDate { get; set; }
         public decimal OriginalAmount { get; set; }
         public decimal AmountUsed { get; set; }

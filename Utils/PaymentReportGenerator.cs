@@ -44,11 +44,7 @@ namespace SaleBillSystem.NET.Utils
             // Advance Utilizations
             html.AppendLine(GenerateAdvanceUtilizations(reportData));
             
-            // Unused Advance Reversals (if any)
-            if (reportData.UnusedAdvanceReversals.Count > 0)
-            {
-                html.AppendLine(GenerateUnusedAdvanceReversals(reportData));
-            }
+            // Unused advance reversals are now shown as "Reverted" status in advance utilizations table
             
             // Payment Terms
             html.AppendLine(GeneratePaymentTerms(reportData));
@@ -501,7 +497,14 @@ namespace SaleBillSystem.NET.Utils
                 html.AppendLine($"                        <td class='amount positive'>₹{advance.AmountUsed:N2}</td>");
                 html.AppendLine($"                        <td class='amount'>₹{advance.RemainingAmount:N2}</td>");
                 html.AppendLine($"                        <td>{advance.PaymentMethod}</td>");
-                html.AppendLine($"                        <td><span class='status {advance.Status.ToLower()}'>{advance.Status}</span></td>");
+                if (data.UnusedAdvanceReversals.Count > 0 && advance.RemainingAmount > 0)
+                {
+                    html.AppendLine($"                        <td><span class='status reverted'>Reverted</span></td>");
+                }
+                else
+                {
+                    html.AppendLine($"                        <td><span class='status {advance.Status.ToLower()}'>{advance.Status}</span></td>");
+                }
                 html.AppendLine($"                        <td>{string.Join(", ", advance.UsedForBills)}</td>");
                 html.AppendLine("                    </tr>");
             }

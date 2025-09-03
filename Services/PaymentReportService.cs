@@ -13,8 +13,9 @@ namespace SaleBillSystem.NET.Services
     public static class PaymentReportService
     {
         /// <summary>
-        /// Creates the PaymentReports table if it doesn't exist
+        /// Creates the PaymentReports table if it doesn't exist and ensures SettlementID column exists
         /// </summary>
+        /// 
         public static void EnsurePaymentReportsTableExists()
         {
             try
@@ -187,7 +188,7 @@ namespace SaleBillSystem.NET.Services
             var parameters = new List<object>();
 
             string sql = @"
-                SELECT PaymentID, PaymentDate, PartyName, BrokerName, TotalAmount, PaymentMethod
+                SELECT ReportID, PaymentID, PaymentDate, PartyName, BrokerName, TotalAmount, PaymentMethod
                 FROM PaymentReports";
 
             // Debug: Log filter parameters
@@ -265,6 +266,7 @@ namespace SaleBillSystem.NET.Services
                         {
                             var report = new PaymentReportSummary
                             {
+                                ReportID = reader.GetInt32(reader.GetOrdinal("ReportID")),
                                 PaymentID = reader.GetInt32(reader.GetOrdinal("PaymentID")),
                                 PaymentDate = reader.GetDateTime(reader.GetOrdinal("PaymentDate")),
                                 PartyName = reader.IsDBNull(reader.GetOrdinal("PartyName")) ? "" : reader.GetString(reader.GetOrdinal("PartyName")),
@@ -404,6 +406,169 @@ namespace SaleBillSystem.NET.Services
                 return new List<string>(); // Return empty list on error
             }
         }
+
+        /// <summary>
+        /// Deletes a settlement and all its associated data using ReportID
+        /// This includes the cash payment, advance utilizations, and report records
+        /// </summary>
+        public static bool DeleteSettlement(int reportId)
+        {
+            try
+            {
+                using (var connection = DatabaseManager.GetConnection())
+                {
+                    connection.Open();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // 1. Get the payment report data to understand what needs to be deleted
+                            string getReportSql = "SELECT PaymentID, ReportData FROM PaymentReports WHERE ReportID = ?";
+                            PaymentReportData reportData = null;
+                            int paymentId = 0;
+                            
+                            using (var cmd = new OleDbCommand(getReportSql, connection, transaction))
+                            {
+                                cmd.Parameters.Add("@ReportID", OleDbType.Integer).Value = reportId;
+                                using (var reader = cmd.ExecuteReader())
+                                {
+                                    if (reader.Read())
+                                    {
+                                        paymentId = reader.GetInt32(reader.GetOrdinal("PaymentID"));
+                                        string jsonData = reader.GetString(reader.GetOrdinal("ReportData"));
+                                        reportData = JsonSerializer.Deserialize<PaymentReportData>(jsonData);
+                                    }
+                                }
+                            }
+
+                            if (reportData == null)
+                            {
+                                System.Windows.Forms.MessageBox.Show(
+                                    "Payment report not found.",
+                                    "Delete Failed",
+                                    System.Windows.Forms.MessageBoxButtons.OK,
+                                    System.Windows.Forms.MessageBoxIcon.Warning);
+                                return false;
+                            }
+
+                            // 2. Delete advance utilizations using UtilizationID from bill details
+                            if (reportData.BillDetails != null && reportData.BillDetails.Count > 0)
+                            {
+                                foreach (var billDetail in reportData.BillDetails)
+                                {
+                                    if (billDetail.AdvanceUtilizations != null && billDetail.AdvanceUtilizations.Count > 0)
+                                    {
+                                        foreach (var utilization in billDetail.AdvanceUtilizations)
+                                        {
+                                            if (utilization.UtilizationID.HasValue)
+                                            {
+                                                string deleteUtilizationSql = "DELETE FROM AdvanceUtilization WHERE UtilizationID = ?";
+                                                using (var cmd = new OleDbCommand(deleteUtilizationSql, connection, transaction))
+                                                {
+                                                    cmd.Parameters.Add("@UtilizationID", OleDbType.Integer).Value = utilization.UtilizationID.Value;
+                                                    int utilizationDeleted = cmd.ExecuteNonQuery();
+                                                    System.Diagnostics.Debug.WriteLine($"Deleted utilization {utilization.UtilizationID.Value} for bill {billDetail.BillNo}");
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Delete ledger transactions for this bill (except "Bill" type transactions)
+                                    string deleteLedgerTransactionsSql = @"
+                                        DELETE FROM TransactionLedger 
+                                        WHERE BillID = ? 
+                                        AND TransactionType <> 'Bill'";
+                                    using (var cmd = new OleDbCommand(deleteLedgerTransactionsSql, connection, transaction))
+                                    {
+                                        cmd.Parameters.Add("@BillID", OleDbType.Integer).Value = billDetail.BillID;
+                                        int ledgerTransactionsDeleted = cmd.ExecuteNonQuery();
+                                        System.Diagnostics.Debug.WriteLine($"Deleted {ledgerTransactionsDeleted} ledger transactions for bill {billDetail.BillID} (excluding Bill type)");
+                                    }
+                                }
+                            }
+
+                            // 3. Delete utilization records for the cash payment itself (if any)
+                            string deleteCashPaymentUtilizationsSql = "DELETE FROM AdvanceUtilization WHERE AdvanceID = ?";
+                            using (var cmd = new OleDbCommand(deleteCashPaymentUtilizationsSql, connection, transaction))
+                            {
+                                cmd.Parameters.Add("@AdvanceID", OleDbType.Integer).Value = paymentId;
+                                int cashPaymentUtilizationsDeleted = cmd.ExecuteNonQuery();
+                                System.Diagnostics.Debug.WriteLine($"Deleted {cashPaymentUtilizationsDeleted} utilization records for cash payment {paymentId}");
+                            }
+
+                            // 4. Delete the cash payment from AdvancePayments table
+                            string deleteCashPaymentSql = "DELETE FROM AdvancePayments WHERE AdvanceID = ?";
+                            using (var cmd = new OleDbCommand(deleteCashPaymentSql, connection, transaction))
+                            {
+                                cmd.Parameters.Add("@AdvanceID", OleDbType.Integer).Value = paymentId;
+                                int cashPaymentDeleted = cmd.ExecuteNonQuery();
+                                System.Diagnostics.Debug.WriteLine($"Deleted {cashPaymentDeleted} cash payment record");
+                            }
+
+                            // 5. Handle reversed payments - delete any reversal payments
+                            if (reportData.UnusedAdvanceReversals != null && reportData.UnusedAdvanceReversals.Count > 0)
+                            {
+                                foreach (var reversal in reportData.UnusedAdvanceReversals)
+                                {
+                                    // Delete the reversal payment
+                                    string deleteReversalUtilizationSql = "DELETE FROM AdvanceUtilization WHERE AdvanceID = ?";
+                                    using (var cmd = new OleDbCommand(deleteReversalUtilizationSql, connection, transaction))
+                                    {
+                                        cmd.Parameters.Add("@AdvanceID", OleDbType.Integer).Value = reversal.ReversalAdvanceID;
+                                        int reversalUtilizationDeleted = cmd.ExecuteNonQuery();
+                                        System.Diagnostics.Debug.WriteLine($"Deleted reversal utilization {reversal.ReversalAdvanceID}");
+                                    }
+                                    string deleteReversalSql = "DELETE FROM AdvancePayments WHERE AdvanceID = ?";
+                                    using (var cmd = new OleDbCommand(deleteReversalSql, connection, transaction))
+                                    {
+                                        cmd.Parameters.Add("@ReversalID", OleDbType.Integer).Value = reversal.ReversalAdvanceID;
+                                        int reversalDeleted = cmd.ExecuteNonQuery();
+                                        System.Diagnostics.Debug.WriteLine($"Deleted reversal payment {reversal.ReversalAdvanceID}");
+                                    }
+                                    
+                                }
+                            }
+
+                            // 6. Delete the payment report record
+                            string deleteReportSql = "DELETE FROM PaymentReports WHERE ReportID = ?";
+                            using (var cmd = new OleDbCommand(deleteReportSql, connection, transaction))
+                            {
+                                cmd.Parameters.Add("@ReportID", OleDbType.Integer).Value = reportId;
+                                int reportDeleted = cmd.ExecuteNonQuery();
+                                System.Diagnostics.Debug.WriteLine($"Deleted {reportDeleted} payment report record");
+                            }
+
+                            transaction.Commit();
+                            
+                            System.Windows.Forms.MessageBox.Show(
+                                $"Settlement deleted successfully!\n\nDeleted:\n- Payment record\n- All advance utilizations\n- Ledger transactions (except Bill type)\n- Any reversal payments\n- Payment report",
+                                "Delete Complete",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Information);
+                            
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error deleting settlement: {ex.Message}",
+                    "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                
+                System.Diagnostics.Debug.WriteLine($"DeleteSettlement Error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+                return false;
+            }
+        }
     }
 
     /// <summary>
@@ -411,6 +576,7 @@ namespace SaleBillSystem.NET.Services
     /// </summary>
     public class PaymentReportSummary
     {
+        public int ReportID { get; set; }
         public int PaymentID { get; set; }
         public DateTime PaymentDate { get; set; }
         public string PartyName { get; set; } = "";

@@ -12,7 +12,7 @@ namespace SaleBillSystem.NET.Data
         /// <summary>
         /// Adds a new advance utilization record to track advance payment usage
         /// </summary>
-        public static bool AddUtilization(AdvanceUtilization utilization, OleDbConnection conn = null, OleDbTransaction transaction = null)
+        public static int AddUtilization(AdvanceUtilization utilization, OleDbConnection conn = null, OleDbTransaction transaction = null)
         {
             try
             {
@@ -42,6 +42,7 @@ namespace SaleBillSystem.NET.Data
                 };
 
                 int rowsAffected;
+                int utilizationId = 0; 
                 using (var cmd = new OleDbCommand(sql, conn))
                 {
                     if (transaction != null)
@@ -49,7 +50,16 @@ namespace SaleBillSystem.NET.Data
                         cmd.Transaction = transaction;
                     }
                     foreach (var p in parameters) cmd.Parameters.Add(p);
-                    rowsAffected = cmd.ExecuteNonQuery();
+                    cmd.ExecuteNonQuery();
+                    string getUtilizationIdSql = "SELECT @@IDENTITY";
+                    using (var getIdCmd = new OleDbCommand(getUtilizationIdSql, conn))
+                    {
+                        if (transaction != null)
+                        {
+                            getIdCmd.Transaction = transaction;
+                        }
+                        utilizationId = Convert.ToInt32(getIdCmd.ExecuteScalar());
+                    }
                 }
 
                 if (shouldCloseConnection)
@@ -57,7 +67,7 @@ namespace SaleBillSystem.NET.Data
                     conn.Close();
                 }
 
-                return rowsAffected > 0;
+                return utilizationId;
             }
             catch (Exception ex)
             {

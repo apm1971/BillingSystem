@@ -31,6 +31,7 @@ namespace SaleBillSystem.NET.Forms
         // Unused advance reversal tracking
         private bool _shouldRevertUnusedAdvances = false;
         private List<UnusedAdvanceDetail> _unusedAdvancesToRevert = new List<UnusedAdvanceDetail>();
+        private List<UnusedAdvanceReversalReport> _processedReversals = new List<UnusedAdvanceReversalReport>();
 
         // Background loading state
         private System.ComponentModel.BackgroundWorker _advanceLoadingWorker;
@@ -575,6 +576,7 @@ namespace SaleBillSystem.NET.Forms
             // Clear unused advance reversal tracking
             _shouldRevertUnusedAdvances = false;
             _unusedAdvancesToRevert.Clear();
+            _processedReversals.Clear();
 
             // Hide advance payment display
             // UpdateAdvancePaymentDisplay();
@@ -1512,7 +1514,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         /// <summary>
         /// Creates PaymentReportData from current settlement calculation
         /// </summary>
-        private PaymentReportData CreatePaymentReportData()
+        private PaymentReportData CreatePaymentReportData(bool isPostSave = false)
         {
             var reportData = new PaymentReportData
             {
@@ -1589,7 +1591,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     Brokerage = breakdown.Brokerage,
                     AdvanceUsed = breakdown.AdvanceUsed,
                     CashUsed = breakdown.CashNeeded,
-                    Status = breakdown.CashNeeded <= 0.01m ? "Fully Settled" : "Cash Payment Required"
+                    Status = isPostSave ? "Paid" : (breakdown.CashNeeded <= 0.01m ? "Fully Settled" : "Cash Payment Required")
                 };
 
                 // Interest periods - simplified for clean FIFO report
@@ -1601,6 +1603,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     billDetail.AdvanceUtilizations.Add(new Models.AdvanceUtilizationDetail
                     {
                         AdvanceID = util.AdvanceID,
+                        UtilizationID = util.UtilizationID,
                         AdvanceDate = util.AdvanceDate,
                         AmountUsed = util.AmountUsed,
                         PaymentMethod = util.PaymentMethod,
@@ -1645,7 +1648,17 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
 
                 if (advanceUtil.AmountUsed > 0)
                 {
-                    advanceUtil.Status = advanceUtil.RemainingAmount > 0 ? "Partial" : "Used";
+                    // Check if this advance was reverted (has unused portion that was reversed)
+                    bool wasReverted = isPostSave && _processedReversals.Any(r => r.OriginalAdvanceID == advance.AdvanceID);
+                    
+                    if (wasReverted)
+                    {
+                        advanceUtil.Status = "Reverted";
+                    }
+                    else
+                    {
+                        advanceUtil.Status = advanceUtil.RemainingAmount > 0 ? "Partial" : "Used";
+                    }
                 }
 
                 reportData.AdvanceUtilizations.Add(advanceUtil);
@@ -1661,6 +1674,8 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 BrokerageRate = decimal.TryParse(txtBrokerageRate.Text, out decimal brokerageRate) ? brokerageRate : 0,
                 TermsSource = "Manual Entry"
             };
+
+            // Unused advance reversals are now shown as "Reverted" status in advance utilizations
 
             return reportData;
         }
@@ -1882,8 +1897,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 {
                     MessageBox.Show($"Payment(s) saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
-                    // Save the payment report data
-                    SavePaymentReportData(result.PaymentId);
+                    // Report data is now saved during the background save process
                     
                     // Show payment trace with print option
                     // ShowPaymentTraceAfterSave(result.PaymentId);
@@ -2152,7 +2166,8 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                                     BrokerID = brokerId,
                                     CompanyID = 1
                                 };
-                                AdvanceUtilizationService.AddUtilization(advanceUtilization, conn, dbTransaction);
+                               int utilizationId = AdvanceUtilizationService.AddUtilization(advanceUtilization, conn, dbTransaction);
+                               utilization.UtilizationID = utilizationId;
 
                                 // ALSO save advance utilization as a ledger transaction
                                 var advancePaymentTransaction = new Transaction
@@ -2194,6 +2209,20 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     }
 
                     dbTransaction.Commit();
+                    
+                    // Capture report data immediately after successful commit while reversal data is still available
+                    var reportData = CreatePaymentReportData(isPostSave: true);
+                    
+                    // Save report data to database
+                    try
+                    {
+                        PaymentReportService.SavePaymentReport(cashPaymentId ?? 0, reportData);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but don't fail the payment save for report issues
+                        System.Diagnostics.Debug.WriteLine($"Warning: Failed to save payment report: {ex.Message}");
+                    }
                     
                     // Return the cash payment ID and total amount
                     return (cashPaymentId ?? 0, _lastSettlementResult.TotalCashNeeded);
@@ -2466,6 +2495,26 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 };
 
                 AdvanceUtilizationService.AddUtilization(reversalUtilization, conn, transaction);
+
+                // Capture reversal data for report
+                var brokerName = "";
+                if (unusedAdvance.BrokerID > 0)
+                {
+                    var broker = _brokers.FirstOrDefault(b => b.BrokerID == unusedAdvance.BrokerID);
+                    brokerName = broker?.BrokerName ?? "";
+                }
+
+                _processedReversals.Add(new UnusedAdvanceReversalReport
+                {
+                    OriginalAdvanceID = unusedAdvance.AdvanceID,
+                    ReversalAdvanceID = reversalAdvanceId,
+                    BrokerName = brokerName,
+                    OriginalAmount = unusedAdvance.OriginalAmount,
+                    UsedAmount = unusedAdvance.UsedAmount,
+                    UnusedAmount = unusedAdvance.UnusedAmount,
+                    ReversalDate = _lastSettlementResult.PaymentDate,
+                    Reference = reversalAdvance.Reference
+                });
             }
         }
 
@@ -4066,6 +4115,7 @@ public class BillSettlementBreakdown
 public class AdvanceUtilizationDetail
 {
     public int AdvanceID { get; set; }
+    public int? UtilizationID { get; set; }
     public int BillID { get; set; }
     public decimal AmountUsed { get; set; }
     public DateTime AdvanceDate { get; set; }

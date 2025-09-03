@@ -95,6 +95,7 @@ namespace SaleBillSystem.NET.Forms
 
                 // Update button state
                 btnViewReport.Enabled = reports.Count > 0;
+                btnDeleteSettlement.Enabled = reports.Count > 0;
                 
                 // Debug: Show filter results
                 System.Diagnostics.Debug.WriteLine($"Filter results: {reports.Count} reports found");
@@ -182,6 +183,58 @@ namespace SaleBillSystem.NET.Forms
         private void dtpToDate_ValueChanged(object sender, EventArgs e)
         {
             LoadReports(); // Auto-refresh when to date changes
+        }
+
+        private void BtnDeleteSettlement_Click(object sender, EventArgs e)
+        {
+            if (dgvReports.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a settlement to delete.", "Selection Required",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                var selectedRow = dgvReports.SelectedRows[0];
+                var reportId = (int)selectedRow.Cells["ReportID"].Value;
+                var partyName = selectedRow.Cells["PartyName"].Value?.ToString() ?? "Unknown";
+                var brokerName = selectedRow.Cells["BrokerName"].Value?.ToString() ?? "Unknown";
+                var paymentDate = (DateTime)selectedRow.Cells["PaymentDate"].Value;
+                var totalAmount = (decimal)selectedRow.Cells["TotalAmount"].Value;
+
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to delete this settlement?\n\n" +
+                    $"Party: {partyName}\n" +
+                    $"Broker: {brokerName}\n" +
+                    $"Date: {paymentDate:dd-MMM-yyyy}\n" +
+                    $"Amount: ₹{totalAmount:N2}\n\n" +
+                    $"This will:\n" +
+                    $"• Delete the cash payment\n" +
+                    $"• Remove all advance utilizations\n" +
+                    $"• Delete any reversal payments\n" +
+                    $"• Remove the payment report\n\n" +
+                    $"This action cannot be undone!",
+                    "Confirm Delete Settlement",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2);
+
+                if (confirmResult == DialogResult.Yes)
+                {
+                    bool success = PaymentReportService.DeleteSettlement(reportId);
+                    if (success)
+                    {
+                        // Refresh the reports list
+                        LoadReports();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting settlement: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

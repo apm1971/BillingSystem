@@ -43,7 +43,6 @@ namespace SaleBillSystem.NET.Forms
             dgvReports = new DataGridView();
             btnViewReport = new Button();
             btnDeleteSettlement = new Button();
-            btnClose = new Button();
             filterPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvReports).BeginInit();
             SuspendLayout();
@@ -218,33 +217,20 @@ namespace SaleBillSystem.NET.Forms
             btnDeleteSettlement.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnDeleteSettlement.BackColor = Color.IndianRed;
             btnDeleteSettlement.ForeColor = Color.White;
-            btnDeleteSettlement.Location = new Point(105, 382);
+            btnDeleteSettlement.Location = new Point(117, 379);
             btnDeleteSettlement.Margin = new Padding(3, 2, 3, 2);
             btnDeleteSettlement.Name = "btnDeleteSettlement";
-            btnDeleteSettlement.Size = new Size(110, 22);
+            btnDeleteSettlement.Size = new Size(134, 25);
             btnDeleteSettlement.TabIndex = 4;
             btnDeleteSettlement.Text = "Delete Settlement";
             btnDeleteSettlement.UseVisualStyleBackColor = false;
             btnDeleteSettlement.Click += BtnDeleteSettlement_Click;
-            // 
-            // btnClose
-            // 
-            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnClose.Location = new Point(223, 382);
-            btnClose.Margin = new Padding(3, 2, 3, 2);
-            btnClose.Name = "btnClose";
-            btnClose.Size = new Size(70, 22);
-            btnClose.TabIndex = 5;
-            btnClose.Text = "Close";
-            btnClose.UseVisualStyleBackColor = true;
-            btnClose.Click += BtnClose_Click;
             // 
             // PaymentReportsControl
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            Controls.Add(btnClose);
             Controls.Add(btnDeleteSettlement);
             Controls.Add(btnViewReport);
             Controls.Add(dgvReports);
@@ -279,7 +265,6 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.DataGridView dgvReports;
         private System.Windows.Forms.Button btnViewReport;
         private System.Windows.Forms.Button btnDeleteSettlement;
-        private System.Windows.Forms.Button btnClose;
         private System.Windows.Forms.DataGridViewTextBoxColumn PaymentID;
         private System.Windows.Forms.DataGridViewTextBoxColumn PaymentDate;
         private System.Windows.Forms.DataGridViewTextBoxColumn PartyName;

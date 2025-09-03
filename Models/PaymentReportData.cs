@@ -137,6 +137,8 @@ namespace SaleBillSystem.NET.Models
     public class UnusedAdvanceReversalReport
     {
         public int OriginalAdvanceID { get; set; }
+        public int ReversalUtilizationID { get; set; }
+        public int OriginalUtilizationID { get; set; }
         public int ReversalAdvanceID { get; set; }
         public string BrokerName { get; set; } = "";
         public decimal OriginalAmount { get; set; }

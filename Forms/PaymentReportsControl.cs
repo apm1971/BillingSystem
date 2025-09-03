@@ -134,9 +134,9 @@ namespace SaleBillSystem.NET.Forms
             try
             {
                 var selectedRow = dgvReports.SelectedRows[0];
-                var paymentId = (int)selectedRow.Cells["PaymentID"].Value;
+                var reportId = (int)selectedRow.Cells["ReportID"].Value;
 
-                var reportData = PaymentReportService.GetPaymentReport(paymentId);
+                var reportData = PaymentReportService.GetPaymentReport(reportId);
                 if (reportData == null)
                 {
                     MessageBox.Show("Report data not found.", "Error",

@@ -82,6 +82,7 @@ namespace SaleBillSystem.NET.Services
             {
                 EnsurePaymentReportsTableExists();
                 
+                // Ensure PaymentID is set correctly, especially for zero-cash settlements
                 reportData.PaymentID = paymentId;
                 
                 string jsonData = JsonSerializer.Serialize(reportData, new JsonSerializerOptions
@@ -99,7 +100,7 @@ namespace SaleBillSystem.NET.Services
                     connection.Open();
                     using (var command = new OleDbCommand(insertSql, connection))
                     {
-                        // Use proper parameter types for OleDb
+                        // Use proper parameter types for OleDb - ensure paymentId is used exactly as passed
                         command.Parameters.Add("@PaymentID", OleDbType.Integer).Value = paymentId;
                         command.Parameters.Add("@PaymentDate", OleDbType.Date).Value = reportData.PaymentDate;
                         command.Parameters.Add("@PartyID", OleDbType.Integer).Value = reportData.PartyID ?? (object)DBNull.Value;
@@ -149,20 +150,20 @@ namespace SaleBillSystem.NET.Services
         }
 
         /// <summary>
-        /// Retrieves payment report data from the database
+        /// Retrieves payment report data from the database using ReportID
         /// </summary>
-        public static PaymentReportData GetPaymentReport(int paymentId)
+        public static PaymentReportData GetPaymentReport(int reportId)
         {
             EnsurePaymentReportsTableExists();
 
-            string selectSql = "SELECT ReportData FROM PaymentReports WHERE PaymentID = ?";
+            string selectSql = "SELECT ReportData FROM PaymentReports WHERE ReportID = ?";
 
             using (var connection = DatabaseManager.GetConnection())
             {
                 connection.Open();
                 using (var command = new OleDbCommand(selectSql, connection))
                 {
-                    command.Parameters.AddWithValue("@PaymentID", paymentId);
+                    command.Parameters.AddWithValue("@ReportID", reportId);
                     
                     var result = command.ExecuteScalar();
                     if (result != null && result != DBNull.Value)
@@ -511,17 +512,26 @@ namespace SaleBillSystem.NET.Services
                                 foreach (var reversal in reportData.UnusedAdvanceReversals)
                                 {
                                     // Delete the reversal payment
-                                    string deleteReversalUtilizationSql = "DELETE FROM AdvanceUtilization WHERE AdvanceID = ?";
+                                    // Add back the unused amount to the original advance payment
+                                    string updateOriginalAdvanceUtilization = @"
+                                        DELETE FROM AdvanceUtilization WHERE UtilizationID = ?";
+                                    using (var cmd = new OleDbCommand(updateOriginalAdvanceUtilization, connection, transaction))
+                                    {
+                                        cmd.Parameters.Add("@UtilizationID", OleDbType.Integer).Value = reversal.OriginalUtilizationID;
+                                        int advanceUpdated = cmd.ExecuteNonQuery();
+                                        System.Diagnostics.Debug.WriteLine($"Deleted original advance utilization {reversal.OriginalUtilizationID}");
+                                    }
+                                    string deleteReversalUtilizationSql = "DELETE FROM AdvanceUtilization WHERE UtilizationID = ?";
                                     using (var cmd = new OleDbCommand(deleteReversalUtilizationSql, connection, transaction))
                                     {
-                                        cmd.Parameters.Add("@AdvanceID", OleDbType.Integer).Value = reversal.ReversalAdvanceID;
+                                        cmd.Parameters.Add("@UtilizationID", OleDbType.Integer).Value = reversal.ReversalUtilizationID;
                                         int reversalUtilizationDeleted = cmd.ExecuteNonQuery();
-                                        System.Diagnostics.Debug.WriteLine($"Deleted reversal utilization {reversal.ReversalAdvanceID}");
+                                        System.Diagnostics.Debug.WriteLine($"Deleted reversal utilization {reversal.ReversalUtilizationID}");
                                     }
                                     string deleteReversalSql = "DELETE FROM AdvancePayments WHERE AdvanceID = ?";
                                     using (var cmd = new OleDbCommand(deleteReversalSql, connection, transaction))
                                     {
-                                        cmd.Parameters.Add("@ReversalID", OleDbType.Integer).Value = reversal.ReversalAdvanceID;
+                                        cmd.Parameters.Add("@AdvanceID", OleDbType.Integer).Value = reversal.ReversalAdvanceID;
                                         int reversalDeleted = cmd.ExecuteNonQuery();
                                         System.Diagnostics.Debug.WriteLine($"Deleted reversal payment {reversal.ReversalAdvanceID}");
                                     }

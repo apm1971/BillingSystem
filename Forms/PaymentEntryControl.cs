@@ -1514,7 +1514,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
         /// <summary>
         /// Creates PaymentReportData from current settlement calculation
         /// </summary>
-        private PaymentReportData CreatePaymentReportData(bool isPostSave = false)
+        private PaymentReportData CreatePaymentReportData(bool isPostSave = false, int paymentId = 0)
         {
             var reportData = new PaymentReportData
             {
@@ -1523,7 +1523,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 ReportDate = DateTime.Now,
                 
                 // Payment Information
-                PaymentID = 0, // Will be set after save
+                PaymentID = paymentId, // Use provided paymentId or 0 for preview
                 PaymentDate = _lastSettlementResult.PaymentDate,
                 PaymentMethod = cmbPaymentMethod.Text ?? "Cash",
                 Reference = txtReference.Text ?? "",
@@ -1675,7 +1675,11 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 TermsSource = "Manual Entry"
             };
 
-            // Unused advance reversals are now shown as "Reverted" status in advance utilizations
+            // Add unused advance reversals if any were processed
+            if (isPostSave && _processedReversals.Any())
+            {
+                reportData.UnusedAdvanceReversals = _processedReversals.ToList();
+            }
 
             return reportData;
         }
@@ -2211,12 +2215,15 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     dbTransaction.Commit();
                     
                     // Capture report data immediately after successful commit while reversal data is still available
-                    var reportData = CreatePaymentReportData(isPostSave: true);
+                    var reportData = CreatePaymentReportData(isPostSave: true, paymentId: cashPaymentId ?? 0);
                     
-                    // Save report data to database
+                    // Save report data to database with proper PaymentID handling
                     try
                     {
-                        PaymentReportService.SavePaymentReport(cashPaymentId ?? 0, reportData);
+                        // For zero-cash settlements, ensure we don't pick up stray identity values
+                        int reportPaymentId = cashPaymentId ?? 0;
+                        System.Diagnostics.Debug.WriteLine($"Saving payment report with PaymentID: {reportPaymentId}, CashPaymentId was: {cashPaymentId?.ToString() ?? "null"}");
+                        PaymentReportService.SavePaymentReport(reportPaymentId, reportData);
                     }
                     catch (Exception ex)
                     {
@@ -2480,7 +2487,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     CompanyID = 1
                 };
 
-                AdvanceUtilizationService.AddUtilization(originalAdvanceUtilization, conn, transaction);
+                int originalUtilizationId = AdvanceUtilizationService.AddUtilization(originalAdvanceUtilization, conn, transaction);
 
                 // Create utilization record for the reversal (marking it as used immediately)
                 var reversalUtilization = new AdvanceUtilization
@@ -2494,7 +2501,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                     CompanyID = 1
                 };
 
-                AdvanceUtilizationService.AddUtilization(reversalUtilization, conn, transaction);
+                int reversalUtilizationId = AdvanceUtilizationService.AddUtilization(reversalUtilization, conn, transaction);
 
                 // Capture reversal data for report
                 var brokerName = "";
@@ -2508,6 +2515,8 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 {
                     OriginalAdvanceID = unusedAdvance.AdvanceID,
                     ReversalAdvanceID = reversalAdvanceId,
+                    ReversalUtilizationID = reversalUtilizationId,
+                    OriginalUtilizationID = originalUtilizationId,
                     BrokerName = brokerName,
                     OriginalAmount = unusedAdvance.OriginalAmount,
                     UsedAmount = unusedAdvance.UsedAmount,

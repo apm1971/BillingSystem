@@ -116,7 +116,7 @@ namespace SaleBillSystem.NET.Forms
             SetupDataGridView(); // Setup grid style and columns first
             LoadInitialData();
             SetupEventHandlers();
-            ClearForm();
+            ClearForm(resetPaymentDate: true);
         }
 
         #region Initial Setup
@@ -535,7 +535,7 @@ namespace SaleBillSystem.NET.Forms
             txtChequeAmountFirm2.TextChanged += TxtChequeAmount_TextChanged;
         }
 
-        private void ClearForm()
+        private void ClearForm(bool resetPaymentDate = false)
         {
             cmbParty.SelectedIndex = -1;
             cmbBroker.SelectedIndex = -1;
@@ -555,7 +555,10 @@ namespace SaleBillSystem.NET.Forms
             lblFinalAmount.Text = "Amount Due: ₹0.00";
 
             txtPaymentAmount.Text = "0.00";
-            txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
+            if (resetPaymentDate)
+            {
+                txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
+            }
             cmbPaymentMethod.SelectedIndex = 0;
             txtReference.Clear();
             
@@ -2413,7 +2416,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
 
         private void BtnClear_Click(object? sender, EventArgs e)
         {
-            ClearForm();
+            ClearForm(resetPaymentDate: true);
         }
 
         #endregion
@@ -3927,137 +3930,146 @@ private SettlementCalculationResult CalculateSettlementRequirement(
     decimal discountRate,
     decimal brokerageRate)
 {
-    // --- 1. SETUP ---
-    var advancesToUse = _userSelectedAdvancePayments.Any() 
-        ? _userSelectedAdvancePayments 
+    // --- 1) SETUP ---
+    var advancesToUse = _userSelectedAdvancePayments != null && _userSelectedAdvancePayments.Any()
+        ? _userSelectedAdvancePayments
         : availableAdvances;
 
-    var sortedAdvances = advancesToUse.OrderBy(a => a.PaymentDate).ToList();
-    
-    // Create a mutable list of bills to track their changing state
-    var workingBills = billsToSettle.OrderBy(b => b.BillDate).Select(b => new WorkingBill
-    {
-        OriginalBill = b,
-        OutstandingPrincipal = b.TotalAmount,
-        // The date from which to start calculating interest is the bill's due date
-        InterestCalcStartDate = b.BillDate.AddDays(interestDays)
-    }).ToList();
+    var sortedAdvances = advancesToUse
+        .OrderBy(a => a.PaymentDate)
+        .ToList();
 
-    // --- 2. MAIN CALCULATION LOOP (Payment-Centric) ---
-    // Loop through each payment and apply it to the oldest bills.
+    // Track mutable state per bill
+    var workingBills = billsToSettle
+        .OrderBy(b => b.BillDate)
+        .Select(b => new WorkingBill
+        {
+            OriginalBill = b,
+            OutstandingPrincipal = b.TotalAmount,
+            InterestCalcStartDate = b.BillDate.AddDays(interestDays),
+            TotalAdvanceUsed = 0m,
+            TotalDiscount = 0m,
+            TotalInterestGenerated = 0m,
+            AdvanceUtilizations = new List<AdvanceUtilizationDetail>()
+        })
+        .ToList();
+
+    // --- 2) MAIN LOOP: apply payments FIFO ---
     foreach (var payment in sortedAdvances)
     {
-        decimal paymentAmountRemaining = payment.Amount;
+        var paymentDate = payment.PaymentDate;
+        decimal paymentRemaining = payment.Amount;
 
-        // Loop through the bills to be settled
         foreach (var bill in workingBills)
         {
-            if (paymentAmountRemaining <= 0) break; // This payment is used up
-            if (bill.OutstandingPrincipal <= 0) continue; // This bill is already paid
+            if (paymentRemaining <= 0) break;
+            if (bill.OutstandingPrincipal <= 0) continue;
 
-            // --- A. Calculate interest accrued on this bill up to the payment date ---
-            decimal interestForPeriod = 0;
-            DateTime paymentDate = payment.PaymentDate;
-
+            // (A) Accrue interest up to this payment date
             if (paymentDate > bill.InterestCalcStartDate)
             {
-                int interestDaysCount = (paymentDate - bill.InterestCalcStartDate).Days;
-                if (interestDaysCount > 0)
+                int days = (paymentDate - bill.InterestCalcStartDate).Days;
+                if (days > 0 && bill.OutstandingPrincipal > 0)
                 {
-                    decimal brokerage = bill.OriginalBill.TotalAmount * brokerageRate / 100m;
-                    decimal interestBase = Math.Max(0, bill.OutstandingPrincipal - brokerage);
-                    interestForPeriod = interestBase * (interestRate / 100m) * (interestDaysCount / 365m);
+                    decimal interestBase = bill.OutstandingPrincipal;
+                    decimal periodInterest = interestBase * (interestRate / 100m) * (days / 365m);
+                    bill.TotalInterestGenerated += periodInterest;
                 }
             }
 
-            // --- B. Calculate discount if payment is within discount period ---
-            decimal discountAmount = 0;
+            // (B) How much of the bill are we settling?
+            decimal intendedPrincipalSettlement = Math.Min(paymentRemaining, bill.OutstandingPrincipal);
+
+            // (C) Apply discount if within discount period
+            decimal discountOnThisPayment = 0m;
             DateTime discountDeadline = bill.OriginalBill.BillDate.AddDays(discountDays);
-            if (paymentDate <= discountDeadline)
+            if (paymentDate <= discountDeadline && discountRate > 0)
             {
-                // Apply discount only to remaining principal, not already paid portions
-                discountAmount = bill.OutstandingPrincipal * (discountRate / 100m);
-                bill.TotalDiscount += discountAmount;
+                discountOnThisPayment = intendedPrincipalSettlement * (discountRate / 100m);
             }
 
-            // --- C. Determine amount to apply from this payment ---
-            decimal brokerageWaiver = bill.OriginalBill.TotalAmount * brokerageRate / 100m;
-            decimal totalDueOnBill = bill.OutstandingPrincipal - brokerageWaiver - discountAmount + interestForPeriod;
-            decimal amountToApply = Math.Min(paymentAmountRemaining, totalDueOnBill);
+            // (D) Cash consumed is less than intended principal if discount applies
+            decimal cashConsumed = intendedPrincipalSettlement - discountOnThisPayment;
+            if (cashConsumed > paymentRemaining) cashConsumed = paymentRemaining;
 
-            // --- D. Apply the payment (interest first, then principal) ---
-            decimal interestPortion = Math.Min(amountToApply, interestForPeriod);
-            decimal principalPortion = amountToApply - interestPortion;
+            // (E) Reduce bill outstanding by full principal portion
+            bill.OutstandingPrincipal -= intendedPrincipalSettlement;
+            if (bill.OutstandingPrincipal < 0) bill.OutstandingPrincipal = 0;
 
-            bill.OutstandingPrincipal -= principalPortion;
-            bill.TotalInterestGenerated += interestPortion; // Only log the interest that was actually paid here
-            bill.TotalAdvanceUsed += amountToApply;
-            
-            bill.AdvanceUtilizations.Add(new AdvanceUtilizationDetail 
+            // (F) Log
+            bill.TotalAdvanceUsed += cashConsumed; // cash actually used
+            bill.TotalDiscount += discountOnThisPayment;
+
+            bill.AdvanceUtilizations.Add(new AdvanceUtilizationDetail
             {
                 AdvanceID = payment.AdvanceID,
                 BillID = bill.OriginalBill.BillID,
-                AmountUsed = amountToApply 
+                AmountUsed = cashConsumed
             });
 
-            paymentAmountRemaining -= amountToApply;
+            // (G) Reduce available cash
+            paymentRemaining -= cashConsumed;
 
-            // The start date for the *next* interest calculation is now this payment's date
-            bill.InterestCalcStartDate = payment.PaymentDate;
+            // (H) Reset interest clock
+            bill.InterestCalcStartDate = paymentDate;
+
+            if (paymentRemaining <= 0) break;
         }
     }
 
-    // --- 3. FINALIZATION ---
-    // After all payments, calculate final interest up to the settlement date for any remaining balances
-    foreach (var bill in workingBills.Where(b => b.OutstandingPrincipal > 0))
+    // --- 3) FINAL INTEREST to settlement date ---
+    foreach (var bill in workingBills)
     {
-        decimal finalInterest = 0;
+        if (bill.OutstandingPrincipal <= 0) continue;
+
         if (settlementDate > bill.InterestCalcStartDate)
         {
-            int interestDaysCount = (settlementDate - bill.InterestCalcStartDate).Days;
-            if (interestDaysCount > 0)
+            int days = (settlementDate - bill.InterestCalcStartDate).Days;
+            if (days > 0)
             {
-                decimal brokerage = bill.OriginalBill.TotalAmount * brokerageRate / 100m;
-                decimal interestBase = Math.Max(0, bill.OutstandingPrincipal - brokerage);
-                finalInterest = interestBase * (interestRate / 100m) * (interestDaysCount / 365m);
+                decimal interestBase = bill.OutstandingPrincipal;
+                decimal finalInterest = interestBase * (interestRate / 100m) * (days / 365m);
                 bill.TotalInterestGenerated += finalInterest;
             }
         }
     }
 
-    // --- 4. AGGREGATE RESULTS ---
-    var billBreakdowns = workingBills.Select(b => {
+    // --- 4) AGGREGATE RESULTS (brokerage waived) ---
+    var billBreakdowns = new List<BillSettlementBreakdown>();
+    foreach (var b in workingBills)
+    {
         decimal brokerage = b.OriginalBill.TotalAmount * brokerageRate / 100m;
-        // Total due = original - brokerage - discount + interest
-        decimal totalAmountDue = b.OriginalBill.TotalAmount - brokerage - b.TotalDiscount + b.TotalInterestGenerated;
-        decimal cashNeeded = Math.Max(0, totalAmountDue - b.TotalAdvanceUsed);
-        
-        return new BillSettlementBreakdown
+        decimal totalAmountDue = Math.Max(0m, b.OutstandingPrincipal - brokerage) + b.TotalInterestGenerated;
+
+        decimal advanceUsed = b.TotalAdvanceUsed;
+        decimal cashNeeded = Math.Max(0m, totalAmountDue - advanceUsed);
+
+        billBreakdowns.Add(new BillSettlementBreakdown
         {
             BillID = b.OriginalBill.BillID,
             BillNo = b.OriginalBill.BillNo,
             Interest = b.TotalInterestGenerated,
-            AdvanceUsed = b.TotalAdvanceUsed,
+            AdvanceUsed = advanceUsed,
             Brokerage = brokerage,
             Discount = b.TotalDiscount,
             CashNeeded = cashNeeded,
             AmountDue = totalAmountDue,
             AdvanceUtilizations = b.AdvanceUtilizations
-        };
-    }).ToList();
+        });
+    }
 
     decimal totalAdvanceAvailable = advancesToUse.Sum(a => a.Amount);
-    decimal totalAdvanceUsed = billBreakdowns.Sum(b => b.AdvanceUsed);
-    decimal totalCashNeeded = billBreakdowns.Sum(b => b.CashNeeded);
+    decimal totalAdvanceUsed = billBreakdowns.Sum(x => x.AdvanceUsed);
+    decimal totalCashNeeded = billBreakdowns.Sum(x => x.CashNeeded);
 
     return new SettlementCalculationResult
     {
         TotalAmountDue = totalAdvanceUsed + totalCashNeeded,
         TotalAdvanceUsed = totalAdvanceUsed,
         TotalCashNeeded = totalCashNeeded,
-        TotalInterest = billBreakdowns.Sum(b => b.Interest),
-        TotalBrokerage = billBreakdowns.Sum(b => b.Brokerage),
-        TotalDiscount = billBreakdowns.Sum(b => b.Discount),
+        TotalInterest = billBreakdowns.Sum(x => x.Interest),
+        TotalBrokerage = billBreakdowns.Sum(x => x.Brokerage),
+        TotalDiscount = billBreakdowns.Sum(x => x.Discount),
         AdvanceAvailable = totalAdvanceAvailable,
         UnusedAdvance = totalAdvanceAvailable - totalAdvanceUsed,
         CanFullySettle = totalCashNeeded <= 0.01m,
@@ -4065,6 +4077,7 @@ private SettlementCalculationResult CalculateSettlementRequirement(
         PaymentDate = settlementDate
     };
 }
+
 
 /// <summary>
 /// Result of settlement calculation for an individual bill

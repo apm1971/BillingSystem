@@ -182,7 +182,34 @@ namespace SaleBillSystem.NET.Forms
             migrateItem.Font = menuFont;
             migrateItem.Click += (s, e) => { RunDatabaseMigration(); };
 
+            // var passwordTestItem = new ToolStripMenuItem("&Test Database Password");
+            // passwordTestItem.Font = menuFont;
+            // passwordTestItem.Click += (s, e) => { TestDatabasePassword(); };
+
+            // var forcePasswordItem = new ToolStripMenuItem("&Force Set Password");
+            // forcePasswordItem.Font = menuFont;
+            // forcePasswordItem.Click += (s, e) => { ForceSetPassword(); };
+
+            var backupDatabaseItem = new ToolStripMenuItem("&Backup Database");
+            backupDatabaseItem.Font = menuFont;
+            backupDatabaseItem.Click += (s, e) => { BackupDatabase(); };
+
+            var restoreDatabaseItem = new ToolStripMenuItem("&Restore Database");
+            restoreDatabaseItem.Font = menuFont;
+            restoreDatabaseItem.Click += (s, e) => { RestoreDatabase(); };
+
+            var databaseInfoItem = new ToolStripMenuItem("Database &Info");
+            databaseInfoItem.Font = menuFont;
+            databaseInfoItem.Click += (s, e) => { ShowDatabaseInfo(); };
+
             utilitiesMenu.DropDownItems.Add(migrateItem);
+            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
+            utilitiesMenu.DropDownItems.Add(backupDatabaseItem);
+            utilitiesMenu.DropDownItems.Add(restoreDatabaseItem);
+            utilitiesMenu.DropDownItems.Add(databaseInfoItem);
+            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
+            // utilitiesMenu.DropDownItems.Add(passwordTestItem);
+            // utilitiesMenu.DropDownItems.Add(forcePasswordItem);
 
             // Add all top-level menus to the main menu strip in the correct order
             mainMenuStrip.Items.Add(mastersMenu);
@@ -212,6 +239,337 @@ namespace SaleBillSystem.NET.Forms
             if (result == DialogResult.No)
             {
                 e.Cancel = true;
+            }
+        }
+
+        #endregion
+
+        #region Database Password Testing
+
+        /// <summary>
+        /// Tests the database password functionality and shows detailed results
+        /// </summary>
+        private void TestDatabasePassword()
+        {
+            try
+            {
+                string testResults = DatabaseManager.TestDatabasePasswordFunctionality();
+                
+                // Create a form to show the detailed results
+                var resultForm = new Form
+                {
+                    Text = "Database Password Test Results",
+                    Size = new Size(600, 400),
+                    StartPosition = FormStartPosition.CenterParent,
+                    ShowIcon = false,
+                    MaximizeBox = false,
+                    MinimizeBox = false
+                };
+                
+                var textBox = new TextBox
+                {
+                    Text = testResults,
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Both,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Consolas", 9f)
+                };
+                
+                var closeButton = new Button
+                {
+                    Text = "Close",
+                    Size = new Size(100, 30),
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                    DialogResult = DialogResult.OK
+                };
+                closeButton.Location = new Point(resultForm.Width - closeButton.Width - 20, resultForm.Height - closeButton.Height - 50);
+                
+                resultForm.Controls.Add(textBox);
+                resultForm.Controls.Add(closeButton);
+                resultForm.AcceptButton = closeButton;
+                
+                resultForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error running password test: {ex.Message}", "Test Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Forces password setting on the current database
+        /// </summary>
+        private void ForceSetPassword()
+        {
+            try
+            {
+                var result = MessageBox.Show(
+                    "This will attempt to set the password 'salessystem' on your database.\n\n" +
+                    "Are you sure you want to continue?",
+                    "Force Set Password",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+                
+                if (result == DialogResult.Yes)
+                {
+                    bool success = DatabaseManager.ForceSetDatabasePassword();
+                    
+                    if (success)
+                    {
+                        MessageBox.Show("Password setting completed successfully!", "Success", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Password setting failed. Check the error messages for details.", "Failed", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error forcing password set: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
+
+        #region Database Backup and Restore
+
+        /// <summary>
+        /// Creates a backup of the database with user-selected location
+        /// </summary>
+        private void BackupDatabase()
+        {
+            try
+            {
+                // Generate default backup filename with timestamp
+                string defaultFileName = $"SaleSystem_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.accdb";
+                
+                using (SaveFileDialog saveDialog = new SaveFileDialog())
+                {
+                    saveDialog.Title = "Save Database Backup";
+                    saveDialog.Filter = "Access Database Files (*.accdb)|*.accdb|All Files (*.*)|*.*";
+                    saveDialog.DefaultExt = "accdb";
+                    saveDialog.FileName = defaultFileName;
+                    saveDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    
+                    if (saveDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        // Show progress message
+                        var progressForm = new Form
+                        {
+                            Text = "Creating Backup",
+                            Size = new Size(300, 100),
+                            StartPosition = FormStartPosition.CenterParent,
+                            FormBorderStyle = FormBorderStyle.FixedDialog,
+                            MaximizeBox = false,
+                            MinimizeBox = false,
+                            ShowIcon = false
+                        };
+                        
+                        var progressLabel = new Label
+                        {
+                            Text = "Creating database backup...",
+                            Dock = DockStyle.Fill,
+                            TextAlign = ContentAlignment.MiddleCenter
+                        };
+                        
+                        progressForm.Controls.Add(progressLabel);
+                        progressForm.Show();
+                        Application.DoEvents();
+                        
+                        try
+                        {
+                            bool success = DatabaseManager.CreateDatabaseBackup(saveDialog.FileName);
+                            progressForm.Close();
+                            
+                            if (!success)
+                            {
+                                MessageBox.Show("Backup creation failed. Please check the error messages.", "Backup Failed", 
+                                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
+                        }
+                        finally
+                        {
+                            if (!progressForm.IsDisposed)
+                                progressForm.Close();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initiating backup: {ex.Message}", "Backup Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Restores the database from a user-selected backup file
+        /// </summary>
+        private void RestoreDatabase()
+        {
+            try
+            {
+                using (OpenFileDialog openDialog = new OpenFileDialog())
+                {
+                    openDialog.Title = "Select Database Backup to Restore";
+                    openDialog.Filter = "Access Database Files (*.accdb)|*.accdb|All Files (*.*)|*.*";
+                    openDialog.DefaultExt = "accdb";
+                    openDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    
+                    if (openDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        // Show additional warning
+                        var result = MessageBox.Show(
+                            "IMPORTANT WARNING:\n\n" +
+                            "Restoring from a backup will completely replace your current database.\n" +
+                            "ALL CURRENT DATA WILL BE PERMANENTLY LOST!\n\n" +
+                            "Make sure you have a backup of your current data before proceeding.\n\n" +
+                            "Do you want to continue with the restore?",
+                            "Final Restore Warning", 
+                            MessageBoxButtons.YesNo, 
+                            MessageBoxIcon.Warning,
+                            MessageBoxDefaultButton.Button2);
+                        
+                        if (result == DialogResult.Yes)
+                        {
+                            // Show progress message
+                            var progressForm = new Form
+                            {
+                                Text = "Restoring Database",
+                                Size = new Size(300, 100),
+                                StartPosition = FormStartPosition.CenterParent,
+                                FormBorderStyle = FormBorderStyle.FixedDialog,
+                                MaximizeBox = false,
+                                MinimizeBox = false,
+                                ShowIcon = false
+                            };
+                            
+                            var progressLabel = new Label
+                            {
+                                Text = "Restoring database from backup...",
+                                Dock = DockStyle.Fill,
+                                TextAlign = ContentAlignment.MiddleCenter
+                            };
+                            
+                            progressForm.Controls.Add(progressLabel);
+                            progressForm.Show();
+                            Application.DoEvents();
+                            
+                            try
+                            {
+                                bool success = DatabaseManager.RestoreDatabaseFromBackup(openDialog.FileName);
+                                progressForm.Close();
+                                
+                                if (success)
+                                {
+                                    // Ask user if they want to restart the application
+                                    var restartResult = MessageBox.Show(
+                                        "Database restored successfully!\n\n" +
+                                        "It's recommended to restart the application to ensure all data is loaded correctly.\n\n" +
+                                        "Do you want to restart the application now?",
+                                        "Restart Application?", 
+                                        MessageBoxButtons.YesNo, 
+                                        MessageBoxIcon.Question);
+                                    
+                                    if (restartResult == DialogResult.Yes)
+                                    {
+                                        Application.Restart();
+                                    }
+                                }
+                            }
+                            finally
+                            {
+                                if (!progressForm.IsDisposed)
+                                    progressForm.Close();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error initiating restore: {ex.Message}", "Restore Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        /// <summary>
+        /// Shows detailed information about the current database
+        /// </summary>
+        private void ShowDatabaseInfo()
+        {
+            try
+            {
+                string databaseInfo = DatabaseManager.GetDatabaseInfo();
+                
+                // Create a form to show the database information
+                var infoForm = new Form
+                {
+                    Text = "Database Information",
+                    Size = new Size(600, 400),
+                    StartPosition = FormStartPosition.CenterParent,
+                    ShowIcon = false,
+                    MaximizeBox = false,
+                    MinimizeBox = false
+                };
+                
+                var textBox = new TextBox
+                {
+                    Text = databaseInfo,
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Both,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Consolas", 9f)
+                };
+                
+                var buttonPanel = new Panel
+                {
+                    Height = 40,
+                    Dock = DockStyle.Bottom
+                };
+                
+                var closeButton = new Button
+                {
+                    Text = "Close",
+                    Size = new Size(100, 30),
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
+                    DialogResult = DialogResult.OK
+                };
+                closeButton.Location = new Point(buttonPanel.Width - closeButton.Width - 10, 5);
+                
+                var backupButton = new Button
+                {
+                    Text = "Create Backup",
+                    Size = new Size(120, 30),
+                    Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                };
+                backupButton.Location = new Point(10, 5);
+                backupButton.Click += (s, e) => 
+                {
+                    infoForm.Close();
+                    BackupDatabase();
+                };
+                
+                buttonPanel.Controls.Add(closeButton);
+                buttonPanel.Controls.Add(backupButton);
+                
+                infoForm.Controls.Add(textBox);
+                infoForm.Controls.Add(buttonPanel);
+                infoForm.AcceptButton = closeButton;
+                
+                infoForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error getting database information: {ex.Message}", "Database Info Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

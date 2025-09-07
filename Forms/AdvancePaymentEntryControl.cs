@@ -15,6 +15,8 @@ namespace SaleBillSystem.NET.Forms
         private List<Party> _parties = new List<Party>();
         private List<Broker> _brokers = new List<Broker>();
         private List<AdvancePayment> _advancePayments = new List<AdvancePayment>();
+        private List<AdvancePayment> _allAdvancePayments = new List<AdvancePayment>();
+        private bool _dateFilterApplied = false;
 
         public AdvancePaymentEntryControl()
         {
@@ -38,12 +40,32 @@ namespace SaleBillSystem.NET.Forms
             // Set default values
             txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
             
+            // Setup date filter controls with null checks
+            if (dtpFromDate != null)
+            {
+                dtpFromDate.Value = DateTime.Now.AddDays(-30); // Default to last 30 days
+            }
+            if (dtpToDate != null)
+            {
+                dtpToDate.Value = DateTime.Now;
+            }
+            
             // Setup payment method combo box
             cmbPaymentMethod.Items.AddRange(new string[] 
             { 
                 "Cash", "Cheque"
             });
             cmbPaymentMethod.SelectedIndex = 0; // Default to Cash
+            
+            // Setup payment method filter combo box
+            if (cmbPaymentMethodFilter != null)
+            {
+                cmbPaymentMethodFilter.Items.AddRange(new string[] 
+                { 
+                    "All", "Cash", "Cheque", "Reversal"
+                });
+                cmbPaymentMethodFilter.SelectedIndex = 0; // Default to All
+            }
             
             SetupDataGridView();
         }
@@ -249,12 +271,16 @@ namespace SaleBillSystem.NET.Forms
         {
             try
             {
-                _advancePayments = AdvancePaymentService.GetAllAdvancePayments();
+                // Load all advance payments but don't display them initially
+                _allAdvancePayments = AdvancePaymentService.GetAllAdvancePayments();
+                
+                // Show empty grid initially
+                _advancePayments = new List<AdvancePayment>();
                 dgvAdvancePayments.DataSource = _advancePayments;
                 
-                // Update total label
-                decimal totalAdvance = _advancePayments.Sum(ap => ap.Amount);
-                lblTotalAdvances.Text = $"Total Advances: ₹{totalAdvance:N2}";
+                // Update total label to show instruction
+                lblTotalAdvances.Text = "Select date range and click 'Apply Filter' to view payments";
+                _dateFilterApplied = false;
             }
             catch (Exception ex)
             {
@@ -268,6 +294,19 @@ namespace SaleBillSystem.NET.Forms
             btnSave.Click += BtnSave_Click;
             btnClear.Click += BtnClear_Click;
             btnDelete.Click += BtnDelete_Click;
+            
+            // Add event handler for date filter button with null check
+            if (btnApplyDateFilter != null)
+            {
+                btnApplyDateFilter.Click += BtnApplyDateFilter_Click;
+            }
+            
+            // Add event handler for payment method filter with null check
+            if (cmbPaymentMethodFilter != null)
+            {
+                cmbPaymentMethodFilter.SelectedIndexChanged += CmbPaymentMethodFilter_SelectedIndexChanged;
+            }
+            
             cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
             cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
             txtPaymentDate.TextChanged += TxtPaymentDate_TextChanged;
@@ -281,6 +320,13 @@ namespace SaleBillSystem.NET.Forms
         {
             cmbParty.SelectedIndex = -1;
             cmbBroker.SelectedIndex = -1;
+            
+            // Reset payment method filter to "All"
+            if (cmbPaymentMethodFilter != null)
+            {
+                cmbPaymentMethodFilter.SelectedIndex = 0; // "All"
+            }
+            
             txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
             nudAmount.Value = 0;
             cmbPaymentMethod.SelectedIndex = 0;
@@ -319,23 +365,45 @@ namespace SaleBillSystem.NET.Forms
             FilterAdvancePayments();
         }
 
+        private void CmbPaymentMethodFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            FilterAdvancePayments();
+        }
+
         private void FilterAdvancePayments()
         {
             try
             {
+                // Only filter if date filter has been applied
+                if (!_dateFilterApplied)
+                {
+                    lblTotalAdvances.Text = "Select date range and click 'Apply Filter' to view payments";
+                    return;
+                }
+
                 int? partyId = cmbParty.SelectedValue as int?;
                 int? brokerId = cmbBroker.SelectedValue as int?;
+                string selectedPaymentMethod = cmbPaymentMethodFilter?.SelectedItem?.ToString() ?? "All";
 
                 var filteredPayments = _advancePayments.AsEnumerable();
 
+                // Filter by Party
                 if (partyId.HasValue && partyId.Value > 0)
                 {
                     filteredPayments = filteredPayments.Where(ap => ap.PartyID == partyId.Value);
                 }
 
+                // Filter by Broker
                 if (brokerId.HasValue && brokerId.Value > 0)
                 {
                     filteredPayments = filteredPayments.Where(ap => ap.BrokerID == brokerId.Value);
+                }
+
+                // Filter by Payment Method
+                if (selectedPaymentMethod != "All")
+                {
+                    filteredPayments = filteredPayments.Where(ap => 
+                        string.Equals(ap.PaymentMethod?.Trim(), selectedPaymentMethod, StringComparison.OrdinalIgnoreCase));
                 }
 
                 var result = filteredPayments.ToList();
@@ -343,11 +411,71 @@ namespace SaleBillSystem.NET.Forms
                 
                 // Update filtered total
                 decimal filteredTotal = result.Sum(ap => ap.Amount);
-                lblTotalAdvances.Text = $"Filtered Total: ₹{filteredTotal:N2}";
+                string filterText = "";
+                if (partyId.HasValue && partyId.Value > 0 || 
+                    brokerId.HasValue && brokerId.Value > 0 || 
+                    selectedPaymentMethod != "All")
+                {
+                    filterText = "Filtered ";
+                }
+                string dateRangeText = "";
+                if (dtpFromDate != null && dtpToDate != null)
+                {
+                    dateRangeText = $" ({dtpFromDate.Value:dd-MMM-yyyy} to {dtpToDate.Value:dd-MMM-yyyy})";
+                }
+                lblTotalAdvances.Text = $"{filterText}Total: ₹{filteredTotal:N2}{dateRangeText}";
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error filtering advance payments: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnApplyDateFilter_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Check if date picker controls are available
+                if (dtpFromDate == null || dtpToDate == null)
+                {
+                    MessageBox.Show("Date filter controls are not available.", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Validate date range
+                if (dtpFromDate.Value > dtpToDate.Value)
+                {
+                    MessageBox.Show("From Date cannot be greater than To Date.", "Invalid Date Range", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    dtpFromDate.Focus();
+                    return;
+                }
+
+                // Filter payments by date range
+                DateTime fromDate = dtpFromDate.Value.Date;
+                DateTime toDate = dtpToDate.Value.Date.AddDays(1).AddTicks(-1); // End of day
+
+                _advancePayments = _allAdvancePayments
+                    .Where(ap => ap.PaymentDate >= fromDate && ap.PaymentDate <= toDate)
+                    .ToList();
+
+                _dateFilterApplied = true;
+
+                // Apply any existing party/broker filters
+                FilterAdvancePayments();
+
+                // Update button text to show filter is applied
+                if (btnApplyDateFilter != null)
+                {
+                    btnApplyDateFilter.Text = "Refresh";
+                    btnApplyDateFilter.BackColor = Color.LightGreen;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error applying date filter: {ex.Message}", "Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -444,8 +572,12 @@ namespace SaleBillSystem.NET.Forms
                     MessageBox.Show("Advance payment added successfully!", "Success", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
-                    // Refresh the data
-                    LoadAdvancePayments();
+                    // Refresh the data - reload all payments and reapply current filter if active
+                    _allAdvancePayments = AdvancePaymentService.GetAllAdvancePayments();
+                    if (_dateFilterApplied)
+                    {
+                        BtnApplyDateFilter_Click(sender, e); // Reapply current date filter
+                    }
                     ClearForm();
                 }
                 else
@@ -464,10 +596,18 @@ namespace SaleBillSystem.NET.Forms
         private void BtnClear_Click(object sender, EventArgs e)
         {
             ClearForm();
-            // Reset the grid to show all payments
+            // Reset the date filter
+            _dateFilterApplied = false;
+            _advancePayments = new List<AdvancePayment>();
             dgvAdvancePayments.DataSource = _advancePayments;
-            decimal totalAdvance = _advancePayments.Sum(ap => ap.Amount);
-            lblTotalAdvances.Text = $"Total Advances: ₹{totalAdvance:N2}";
+            lblTotalAdvances.Text = "Select date range and click 'Apply Filter' to view payments";
+            
+            // Reset date filter button with null check
+            if (btnApplyDateFilter != null)
+            {
+                btnApplyDateFilter.Text = "Apply Filter";
+                btnApplyDateFilter.BackColor = Color.LightBlue;
+            }
         }
 
         private void BtnDelete_Click(object sender, EventArgs e)
@@ -516,11 +656,16 @@ namespace SaleBillSystem.NET.Forms
                     MessageBox.Show("Advance payment deleted successfully!", "Success", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
-                    // Refresh the data
-                    LoadAdvancePayments();
-                    
-                    // Apply current filters if any
-                    FilterAdvancePayments();
+                    // Refresh the data - reload all payments and reapply current filter if active
+                    _allAdvancePayments = AdvancePaymentService.GetAllAdvancePayments();
+                    if (_dateFilterApplied)
+                    {
+                        BtnApplyDateFilter_Click(sender, EventArgs.Empty); // Reapply current date filter
+                    }
+                    else
+                    {
+                        LoadAdvancePayments(); // Show empty grid with instruction
+                    }
                 }
                 else
                 {

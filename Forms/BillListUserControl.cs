@@ -19,7 +19,7 @@ namespace SaleBillSystem.NET.Forms
         private List<Broker> _brokers;
         private DataGridViewColumn _sortedColumn;
         private SortOrder _sortOrder = SortOrder.None;
-        
+
         // Pagination properties
         private int _pageSize = 100;
         private int _currentPage = 1;
@@ -180,8 +180,40 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
+        private void SetupPartyAndBrokerFilters()
+        {
+            try
+            {
+                // Setup Party filter - similar to BillLedgerControl
+                var allParties = new List<Party> { new Party { PartyID = 0, PartyName = "All Parties" } };
+                allParties.AddRange(_parties);
+
+                cmbParty.DataSource = allParties;
+                cmbParty.DisplayMember = "PartyName";
+                cmbParty.ValueMember = "PartyID";
+                cmbParty.SelectedIndex = 0; // Select "All Parties" by default
+
+                // Setup Broker filter - similar to BillLedgerControl
+                var allBrokers = new List<Broker> { new Broker { BrokerID = 0, BrokerName = "All Brokers" } };
+                allBrokers.AddRange(_brokers);
+
+                cmbBroker.DataSource = allBrokers;
+                cmbBroker.DisplayMember = "BrokerName";
+                cmbBroker.ValueMember = "BrokerID";
+                cmbBroker.SelectedIndex = 0; // Select "All Brokers" by default
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error setting up filters: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void SetupForm()
         {
+            // Setup Party and Broker filters
+            SetupPartyAndBrokerFilters();
+
             // Setup DataGridView
             dgvBills.AutoGenerateColumns = false;
             dgvBills.AllowUserToAddRows = false;
@@ -221,10 +253,13 @@ namespace SaleBillSystem.NET.Forms
             btnEditBill.Click += BtnEditBill_Click;
             btnViewDetails.Click += BtnViewDetails_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
-            btnRefresh.Click += BtnRefresh_Click;
+            // btnRefresh.Click += BtnRefresh_Click;
             btnPrint.Click += BtnPrint_Click;
 
-            txtSearch.TextChanged += TxtSearch_TextChanged;
+            // Add event handlers for Party and Broker filters
+            cmbParty.SelectedIndexChanged += CmbParty_SelectedIndexChanged;
+            cmbBroker.SelectedIndexChanged += CmbBroker_SelectedIndexChanged;
+
             dgvBills.CellDoubleClick += DgvBills_CellDoubleClick;
             this.KeyDown += BillListUserControl_KeyDown;
 
@@ -322,28 +357,33 @@ namespace SaleBillSystem.NET.Forms
             }
         }
 
-        private void TxtSearch_TextChanged(object sender, EventArgs e)
+        private void CmbParty_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ApplyFilters();
+        }
+
+        private void CmbBroker_SelectedIndexChanged(object sender, EventArgs e)
         {
             ApplyFilters();
         }
 
         private void ApplyFilters()
         {
-            string searchText = txtSearch.Text.ToLower().Trim();
-            
+            int? selectedPartyId = cmbParty.SelectedValue as int?;
+            int? selectedBrokerId = cmbBroker.SelectedValue as int?;
+
             // Use more efficient LINQ query that creates a single filtered list
             _filteredBills = _allBills
-                .Where(b => 
+                .Where(b =>
                     // Date filter
-                    b.BillDate >= dtpStartDate.Value.Date && 
-                    b.BillDate <= dtpEndDate.Value.Date.AddDays(1).AddSeconds(-1) && 
+                    b.BillDate >= dtpStartDate.Value.Date &&
+                    b.BillDate <= dtpEndDate.Value.Date.AddDays(1).AddSeconds(-1) &&
                     // Status filter
                     (cmbStatus.SelectedItem.ToString() == "All" || b.Status == cmbStatus.SelectedItem.ToString()) &&
-                    // Text search
-                    (string.IsNullOrWhiteSpace(searchText) || 
-                     b.BillNo.ToLower().Contains(searchText) || 
-                     b.PartyName.ToLower().Contains(searchText) || 
-                     (b.BrokerName?.ToLower().Contains(searchText) ?? false))
+                    // Party filter
+                    (!selectedPartyId.HasValue || selectedPartyId.Value == 0 || b.PartyID == selectedPartyId.Value) &&
+                    // Broker filter
+                    (!selectedBrokerId.HasValue || selectedBrokerId.Value == 0 || b.BrokerID == selectedBrokerId.Value)
                 )
                 .ToList();
 
@@ -437,7 +477,7 @@ namespace SaleBillSystem.NET.Forms
 
             // Update the sort glyph on the header cell
             column.HeaderCell.SortGlyphDirection = _sortOrder;
-            
+
             // Reset to first page when sorting changes
             _currentPage = 1;
             DisplayCurrentPage();
@@ -470,11 +510,11 @@ namespace SaleBillSystem.NET.Forms
         private void BtnEditBill_Click(object sender, EventArgs e) => EditSelectedBill();
         private void BtnViewDetails_Click(object sender, EventArgs e) => ViewSelectedBillDetails();
         private void BtnDeleteBill_Click(object sender, EventArgs e) => DeleteSelectedBill();
-        private void BtnRefresh_Click(object sender, EventArgs e)
-        {
-            LoadData();
-            RefreshGrid();
-        }
+        // private void BtnRefresh_Click(object sender, EventArgs e)
+        // {
+        //     LoadData();
+        //     RefreshGrid();
+        // }
 
         private void BtnPrint_Click(object sender, EventArgs e)
         {
@@ -643,7 +683,7 @@ namespace SaleBillSystem.NET.Forms
             }
             else if (e.KeyCode == Keys.F5)
             {
-                BtnRefresh_Click(sender, e);
+                // BtnRefresh_Click(sender, e);
                 e.Handled = true;
             }
             else if (e.KeyCode == Keys.Delete)
@@ -684,7 +724,8 @@ namespace SaleBillSystem.NET.Forms
             // Get filter details for the report header
             string statusFilter = cmbStatus.SelectedItem?.ToString() ?? "All";
             string dateRange = $"From: {dtpStartDate.Value:dd/MM/yyyy} To: {dtpEndDate.Value:dd/MM/yyyy}";
-            string searchFilter = !string.IsNullOrWhiteSpace(txtSearch.Text) ? $"Search: {txtSearch.Text}" : "";
+            string partyFilter = cmbParty.SelectedItem?.ToString() ?? "All Parties";
+            string brokerFilter = cmbBroker.SelectedItem?.ToString() ?? "All Brokers";
 
             // --- HTML and CSS Styling ---
             sb.AppendLine("<!DOCTYPE html>");
@@ -740,10 +781,10 @@ namespace SaleBillSystem.NET.Forms
             sb.AppendLine($"<div class='compact-row'>");
             sb.AppendLine($"<div class='compact-col'><strong>Date Range:</strong> {dateRange}</div>");
             sb.AppendLine($"<div class='compact-col'><strong>Status:</strong> {statusFilter}</div>");
-            if (!string.IsNullOrWhiteSpace(searchFilter))
-            {
-                sb.AppendLine($"<div class='compact-col'><strong>{searchFilter}</strong></div>");
-            }
+            sb.AppendLine("</div>");
+            sb.AppendLine($"<div class='compact-row'>");
+            sb.AppendLine($"<div class='compact-col'><strong>Party:</strong> {partyFilter}</div>");
+            sb.AppendLine($"<div class='compact-col'><strong>Broker:</strong> {brokerFilter}</div>");
             sb.AppendLine("</div>");
             sb.AppendLine("</div>");
 
@@ -801,7 +842,7 @@ namespace SaleBillSystem.NET.Forms
             // --- Compact Summary Box ---
             sb.AppendLine("<div class='summary-box'>");
             sb.AppendLine("<h3>Status Summary</h3>");
-            
+
             var statusGroups = bills.GroupBy(b => b.Status).OrderBy(g => g.Key);
             sb.AppendLine("<div class='compact-row'>");
             foreach (var group in statusGroups)
@@ -809,7 +850,7 @@ namespace SaleBillSystem.NET.Forms
                 decimal groupAmount = group.Sum(b => b.OriginalAmount);
                 decimal groupBalance = group.Sum(b => b.Balance);
                 int groupCount = group.Count();
-                
+
                 sb.AppendLine($"<div class='compact-col'><strong>{group.Key}:</strong> {groupCount} bills<br>₹{groupAmount:N0} | ₹{groupBalance:N0}</div>");
             }
             sb.AppendLine("</div>");
@@ -822,5 +863,9 @@ namespace SaleBillSystem.NET.Forms
         #endregion
 
 
+        private void lblStatus_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

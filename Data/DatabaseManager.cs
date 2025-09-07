@@ -12,7 +12,7 @@ namespace SaleBillSystem.NET.Data
     {
         // Database constants
         private const string DB_FILENAME = "SaleSystem.accdb"; // Changed from .db to .accdb
-        private const string DB_PASSWORD = "SaleSystem@2024"; // Database password
+        private const string DB_PASSWORD = "salessystem"; // Database password
         
         // Static property for custom database path
         public static string CustomDatabasePath { get; private set; }
@@ -152,18 +152,22 @@ namespace SaleBillSystem.NET.Data
                 {
                     // Copy the template database to the target location
                     File.Copy(templatePath, dbPath);
+                    
+                    // Ensure the copied template has the correct password
+                    if (!SetPasswordOnExistingDatabase(dbPath))
+                    {
+                        System.Windows.Forms.MessageBox.Show(
+                            "Warning: Could not set password on template database copy.\nThe database may not be password protected.",
+                            "Password Warning",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Warning);
+                    }
                 }
                 else
                 {
-                    // Template doesn't exist, create manually using the connection string
-                    // Use Microsoft Access directly - this will require ACE to be installed
-                    string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Engine Type=5;Jet OLEDB:Database Password={DB_PASSWORD}";
-                    
-                    using (OleDbConnection tempConn = new OleDbConnection(connString))
-                    {
-                        // This will create an empty database
+                    // Template doesn't exist, create manually using ADOX
                         System.Windows.Forms.MessageBox.Show(
-                            "Creating a new database. This might take a moment.",
+                        "Creating a new password-protected database. This might take a moment.",
                             "Creating Database",
                             System.Windows.Forms.MessageBoxButtons.OK,
                             System.Windows.Forms.MessageBoxIcon.Information);
@@ -178,32 +182,36 @@ namespace SaleBillSystem.NET.Data
                             }
                             
                             dynamic catalog = Activator.CreateInstance(catalogType);
-                            catalog.Create(connString);
-                            
-                            // Set password on the newly created database
+                        
+                        // Create database with password from the start
+                        string connStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Engine Type=5;Jet OLEDB:Database Password={DB_PASSWORD}";
+                        catalog.Create(connStringWithPassword);
+                        
+                        // Ensure password is properly set
                             if (catalog.ActiveConnection != null)
                             {
                                 try
                                 {
+                                // This ensures the password is properly applied
                                     catalog.ActiveConnection.Execute($"ALTER DATABASE PASSWORD [{DB_PASSWORD}] NULL", 0);
                                 }
                                 catch (Exception passwordEx)
                                 {
-                                    System.Diagnostics.Debug.WriteLine($"Note: Could not set password via ALTER: {passwordEx.Message}");
+                                System.Diagnostics.Debug.WriteLine($"Note: Password already set during creation: {passwordEx.Message}");
                                 }
+                            catalog.ActiveConnection.Close();
                                 catalog.ActiveConnection = null;
                             }
                             
                             System.Windows.Forms.MessageBox.Show(
-                                "Database created successfully.",
-                                "Database Created",
+                            $"New database created successfully with password protection.\n\nPassword: {DB_PASSWORD}\n\nThis database can only be opened with this password, even in Microsoft Access.",
+                            "Database Created Successfully",
                                 System.Windows.Forms.MessageBoxButtons.OK,
                                 System.Windows.Forms.MessageBoxIcon.Information);
                         }
                         catch (Exception ex) 
                         {
-                            throw new Exception($"Error creating database with ADOX: {ex.Message}", ex);
-                        }
+                        throw new Exception($"Error creating password-protected database with ADOX: {ex.Message}", ex);
                     }
                 }
                 
@@ -1430,7 +1438,26 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                // First try to connect without password to see if database has no password
+                // First check if database already has our password
+                try
+                {
+                    string connectionStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
+                    using (OleDbConnection passwordConn = new OleDbConnection(connectionStringWithPassword))
+                    {
+                        passwordConn.Open();
+                        passwordConn.Close();
+                        // If this succeeds, database already has our password
+                        System.Windows.Forms.MessageBox.Show($"Database already has the correct password: {DB_PASSWORD}", 
+                            "Database Password Already Set", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                        return true;
+                    }
+                }
+                catch
+                {
+                    // Database doesn't have our password, continue to set it
+                }
+                
+                // Try to connect without password to see if database has no password
                 string connectionStringWithoutPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
                 
                 using (OleDbConnection testConn = new OleDbConnection(connectionStringWithoutPassword))
@@ -1445,7 +1472,7 @@ namespace SaleBillSystem.NET.Data
                         var catalogType = Type.GetTypeFromProgID("ADOX.Catalog");
                         if (catalogType == null)
                         {
-                            System.Windows.Forms.MessageBox.Show("ADOX.Catalog not found. Cannot set database password.", "Error", 
+                            System.Windows.Forms.MessageBox.Show("ADOX.Catalog not found. Cannot set database password.\nPlease ensure Microsoft Access Database Engine is installed.", "Error", 
                                 System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                             return false;
                         }
@@ -1459,33 +1486,38 @@ namespace SaleBillSystem.NET.Data
                         catalog.ActiveConnection.Close();
                         catalog.ActiveConnection = null;
                         
-                        System.Windows.Forms.MessageBox.Show($"Password has been successfully set on the database.\nPassword: {DB_PASSWORD}", 
-                            "Database Password Set", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                        System.Windows.Forms.MessageBox.Show($"Password has been successfully set on the existing database.\n\nPassword: {DB_PASSWORD}\n\nThis database is now password protected and can only be opened with this password, even in Microsoft Access.", 
+                            "Database Password Set Successfully", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                         
                         return true;
                     }
                     catch (Exception innerEx)
                     {
-                        // If connection fails, database might already have a password or other issue
-                        if (innerEx.Message.Contains("password") || innerEx.Message.Contains("3031"))
+                        // If connection fails, database might already have a different password
+                        if (innerEx.Message.Contains("password") || innerEx.Message.Contains("3031") || innerEx.Message.Contains("Could not decrypt file"))
                         {
-                            // Database already has a password, check if it's our password
-                            try
+                            // Try common passwords or ask user
+                            var result = System.Windows.Forms.MessageBox.Show(
+                                $"Database appears to have a password, but it's not '{DB_PASSWORD}'.\n\n" +
+                                "Would you like to try changing it from a common old password?\n\n" +
+                                "Click Yes to try 'SaleSystem@2024' (old password)\n" +
+                                "Click No to skip password setting for now",
+                                "Database Password Issue", 
+                                System.Windows.Forms.MessageBoxButtons.YesNo, 
+                                System.Windows.Forms.MessageBoxIcon.Question);
+                            
+                            if (result == System.Windows.Forms.DialogResult.Yes)
                             {
-                                string connectionStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
-                                using (OleDbConnection passwordConn = new OleDbConnection(connectionStringWithPassword))
-                                {
-                                    passwordConn.Open();
-                                    passwordConn.Close();
-                                    // If this succeeds, database already has our password
-                                    return true;
-                                }
+                                return TryChangePasswordFromOld(dbPath, "SaleSystem@2024");
                             }
-                            catch
+                            else
                             {
-                                // Database has a different password
-                                System.Windows.Forms.MessageBox.Show($"Database already has a different password. Cannot change it automatically.\nExpected password: {DB_PASSWORD}", 
-                                    "Database Password Issue", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                                System.Windows.Forms.MessageBox.Show(
+                                    "Password setting skipped. The database will continue to use its existing password.\n" +
+                                    "You may need to manually change the password in Microsoft Access if needed.",
+                                    "Password Setting Skipped", 
+                                    System.Windows.Forms.MessageBoxButtons.OK, 
+                                    System.Windows.Forms.MessageBoxIcon.Warning);
                                 return false;
                             }
                         }
@@ -1495,9 +1527,495 @@ namespace SaleBillSystem.NET.Data
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"Error setting database password: {ex.Message}", "Database Error", 
+                System.Windows.Forms.MessageBox.Show($"Error setting database password: {ex.Message}\n\nThe application will continue to work, but the database may not be password protected.", "Database Error", 
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                 return false;
+            }
+        }
+        
+        /// <summary>
+        /// Attempts to change password from an old password to the new one
+        /// </summary>
+        /// <param name="dbPath">Path to the database file</param>
+        /// <param name="oldPassword">The old password to try</param>
+        /// <returns>True if password was changed successfully, false otherwise</returns>
+        private static bool TryChangePasswordFromOld(string dbPath, string oldPassword)
+        {
+            try
+            {
+                // Try to connect with old password
+                string connectionStringWithOldPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={oldPassword};Persist Security Info=False;";
+                
+                using (OleDbConnection oldConn = new OleDbConnection(connectionStringWithOldPassword))
+                {
+                    oldConn.Open();
+                    oldConn.Close();
+                    
+                    // If we can connect with old password, change it to new password
+                    var catalogType = Type.GetTypeFromProgID("ADOX.Catalog");
+                    if (catalogType == null)
+                    {
+                        System.Windows.Forms.MessageBox.Show("ADOX.Catalog not found. Cannot change database password.", "Error", 
+                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                        return false;
+                    }
+                    
+                    dynamic catalog = Activator.CreateInstance(catalogType);
+                    catalog.ActiveConnection = connectionStringWithOldPassword;
+                    
+                    // Change password from old to new
+                    catalog.ActiveConnection.Execute($"ALTER DATABASE PASSWORD [{DB_PASSWORD}] [{oldPassword}]", 0);
+                    
+                    catalog.ActiveConnection.Close();
+                    catalog.ActiveConnection = null;
+                    
+                    System.Windows.Forms.MessageBox.Show($"Password has been successfully changed from '{oldPassword}' to '{DB_PASSWORD}'.\n\nThe database is now using the new password.", 
+                        "Database Password Changed Successfully", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Could not change password from '{oldPassword}': {ex.Message}", "Password Change Failed", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets information about the current database password status
+        /// </summary>
+        /// <returns>String describing the password status</returns>
+        public static string GetDatabasePasswordStatus()
+        {
+            try
+            {
+                string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    dbPath = CustomDatabasePath;
+                }
+                
+                if (!File.Exists(dbPath))
+                {
+                    return "Database file does not exist.";
+                }
+                
+                // Try to connect with our password
+                            try
+                            {
+                                string connectionStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
+                                using (OleDbConnection passwordConn = new OleDbConnection(connectionStringWithPassword))
+                                {
+                                    passwordConn.Open();
+                                    passwordConn.Close();
+                        return $"Database is password protected with the correct password: '{DB_PASSWORD}'";
+                                }
+                            }
+                            catch
+                            {
+                    // Try to connect without password
+                    try
+                    {
+                        string connectionStringWithoutPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                        using (OleDbConnection testConn = new OleDbConnection(connectionStringWithoutPassword))
+                        {
+                            testConn.Open();
+                            testConn.Close();
+                            return "Database exists but has no password protection.";
+                        }
+                    }
+                    catch
+                    {
+                        return $"Database exists but has a different password (not '{DB_PASSWORD}').";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error checking database password status: {ex.Message}";
+            }
+        }
+        
+        /// <summary>
+        /// Forces password setting on the current database (for manual troubleshooting)
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public static bool ForceSetDatabasePassword()
+        {
+            try
+            {
+                string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    dbPath = CustomDatabasePath;
+                }
+                
+                if (!File.Exists(dbPath))
+                {
+                    System.Windows.Forms.MessageBox.Show("Database file does not exist.", "Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+                
+                return SetPasswordOnExistingDatabase(dbPath);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Error forcing password set: {ex.Message}", "Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Tests the database password functionality (for debugging purposes)
+        /// </summary>
+        /// <returns>Test results as a string</returns>
+        public static string TestDatabasePasswordFunctionality()
+        {
+            var results = new System.Text.StringBuilder();
+            results.AppendLine("=== Database Password Functionality Test ===");
+            results.AppendLine($"Expected Password: '{DB_PASSWORD}'");
+            results.AppendLine();
+            
+            try
+            {
+                string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    dbPath = CustomDatabasePath;
+                }
+                
+                results.AppendLine($"Database Path: {dbPath}");
+                results.AppendLine($"Database Exists: {File.Exists(dbPath)}");
+                
+                if (File.Exists(dbPath))
+                {
+                    results.AppendLine();
+                    results.AppendLine("Password Status: " + GetDatabasePasswordStatus());
+                    
+                    // Test connection with password
+                    try
+                    {
+                        string connectionStringWithPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
+                        using (OleDbConnection passwordConn = new OleDbConnection(connectionStringWithPassword))
+                        {
+                            passwordConn.Open();
+                            results.AppendLine("✓ Connection with password: SUCCESS");
+                            passwordConn.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        results.AppendLine($"✗ Connection with password: FAILED - {ex.Message}");
+                    }
+                    
+                    // Test connection without password
+                    try
+                    {
+                        string connectionStringWithoutPassword = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Persist Security Info=False;";
+                        using (OleDbConnection testConn = new OleDbConnection(connectionStringWithoutPassword))
+                        {
+                            testConn.Open();
+                            results.AppendLine("⚠ Connection without password: SUCCESS (Database not protected!)");
+                            testConn.Close();
+                        }
+                    }
+                    catch
+                    {
+                        results.AppendLine("✓ Connection without password: FAILED (Database is protected)");
+                    }
+                }
+                else
+                {
+                    results.AppendLine("Database file does not exist - will be created on first run.");
+                }
+            }
+            catch (Exception ex)
+            {
+                results.AppendLine($"Test Error: {ex.Message}");
+            }
+            
+            results.AppendLine();
+            results.AppendLine("=== Test Complete ===");
+            return results.ToString();
+        }
+
+        /// <summary>
+        /// Creates a backup of the current database to a specified location
+        /// </summary>
+        /// <param name="backupPath">Full path where the backup should be saved (including filename)</param>
+        /// <returns>True if backup was successful, false otherwise</returns>
+        public static bool CreateDatabaseBackup(string backupPath)
+        {
+            try
+            {
+                string currentDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    currentDbPath = CustomDatabasePath;
+                }
+                
+                if (!File.Exists(currentDbPath))
+                {
+                    System.Windows.Forms.MessageBox.Show("Database file not found. Cannot create backup.", "Backup Error", 
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Ensure backup directory exists
+                string backupDir = Path.GetDirectoryName(backupPath);
+                if (!Directory.Exists(backupDir))
+                {
+                    Directory.CreateDirectory(backupDir);
+                }
+                
+                // Copy the database file to backup location
+                File.Copy(currentDbPath, backupPath, true);
+                
+                // Verify the backup was created successfully
+                if (File.Exists(backupPath))
+                {
+                    FileInfo originalFile = new FileInfo(currentDbPath);
+                    FileInfo backupFile = new FileInfo(backupPath);
+                    
+                    if (originalFile.Length == backupFile.Length)
+                    {
+                        System.Windows.Forms.MessageBox.Show(
+                            $"Database backup created successfully!\n\n" +
+                            $"Backup Location: {backupPath}\n" +
+                            $"Backup Size: {FormatFileSize(backupFile.Length)}\n" +
+                            $"Backup Date: {backupFile.CreationTime:yyyy-MM-dd HH:mm:ss}",
+                            "Backup Successful", 
+                            System.Windows.Forms.MessageBoxButtons.OK, 
+                            System.Windows.Forms.MessageBoxIcon.Information);
+                        return true;
+                    }
+                    else
+                    {
+                        System.Windows.Forms.MessageBox.Show("Backup file size doesn't match original. Backup may be corrupted.", "Backup Warning", 
+                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                        return false;
+                    }
+                }
+                else
+                {
+                    System.Windows.Forms.MessageBox.Show("Backup file was not created. Unknown error occurred.", "Backup Error", 
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error creating database backup: {ex.Message}\n\n" +
+                    "Please ensure:\n" +
+                    "• The backup location is accessible\n" +
+                    "• You have write permissions to the backup folder\n" +
+                    "• The database is not currently being used by another process",
+                    "Backup Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Restores a database from a backup file
+        /// </summary>
+        /// <param name="backupPath">Path to the backup file to restore from</param>
+        /// <returns>True if restore was successful, false otherwise</returns>
+        public static bool RestoreDatabaseFromBackup(string backupPath)
+        {
+            try
+            {
+                if (!File.Exists(backupPath))
+                {
+                    System.Windows.Forms.MessageBox.Show("Backup file not found.", "Restore Error", 
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                string currentDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    currentDbPath = CustomDatabasePath;
+                }
+                
+                // Confirm with user before restoring
+                var result = System.Windows.Forms.MessageBox.Show(
+                    $"This will replace your current database with the backup.\n\n" +
+                    $"Current Database: {currentDbPath}\n" +
+                    $"Backup File: {backupPath}\n\n" +
+                    "ALL CURRENT DATA WILL BE LOST!\n\n" +
+                    "Are you sure you want to continue?",
+                    "Confirm Database Restore", 
+                    System.Windows.Forms.MessageBoxButtons.YesNo, 
+                    System.Windows.Forms.MessageBoxIcon.Warning,
+                    System.Windows.Forms.MessageBoxDefaultButton.Button2);
+                
+                if (result != System.Windows.Forms.DialogResult.Yes)
+                {
+                    return false;
+                }
+                
+                // Create a backup of current database before restoring
+                string tempBackup = currentDbPath + ".temp_backup_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                try
+                {
+                    File.Copy(currentDbPath, tempBackup, true);
+                }
+                catch
+                {
+                    // Continue even if temp backup fails
+                }
+                
+                // Copy backup file to current database location
+                File.Copy(backupPath, currentDbPath, true);
+                
+                // Verify the restore was successful by testing database connection
+                try
+                {
+                    string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={currentDbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
+                    using (OleDbConnection testConn = new OleDbConnection(connectionString))
+                    {
+                        testConn.Open();
+                        testConn.Close();
+                    }
+                    
+                    // Clean up temp backup if restore was successful
+                    try
+                    {
+                        if (File.Exists(tempBackup))
+                            File.Delete(tempBackup);
+                    }
+                    catch { }
+                    
+                    System.Windows.Forms.MessageBox.Show(
+                        $"Database restored successfully from backup!\n\n" +
+                        $"Restored from: {backupPath}\n" +
+                        $"Please restart the application to ensure all data is loaded correctly.",
+                        "Restore Successful", 
+                        System.Windows.Forms.MessageBoxButtons.OK, 
+                        System.Windows.Forms.MessageBoxIcon.Information);
+                    
+                    return true;
+                }
+                catch (Exception testEx)
+                {
+                    // Restore failed, try to restore from temp backup
+                    try
+                    {
+                        if (File.Exists(tempBackup))
+                        {
+                            File.Copy(tempBackup, currentDbPath, true);
+                            File.Delete(tempBackup);
+                        }
+                    }
+                    catch { }
+                    
+                    System.Windows.Forms.MessageBox.Show(
+                        $"Database restore failed. The backup file may be corrupted or incompatible.\n\n" +
+                        $"Error: {testEx.Message}\n\n" +
+                        "Your original database has been restored.",
+                        "Restore Failed", 
+                        System.Windows.Forms.MessageBoxButtons.OK, 
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                    
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error restoring database: {ex.Message}",
+                    "Restore Error", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Formats file size in human-readable format
+        /// </summary>
+        /// <param name="bytes">File size in bytes</param>
+        /// <returns>Formatted file size string</returns>
+        private static string FormatFileSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
+        }
+        
+        /// <summary>
+        /// Gets information about the current database
+        /// </summary>
+        /// <returns>Database information string</returns>
+        public static string GetDatabaseInfo()
+        {
+            try
+            {
+                string currentDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                if (CustomDatabasePath != null)
+                {
+                    currentDbPath = CustomDatabasePath;
+                }
+                
+                if (!File.Exists(currentDbPath))
+                {
+                    return "Database file not found.";
+                }
+                
+                FileInfo dbFile = new FileInfo(currentDbPath);
+                
+                var info = new System.Text.StringBuilder();
+                info.AppendLine("=== Database Information ===");
+                info.AppendLine($"Database Path: {currentDbPath}");
+                info.AppendLine($"File Size: {FormatFileSize(dbFile.Length)}");
+                info.AppendLine($"Created: {dbFile.CreationTime:yyyy-MM-dd HH:mm:ss}");
+                info.AppendLine($"Last Modified: {dbFile.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                info.AppendLine($"Password Protected: {(GetDatabasePasswordStatus().Contains("correct password") ? "Yes" : "No")}");
+                info.AppendLine();
+                
+                // Get table count
+                try
+                {
+                    using (var conn = GetConnection())
+                    {
+                        conn.Open();
+                        var tables = conn.GetSchema("Tables");
+                        int userTableCount = 0;
+                        foreach (System.Data.DataRow row in tables.Rows)
+                        {
+                            string tableName = row["TABLE_NAME"].ToString();
+                            string tableType = row["TABLE_TYPE"].ToString();
+                            if (tableType == "TABLE" && !tableName.StartsWith("MSys"))
+                            {
+                                userTableCount++;
+                            }
+                        }
+                        info.AppendLine($"User Tables: {userTableCount}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    info.AppendLine($"Table Count: Error - {ex.Message}");
+                }
+                
+                return info.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"Error getting database info: {ex.Message}";
             }
         }
 

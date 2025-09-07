@@ -3935,11 +3935,8 @@ private SettlementCalculationResult CalculateSettlementRequirement(
         ? _userSelectedAdvancePayments
         : availableAdvances;
 
-    var sortedAdvances = advancesToUse
-        .OrderBy(a => a.PaymentDate)
-        .ToList();
+    var sortedAdvances = advancesToUse.OrderBy(a => a.PaymentDate).ToList();
 
-    // Track mutable state per bill
     var workingBills = billsToSettle
         .OrderBy(b => b.BillDate)
         .Select(b => new WorkingBill
@@ -3980,7 +3977,7 @@ private SettlementCalculationResult CalculateSettlementRequirement(
             // (B) How much of the bill are we settling?
             decimal intendedPrincipalSettlement = Math.Min(paymentRemaining, bill.OutstandingPrincipal);
 
-            // (C) Apply discount if within discount period
+            // (C) Discount if within discount period
             decimal discountOnThisPayment = 0m;
             DateTime discountDeadline = bill.OriginalBill.BillDate.AddDays(discountDays);
             if (paymentDate <= discountDeadline && discountRate > 0)
@@ -3988,18 +3985,17 @@ private SettlementCalculationResult CalculateSettlementRequirement(
                 discountOnThisPayment = intendedPrincipalSettlement * (discountRate / 100m);
             }
 
-            // (D) Cash consumed is less than intended principal if discount applies
+            // (D) Cash consumed = intended portion − discount
             decimal cashConsumed = intendedPrincipalSettlement - discountOnThisPayment;
             if (cashConsumed > paymentRemaining) cashConsumed = paymentRemaining;
 
-            // (E) Reduce bill outstanding by full principal portion
+            // (E) Reduce bill outstanding
             bill.OutstandingPrincipal -= intendedPrincipalSettlement;
             if (bill.OutstandingPrincipal < 0) bill.OutstandingPrincipal = 0;
 
             // (F) Log
-            bill.TotalAdvanceUsed += cashConsumed; // cash actually used
+            bill.TotalAdvanceUsed += cashConsumed;
             bill.TotalDiscount += discountOnThisPayment;
-
             bill.AdvanceUtilizations.Add(new AdvanceUtilizationDetail
             {
                 AdvanceID = payment.AdvanceID,
@@ -4011,7 +4007,34 @@ private SettlementCalculationResult CalculateSettlementRequirement(
             paymentRemaining -= cashConsumed;
 
             // (H) Reset interest clock
-            bill.InterestCalcStartDate = paymentDate;
+            DateTime graceExpiry = bill.OriginalBill.BillDate.AddDays(interestDays);
+            if (paymentDate > graceExpiry)
+            {
+                bill.InterestCalcStartDate = paymentDate;
+            }
+
+            // (I) Brokerage rollback if bill is fully settled
+            if (bill.OutstandingPrincipal == 0)
+            {
+                decimal brokerage = bill.OriginalBill.TotalAmount * brokerageRate / 100m;
+                decimal effectiveDue = bill.OriginalBill.TotalAmount
+                                       - brokerage
+                                       - bill.TotalDiscount
+                                       + bill.TotalInterestGenerated;
+
+                if (bill.TotalAdvanceUsed > effectiveDue)
+                {
+                    decimal overApplied = bill.TotalAdvanceUsed - effectiveDue;
+
+                    // Roll back excess so it's available for next bill
+                    bill.TotalAdvanceUsed -= overApplied;
+                    paymentRemaining += overApplied;
+
+                    // Also adjust the last utilization entry
+                    var lastUtil = bill.AdvanceUtilizations.Last();
+                    lastUtil.AmountUsed -= overApplied;
+                }
+            }
 
             if (paymentRemaining <= 0) break;
         }
@@ -4034,12 +4057,15 @@ private SettlementCalculationResult CalculateSettlementRequirement(
         }
     }
 
-    // --- 4) AGGREGATE RESULTS (brokerage waived) ---
+    // --- 4) AGGREGATE RESULTS ---
     var billBreakdowns = new List<BillSettlementBreakdown>();
     foreach (var b in workingBills)
     {
         decimal brokerage = b.OriginalBill.TotalAmount * brokerageRate / 100m;
-        decimal totalAmountDue = Math.Max(0m, b.OutstandingPrincipal - brokerage) + b.TotalInterestGenerated;
+
+        // FIX: base on original bill, not current outstanding
+        decimal totalAmountDue = (b.OriginalBill.TotalAmount - brokerage - b.TotalDiscount)
+                                 + b.TotalInterestGenerated;
 
         decimal advanceUsed = b.TotalAdvanceUsed;
         decimal cashNeeded = Math.Max(0m, totalAmountDue - advanceUsed);
@@ -4058,13 +4084,16 @@ private SettlementCalculationResult CalculateSettlementRequirement(
         });
     }
 
+    // FIX: TotalAmountDue = sum of bill AmountDue
+    decimal totalAmountDueAllBills = billBreakdowns.Sum(b => b.AmountDue);
+
     decimal totalAdvanceAvailable = advancesToUse.Sum(a => a.Amount);
     decimal totalAdvanceUsed = billBreakdowns.Sum(x => x.AdvanceUsed);
     decimal totalCashNeeded = billBreakdowns.Sum(x => x.CashNeeded);
 
     return new SettlementCalculationResult
     {
-        TotalAmountDue = totalAdvanceUsed + totalCashNeeded,
+        TotalAmountDue = totalAmountDueAllBills,
         TotalAdvanceUsed = totalAdvanceUsed,
         TotalCashNeeded = totalCashNeeded,
         TotalInterest = billBreakdowns.Sum(x => x.Interest),
@@ -4077,6 +4106,7 @@ private SettlementCalculationResult CalculateSettlementRequirement(
         PaymentDate = settlementDate
     };
 }
+
 
 
 /// <summary>

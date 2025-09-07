@@ -19,6 +19,13 @@ namespace SaleBillSystem.NET.Forms
         {
             components = new System.ComponentModel.Container();
             pnlTop = new Panel();
+            cmbPaymentMethodFilter = new ComboBox();
+            lblPaymentMethodFilter = new Label();
+            btnApplyDateFilter = new Button();
+            dtpToDate = new DateTimePicker();
+            lblToDate = new Label();
+            dtpFromDate = new DateTimePicker();
+            lblFromDate = new Label();
             cmbBroker = new ComboBox();
             lblBroker = new Label();
             cmbParty = new ComboBox();
@@ -54,6 +61,13 @@ namespace SaleBillSystem.NET.Forms
             // 
             // pnlTop
             // 
+            pnlTop.Controls.Add(cmbPaymentMethodFilter);
+            pnlTop.Controls.Add(lblPaymentMethodFilter);
+            pnlTop.Controls.Add(btnApplyDateFilter);
+            pnlTop.Controls.Add(dtpToDate);
+            pnlTop.Controls.Add(lblToDate);
+            pnlTop.Controls.Add(dtpFromDate);
+            pnlTop.Controls.Add(lblFromDate);
             pnlTop.Controls.Add(cmbBroker);
             pnlTop.Controls.Add(lblBroker);
             pnlTop.Controls.Add(cmbParty);
@@ -63,7 +77,7 @@ namespace SaleBillSystem.NET.Forms
             pnlTop.Margin = new Padding(4);
             pnlTop.Name = "pnlTop";
             pnlTop.Padding = new Padding(5);
-            pnlTop.Size = new Size(1178, 50);
+            pnlTop.Size = new Size(1178, 80);
             pnlTop.TabIndex = 0;
             // 
             // cmbBroker
@@ -110,6 +124,80 @@ namespace SaleBillSystem.NET.Forms
             lblParty.TabIndex = 0;
             lblParty.Text = "Select a Party:";
             // 
+            // btnApplyDateFilter
+            // 
+            btnApplyDateFilter.BackColor = Color.LightBlue;
+            btnApplyDateFilter.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnApplyDateFilter.Location = new Point(570, 45);
+            btnApplyDateFilter.Margin = new Padding(4);
+            btnApplyDateFilter.Name = "btnApplyDateFilter";
+            btnApplyDateFilter.Size = new Size(100, 25);
+            btnApplyDateFilter.TabIndex = 5;
+            btnApplyDateFilter.Text = "Apply Filter";
+            toolTip1.SetToolTip(btnApplyDateFilter, "Apply date range filter to show payments");
+            btnApplyDateFilter.UseVisualStyleBackColor = false;
+            // 
+            // dtpToDate
+            // 
+            dtpToDate.Format = DateTimePickerFormat.Short;
+            dtpToDate.Location = new Point(350, 47);
+            dtpToDate.Margin = new Padding(4);
+            dtpToDate.Name = "dtpToDate";
+            dtpToDate.Size = new Size(120, 23);
+            dtpToDate.TabIndex = 4;
+            toolTip1.SetToolTip(dtpToDate, "Select end date for filtering");
+            // 
+            // lblToDate
+            // 
+            lblToDate.AutoSize = true;
+            lblToDate.Location = new Point(290, 51);
+            lblToDate.Margin = new Padding(4, 0, 4, 0);
+            lblToDate.Name = "lblToDate";
+            lblToDate.Size = new Size(52, 15);
+            lblToDate.TabIndex = 0;
+            lblToDate.Text = "To Date:";
+            // 
+            // dtpFromDate
+            // 
+            dtpFromDate.Format = DateTimePickerFormat.Short;
+            dtpFromDate.Location = new Point(102, 47);
+            dtpFromDate.Margin = new Padding(4);
+            dtpFromDate.Name = "dtpFromDate";
+            dtpFromDate.Size = new Size(120, 23);
+            dtpFromDate.TabIndex = 3;
+            toolTip1.SetToolTip(dtpFromDate, "Select start date for filtering");
+            // 
+            // lblFromDate
+            // 
+            lblFromDate.AutoSize = true;
+            lblFromDate.Location = new Point(9, 51);
+            lblFromDate.Margin = new Padding(4, 0, 4, 0);
+            lblFromDate.Name = "lblFromDate";
+            lblFromDate.Size = new Size(70, 15);
+            lblFromDate.TabIndex = 0;
+            lblFromDate.Text = "From Date:";
+            // 
+            // cmbPaymentMethodFilter
+            // 
+            cmbPaymentMethodFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbPaymentMethodFilter.FormattingEnabled = true;
+            cmbPaymentMethodFilter.Location = new Point(780, 47);
+            cmbPaymentMethodFilter.Margin = new Padding(4);
+            cmbPaymentMethodFilter.Name = "cmbPaymentMethodFilter";
+            cmbPaymentMethodFilter.Size = new Size(120, 23);
+            cmbPaymentMethodFilter.TabIndex = 6;
+            toolTip1.SetToolTip(cmbPaymentMethodFilter, "Filter by payment method");
+            // 
+            // lblPaymentMethodFilter
+            // 
+            lblPaymentMethodFilter.AutoSize = true;
+            lblPaymentMethodFilter.Location = new Point(720, 51);
+            lblPaymentMethodFilter.Margin = new Padding(4, 0, 4, 0);
+            lblPaymentMethodFilter.Name = "lblPaymentMethodFilter";
+            lblPaymentMethodFilter.Size = new Size(52, 15);
+            lblPaymentMethodFilter.TabIndex = 0;
+            lblPaymentMethodFilter.Text = "Method:";
+            // 
             // pnlEntry
             // 
             pnlEntry.BackColor = Color.FromArgb(240, 248, 255);
@@ -127,7 +215,7 @@ namespace SaleBillSystem.NET.Forms
             pnlEntry.Controls.Add(txtPaymentDate);
             pnlEntry.Controls.Add(lblPaymentDate);
             pnlEntry.Dock = DockStyle.Top;
-            pnlEntry.Location = new Point(11, 61);
+            pnlEntry.Location = new Point(11, 91);
             pnlEntry.Margin = new Padding(4);
             pnlEntry.Name = "pnlEntry";
             pnlEntry.Padding = new Padding(10);
@@ -316,10 +404,10 @@ namespace SaleBillSystem.NET.Forms
             pnlGrid.Controls.Add(dgvAdvancePayments);
             pnlGrid.Controls.Add(lblTotalAdvances);
             pnlGrid.Dock = DockStyle.Fill;
-            pnlGrid.Location = new Point(11, 221);
+            pnlGrid.Location = new Point(11, 251);
             pnlGrid.Margin = new Padding(4);
             pnlGrid.Name = "pnlGrid";
-            pnlGrid.Size = new Size(1178, 428);
+            pnlGrid.Size = new Size(1178, 398);
             pnlGrid.TabIndex = 2;
             // 
             // dgvAdvancePayments
@@ -333,7 +421,7 @@ namespace SaleBillSystem.NET.Forms
             dgvAdvancePayments.Name = "dgvAdvancePayments";
             dgvAdvancePayments.ReadOnly = true;
             dgvAdvancePayments.RowHeadersWidth = 51;
-            dgvAdvancePayments.Size = new Size(1178, 393);
+            dgvAdvancePayments.Size = new Size(1178, 363);
             dgvAdvancePayments.TabIndex = 0;
             // 
             // lblTotalAdvances
@@ -343,7 +431,7 @@ namespace SaleBillSystem.NET.Forms
             lblTotalAdvances.Dock = DockStyle.Bottom;
             lblTotalAdvances.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold);
             lblTotalAdvances.ForeColor = Color.DarkGreen;
-            lblTotalAdvances.Location = new Point(0, 393);
+            lblTotalAdvances.Location = new Point(0, 363);
             lblTotalAdvances.Margin = new Padding(4, 0, 4, 0);
             lblTotalAdvances.Name = "lblTotalAdvances";
             lblTotalAdvances.Padding = new Padding(10, 5, 10, 5);
@@ -404,5 +492,12 @@ namespace SaleBillSystem.NET.Forms
         private TextBox txtChequeAmountFirm1;
         private Label lblChequeAmountFirm1;
         private ToolTip toolTip1;
+        private Button btnApplyDateFilter;
+        private DateTimePicker dtpToDate;
+        private Label lblToDate;
+        private DateTimePicker dtpFromDate;
+        private Label lblFromDate;
+        private ComboBox cmbPaymentMethodFilter;
+        private Label lblPaymentMethodFilter;
     }
 }

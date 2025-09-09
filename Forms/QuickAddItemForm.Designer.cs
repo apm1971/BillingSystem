@@ -31,6 +31,8 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.txtCharges = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.txtSubQuantity = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.txtDefaultRate = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.txtUnit = new System.Windows.Forms.TextBox();
@@ -46,6 +48,8 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.groupBox1.Controls.Add(this.txtCharges);
             this.groupBox1.Controls.Add(this.label4);
+            this.groupBox1.Controls.Add(this.txtSubQuantity);
+            this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.txtDefaultRate);
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.txtUnit);
@@ -54,27 +58,43 @@ namespace SaleBillSystem.NET.Forms
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(410, 160);
+            this.groupBox1.Size = new System.Drawing.Size(410, 190);
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Item Details";
             // 
             // txtCharges
             // 
-            this.txtCharges.Location = new System.Drawing.Point(120, 110);
+            this.txtCharges.Location = new System.Drawing.Point(120, 140);
             this.txtCharges.Name = "txtCharges";
             this.txtCharges.Size = new System.Drawing.Size(100, 23);
-            this.txtCharges.TabIndex = 7;
+            this.txtCharges.TabIndex = 9;
             this.txtCharges.Text = "0.00";
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(20, 113);
+            this.label4.Location = new System.Drawing.Point(20, 143);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(57, 15);
-            this.label4.TabIndex = 6;
+            this.label4.TabIndex = 8;
             this.label4.Text = "Charges:";
+            // 
+            // txtSubQuantity
+            // 
+            this.txtSubQuantity.Location = new System.Drawing.Point(120, 110);
+            this.txtSubQuantity.Name = "txtSubQuantity";
+            this.txtSubQuantity.Size = new System.Drawing.Size(275, 23);
+            this.txtSubQuantity.TabIndex = 7;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(20, 113);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(88, 15);
+            this.label5.TabIndex = 6;
+            this.label5.Text = "Sub-Quantity:";
             // 
             // txtDefaultRate
             // 
@@ -129,7 +149,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.btnSave.BackColor = System.Drawing.Color.LightGreen;
             this.btnSave.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
-            this.btnSave.Location = new System.Drawing.Point(220, 185);
+            this.btnSave.Location = new System.Drawing.Point(220, 215);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(100, 35);
             this.btnSave.TabIndex = 1;
@@ -141,7 +161,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.btnCancel.BackColor = System.Drawing.Color.LightCoral;
             this.btnCancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
-            this.btnCancel.Location = new System.Drawing.Point(330, 185);
+            this.btnCancel.Location = new System.Drawing.Point(330, 215);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(100, 35);
             this.btnCancel.TabIndex = 2;
@@ -153,7 +173,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(444, 236);
+            this.ClientSize = new System.Drawing.Size(444, 266);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.groupBox1);
@@ -181,5 +201,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox txtCharges;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.TextBox txtSubQuantity;
+        private System.Windows.Forms.Label label5;
     }
 } 

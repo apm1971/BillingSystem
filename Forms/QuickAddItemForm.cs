@@ -46,6 +46,7 @@ namespace SaleBillSystem.NET.Forms
             // Set text fields to use uppercase
             txtItemName.CharacterCasing = CharacterCasing.Upper;
             txtUnit.CharacterCasing = CharacterCasing.Upper;
+            txtSubQuantity.CharacterCasing = CharacterCasing.Upper;
             
             txtItemName.Focus();
         }
@@ -68,7 +69,8 @@ namespace SaleBillSystem.NET.Forms
                     ItemName = txtItemName.Text.Trim().ToUpper(),
                     Unit = txtUnit.Text.Trim().ToUpper(),
                     DefaultRate = defaultRate,
-                    Charges = charges
+                    Charges = charges,
+                    SubQuantity = txtSubQuantity.Text.Trim().ToUpper()
                 };
 
                 if (ItemService.AddItem(item))

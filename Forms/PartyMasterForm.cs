@@ -458,6 +458,10 @@ namespace SaleBillSystem.NET.Forms
             if (currentParty.PartyID == 0)
                 return;
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Masters, "party"))
+                return;
+
             // Check if party has bills linked to it
             if (BillService.HasBillsForParty(currentParty.PartyID))
             {

@@ -19,27 +19,32 @@ namespace SaleBillSystem.NET.Forms
 
         private void MainForm_Load(object sender, EventArgs e)
         {
-            // Temporarily bypass the login screen for development
-            ShowMainApplicationUI();
-
-            // To re-enable login later, uncomment the line below and comment out the line above
-            // ShowLoginScreen();
+            // Show login screen first
+            ShowLoginScreen();
         }
 
         #region Login Flow Management
 
-        // private void ShowLoginScreen()
-        // {
-        //     mainMenuStrip.Visible = false;
+        private void ShowLoginScreen()
+        {
+            mainMenuStrip.Visible = false;
 
-        //     // The loginControl is already on the form from the Designer
-        //     loginControl.Visible = true;
-        //     loginControl.Dock = DockStyle.Fill;
-        //     loginControl.LoginSuccess += OnLoginSuccess;
-        // }
+            // The loginControl is already on the form from the Designer
+            loginControl.Visible = true;
+            loginControl.Dock = DockStyle.Fill;
+            loginControl.LoginSuccess += OnLoginSuccess;
+        }
 
         private void OnLoginSuccess(object sender, User authenticatedUser)
         {
+            // Set the global current user
+            Program.CurrentUser = authenticatedUser;
+            
+            // Initialize permission manager with the authenticated user
+            PermissionManager.InitializeUserSession(authenticatedUser);
+
+            // Hide the login control
+            loginControl.Visible = false;
 
             // Once login is successful, show the main UI
             ShowMainApplicationUI();

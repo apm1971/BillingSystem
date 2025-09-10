@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.OleDb; // Changed from SQLite to OleDb
 using System.IO;
 using System.Linq;
+using SaleBillSystem.NET.Models;
 // Remove ADOX reference
 
 namespace SaleBillSystem.NET.Data
@@ -129,6 +130,9 @@ namespace SaleBillSystem.NET.Data
                     }
                 }
                 
+                // Create default user if it doesn't exist
+                CreateDefaultUserIfNotExists();
+                
                 return true;
             }
             catch (Exception ex)
@@ -136,6 +140,38 @@ namespace SaleBillSystem.NET.Data
                 System.Windows.Forms.MessageBox.Show($"Error initializing database: {ex.Message}", "Database Error", 
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Creates a default user 'user' with password 'user123' if it doesn't already exist
+        /// </summary>
+        private static void CreateDefaultUserIfNotExists()
+        {
+            try
+            {
+                // Check if default user already exists
+                var existingUser = UserService.GetUserByUsername("user");
+                if (existingUser == null)
+                {
+                    // Create default user
+                    var defaultUser = new User
+                    {
+                        Username = "user",
+                        DisplayName = "Default User",
+                        IsAdmin = false
+                    };
+                    
+                    // Save user with password 'user123'
+                    UserService.SaveUser(defaultUser, "user123");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"Warning: Could not create default user: {ex.Message}", 
+                    "User Creation Warning", 
+                    System.Windows.Forms.MessageBoxButtons.OK, 
+                    System.Windows.Forms.MessageBoxIcon.Warning);
             }
         }
 

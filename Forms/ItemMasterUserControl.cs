@@ -353,6 +353,10 @@ namespace SaleBillSystem.NET.Forms
             if (currentItem.ItemID == 0)
                 return;
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Masters, "item"))
+                return;
+
             if (MessageBox.Show("Are you sure you want to delete this item?", "Confirm Delete", 
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {

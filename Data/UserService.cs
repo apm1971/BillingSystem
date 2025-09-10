@@ -24,7 +24,7 @@ namespace SaleBillSystem.NET.Data
 
             if (user != null)
             {
-                string hashedPassword = (password);
+                string hashedPassword = HashPassword(password);
                 if (user.PasswordHash == hashedPassword)
                 {
                     return user; // Success
@@ -179,6 +179,51 @@ namespace SaleBillSystem.NET.Data
                 }
                 return builder.ToString();
             }
+        }
+
+        /// <summary>
+        /// Fixes any admin accounts that have plain text passwords stored
+        /// </summary>
+        public static bool FixAdminPasswordHashing()
+        {
+            try
+            {
+                // Get admin user
+                string sql = "SELECT * FROM UserMaster WHERE Username = 'admin' AND PasswordHash = 'admin'";
+                DataTable dt = DatabaseManager.ExecuteQuery(sql);
+                
+                if (dt.Rows.Count > 0)
+                {
+                    // Admin exists with plain text password, fix it
+                    string hashedPassword = HashPassword("admin");
+                    string updateSql = "UPDATE UserMaster SET PasswordHash = ? WHERE Username = 'admin' AND PasswordHash = 'admin'";
+                    var param = new OleDbParameter("PasswordHash", hashedPassword);
+                    
+                    int rowsAffected = DatabaseManager.ExecuteNonQuery(updateSql, param);
+                    
+                    if (rowsAffected > 0)
+                    {
+                        MessageBox.Show("Admin password has been secured with proper hashing.", "Security Fix Applied", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return true;
+                    }
+                }
+                return false; // No plain text admin password found
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error fixing admin password: {ex.Message}", "Security Fix Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Public method to hash passwords (for external use)
+        /// </summary>
+        public static string HashPasswordPublic(string password)
+        {
+            return HashPassword(password);
         }
 
         /// <summary>

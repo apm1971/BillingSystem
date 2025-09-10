@@ -147,6 +147,10 @@ namespace SaleBillSystem.NET.Forms
             var selectedPayment = dgvPayments.SelectedRows[0].DataBoundItem as PaymentViewModel;
             if (selectedPayment == null) return;
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Payments, "payment"))
+                return;
+
             if (MessageBox.Show($"Are you sure you want to delete Payment ID {selectedPayment.PaymentID}?\nThis will also delete all associated ledger entries and cannot be undone.", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 // Show loading cursor and disable controls to prevent double-clicking

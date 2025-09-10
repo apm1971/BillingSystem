@@ -646,6 +646,10 @@ namespace SaleBillSystem.NET.Forms
         {
             if (dgvBills.CurrentRow?.DataBoundItem is Bill selectedBill)
             {
+                // Check permissions before allowing delete
+                if (!PermissionManager.ValidateDeleteOperation(ModuleType.Bills, "bill"))
+                    return;
+
                 if (MessageBox.Show($"Are you sure you want to delete bill {selectedBill.BillNo}?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     try

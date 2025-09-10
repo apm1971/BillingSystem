@@ -384,6 +384,10 @@ namespace SaleBillSystem.NET.Forms
             if (currentBroker.BrokerID == 0)
                 return;
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Masters, "broker"))
+                return;
+
             if (MessageBox.Show("Are you sure you want to delete this broker?", "Confirm Delete", 
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {

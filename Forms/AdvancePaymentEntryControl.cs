@@ -629,6 +629,10 @@ namespace SaleBillSystem.NET.Forms
                 return;
             }
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Payments, "advance payment"))
+                return;
+
             // Show confirmation dialog
             string confirmMessage = $"Are you sure you want to delete the advance payment?\n\n" +
                                   $"Date: {selectedAdvancePayment.PaymentDate:dd-MMM-yyyy}\n" +

@@ -4,6 +4,7 @@ namespace SaleBillSystem.NET.Forms
     {
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.MenuStrip mainMenuStrip;
+        private LoginControl loginControl;
 
         protected override void Dispose(bool disposing)
         {
@@ -19,7 +20,7 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeComponent()
         {
             mainMenuStrip = new MenuStrip();
-            // loginControl = new LoginControl();
+            loginControl = new LoginControl();
             SuspendLayout();
             // 
             // mainMenuStrip
@@ -34,21 +35,20 @@ namespace SaleBillSystem.NET.Forms
             // 
             // loginControl
             // 
-            // loginControl.Dock = DockStyle.Fill;
-            // loginControl.Location = new Point(0, 0);
-            // loginControl.Margin = new Padding(5, 3, 5, 3);
-            // loginControl.Name = "loginControl";
-            // loginControl.Size = new Size(933, 519);
-            // loginControl.TabIndex = 0;
-            // loginControl.Visible = false;
-            // loginControl.Load += loginControl_Load;
+            loginControl.Dock = DockStyle.Fill;
+            loginControl.Location = new Point(0, 0);
+            loginControl.Margin = new Padding(5, 3, 5, 3);
+            loginControl.Name = "loginControl";
+            loginControl.Size = new Size(933, 519);
+            loginControl.TabIndex = 0;
+            loginControl.Visible = false;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(933, 519);
-            // Controls.Add(loginControl);
+            Controls.Add(loginControl);
             Controls.Add(mainMenuStrip);
             MainMenuStrip = mainMenuStrip;
             Margin = new Padding(4, 3, 4, 3);
@@ -61,7 +61,5 @@ namespace SaleBillSystem.NET.Forms
         }
 
         #endregion
-
-        // private LoginControl loginControl;
     }
 }

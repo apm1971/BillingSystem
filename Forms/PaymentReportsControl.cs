@@ -194,6 +194,10 @@ namespace SaleBillSystem.NET.Forms
                 return;
             }
 
+            // Check permissions before allowing delete
+            if (!PermissionManager.ValidateDeleteOperation(ModuleType.Reports, "settlement"))
+                return;
+
             try
             {
                 var selectedRow = dgvReports.SelectedRows[0];

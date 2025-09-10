@@ -70,6 +70,16 @@ namespace SaleBillSystem.NET
             {
                 System.Diagnostics.Debug.WriteLine($"Warning: Could not change PartyID column to nullable: {ex.Message}");
             }
+            
+            // Fix admin password hashing if needed
+            try
+            {
+                UserService.FixAdminPasswordHashing();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not fix admin password hashing: {ex.Message}");
+            }
             try
             {
                 // Load the existing company with ID = 1 from the database

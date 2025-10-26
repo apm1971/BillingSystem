@@ -232,9 +232,9 @@ namespace SaleBillSystem.NET.Forms
             var utilitiesMenu = new ToolStripMenuItem("&Utilities");
             utilitiesMenu.Font = menuFont;
 
-            var migrateItem = new ToolStripMenuItem("&Migrate Database");
-            migrateItem.Font = menuFont;
-            migrateItem.Click += (s, e) => { RunDatabaseMigration(); };
+            // var migrateItem = new ToolStripMenuItem("&Migrate Database");
+            // migrateItem.Font = menuFont;
+            // migrateItem.Click += (s, e) => { RunDatabaseMigration(); };
 
             // var passwordTestItem = new ToolStripMenuItem("&Test Database Password");
             // passwordTestItem.Font = menuFont;
@@ -256,7 +256,7 @@ namespace SaleBillSystem.NET.Forms
             databaseInfoItem.Font = menuFont;
             databaseInfoItem.Click += (s, e) => { ShowDatabaseInfo(); };
 
-            utilitiesMenu.DropDownItems.Add(migrateItem);
+            // utilitiesMenu.DropDownItems.Add(migrateItem);
             utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             utilitiesMenu.DropDownItems.Add(backupDatabaseItem);
             utilitiesMenu.DropDownItems.Add(restoreDatabaseItem);

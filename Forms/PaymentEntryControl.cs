@@ -1347,7 +1347,8 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 return;
             }
 
-                using (var selectionForm = new AdvancePaymentSelectionForm(brokerId, partyId))
+                // Pass currently selected payments so they show as selected in the form
+                using (var selectionForm = new AdvancePaymentSelectionForm(brokerId, partyId, _userSelectedAdvancePayments))
                 {
                     if (selectionForm.ShowDialog() == DialogResult.OK)
                     {
@@ -1372,9 +1373,9 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                         UpdateSelectedAdvancePaymentsDisplay();
                         
                         // Update button to show that payments are selected
-                        btnSelectPayments.Text = $"Selected ({_userSelectedAdvancePayments.Count})";
-                        btnSelectPayments.BackColor = Color.LightGreen;
+                        UpdateSelectPaymentsButtonVisibility();
                     }
+                    // If user cancels, keep existing selection (no change to _userSelectedAdvancePayments)
                 }
             }
             catch (Exception ex)
@@ -1418,19 +1419,26 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 
                 if (_userSelectedAdvancePayments.Any())
                 {
-                    // Show selected payments count
-                    btnSelectPayments.Text = $"Selected ({_userSelectedAdvancePayments.Count})";
+                    // Show selected payments count AND total amount
+                    decimal totalAmount = _userSelectedAdvancePayments.Sum(ap => ap.Amount);
+                    btnSelectPayments.Text = $"✓ Selected: {_userSelectedAdvancePayments.Count} (₹{totalAmount:N2})";
                     btnSelectPayments.BackColor = Color.LightGreen;
+                    btnSelectPayments.ForeColor = Color.DarkGreen;
+                    btnSelectPayments.Font = new Font(btnSelectPayments.Font, FontStyle.Bold);
                 }
                 else if (hasAdvancePayments)
                 {
-                    btnSelectPayments.Text = "Select Payments (None Selected)";
+                    btnSelectPayments.Text = "Select Payments";
                     btnSelectPayments.BackColor = Color.LightBlue;
+                    btnSelectPayments.ForeColor = Color.Black;
+                    btnSelectPayments.Font = new Font(btnSelectPayments.Font, FontStyle.Regular);
                 }
                 else
                 {
                     btnSelectPayments.Text = "No Payments Available";
                     btnSelectPayments.BackColor = Color.LightGray;
+                    btnSelectPayments.ForeColor = Color.Gray;
+                    btnSelectPayments.Font = new Font(btnSelectPayments.Font, FontStyle.Regular);
                 }
         }
         catch (Exception ex)
@@ -1585,6 +1593,7 @@ private void ShowCalculationSummary(PaymentCalculationSummary calculation, strin
                 {
                     BillID = breakdown.BillID,
                     BillNo = breakdown.BillNo,
+                    PartyName = originalBill?.PartyName ?? "",
                     BillDate = originalBill?.BillDate ?? DateTime.Now,
                     OriginalAmount = originalAmount,
                     BalanceDue = breakdown.AmountDue,
@@ -3931,9 +3940,70 @@ private SettlementCalculationResult CalculateSettlementRequirement(
     decimal brokerageRate)
 {
     // --- 1) SETUP ---
-    var advancesToUse = _userSelectedAdvancePayments != null && _userSelectedAdvancePayments.Any()
-        ? _userSelectedAdvancePayments
-        : availableAdvances;
+    var advancesToUse = _userSelectedAdvancePayments;
+    
+    // --- SPECIAL CASE: No prior payments - cash-only settlement ---
+    if(advancesToUse == null || advancesToUse.Count == 0)
+    {
+        var cashOnlyBillBreakdowns = new List<BillSettlementBreakdown>();
+        
+        foreach (var bill in billsToSettle)
+        {
+            decimal brokerage = bill.TotalAmount * brokerageRate / 100m;
+            decimal discount = 0m;
+            decimal interest = 0m;
+            
+            // Calculate discount if settlement date is within discount period
+            DateTime discountDeadline = bill.BillDate.AddDays(discountDays);
+            if (settlementDate <= discountDeadline && discountRate > 0)
+            {
+                discount = bill.TotalAmount * (discountRate / 100m);
+            }
+            
+            // Calculate interest if settlement date is after interest grace period
+            DateTime interestStartDate = bill.BillDate.AddDays(interestDays);
+            if (settlementDate > interestStartDate)
+            {
+                int days = (settlementDate - interestStartDate).Days;
+                if (days > 0)
+                {
+                    interest = bill.TotalAmount * (interestRate / 100m) * (days / 365m);
+                }
+            }
+            
+            // Calculate total amount due for this bill
+            decimal totalAmountDue = (bill.TotalAmount - brokerage - discount) + interest;
+            
+            cashOnlyBillBreakdowns.Add(new BillSettlementBreakdown
+            {
+                BillID = bill.BillID,
+                BillNo = bill.BillNo,
+                Interest = interest,
+                AdvanceUsed = 0m,
+                Brokerage = brokerage,
+                Discount = discount,
+                CashNeeded = totalAmountDue,
+                AmountDue = totalAmountDue,
+                AdvanceUtilizations = new List<AdvanceUtilizationDetail>()
+            });
+        }
+        
+        // Return settlement result for cash-only payment
+        return new SettlementCalculationResult
+        {
+            TotalAmountDue = cashOnlyBillBreakdowns.Sum(b => b.AmountDue),
+            TotalAdvanceUsed = 0m,
+            TotalCashNeeded = cashOnlyBillBreakdowns.Sum(b => b.CashNeeded),
+            TotalInterest = cashOnlyBillBreakdowns.Sum(b => b.Interest),
+            TotalBrokerage = cashOnlyBillBreakdowns.Sum(b => b.Brokerage),
+            TotalDiscount = cashOnlyBillBreakdowns.Sum(b => b.Discount),
+            AdvanceAvailable = 0m,
+            UnusedAdvance = 0m,
+            CanFullySettle = true, // Cash payment can always fully settle
+            BillBreakdowns = cashOnlyBillBreakdowns,
+            PaymentDate = settlementDate
+        };
+    }
 
     var sortedAdvances = advancesToUse.OrderBy(a => a.PaymentDate).ToList();
 

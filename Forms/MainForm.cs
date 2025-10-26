@@ -15,6 +15,7 @@ namespace SaleBillSystem.NET.Forms
         {
             InitializeComponent();
             this.FormClosing += MainForm_FormClosing;
+            this.KeyPreview = true; // Enable keyboard shortcuts at form level
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -22,6 +23,46 @@ namespace SaleBillSystem.NET.Forms
             // Show login screen first
             ShowLoginScreen();
         }
+
+        #region Keyboard Shortcuts
+
+        /// <summary>
+        /// Handles keyboard shortcuts for quick navigation
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Only process shortcuts if main menu is visible (user is logged in)
+            if (!mainMenuStrip.Visible)
+                return base.ProcessCmdKey(ref msg, keyData);
+
+            switch (keyData)
+            {
+                case Keys.Control | Keys.B:
+                    // Ctrl + B: New Bill
+                    ShowControl(new SaleBillUserControl());
+                    return true;
+
+                case Keys.Control | Keys.A:
+                    // Ctrl + A: Advance Payment Entry
+                    ShowControl(new AdvancePaymentEntryControl());
+                    return true;
+
+                case Keys.Control | Keys.E:
+                    // Ctrl + E: Settlement Entry
+                    ShowControl(new PaymentEntryControl());
+                    return true;
+
+                case Keys.Control | Keys.R:
+                    // Ctrl + R: Payment Reports
+                    ShowControl(new PaymentReportsControl());
+                    return true;
+
+                default:
+                    return base.ProcessCmdKey(ref msg, keyData);
+            }
+        }
+
+        #endregion
 
         #region Login Flow Management
 
@@ -136,6 +177,8 @@ namespace SaleBillSystem.NET.Forms
 
             var newBillItem = new ToolStripMenuItem("&New Bill");
             newBillItem.Font = menuFont;
+            newBillItem.ShortcutKeys = Keys.Control | Keys.B;
+            newBillItem.ShowShortcutKeys = true;
             newBillItem.Click += (s, e) => { ShowControl(new SaleBillUserControl()); };
 
             var billledgerItem = new ToolStripMenuItem("&Bill Ledger");
@@ -155,6 +198,8 @@ namespace SaleBillSystem.NET.Forms
 
             var paymentEntryItem = new ToolStripMenuItem("&Settlement Entry");
             paymentEntryItem.Font = menuFont;
+            paymentEntryItem.ShortcutKeys = Keys.Control | Keys.E;
+            paymentEntryItem.ShowShortcutKeys = true;
             paymentEntryItem.Click += (s, e) => { ShowControl(new PaymentEntryControl()); };
 
             // var paymentListItem = new ToolStripMenuItem("&Payment List");
@@ -163,6 +208,8 @@ namespace SaleBillSystem.NET.Forms
 
             var advancePaymentItem = new ToolStripMenuItem("&Payment Entry");
             advancePaymentItem.Font = menuFont;
+            advancePaymentItem.ShortcutKeys = Keys.Control | Keys.A;
+            advancePaymentItem.ShowShortcutKeys = true;
             advancePaymentItem.Click += (s, e) => { ShowControl(new AdvancePaymentEntryControl()); };
 
             paymentsMenu.DropDownItems.Add(paymentEntryItem);
@@ -175,6 +222,8 @@ namespace SaleBillSystem.NET.Forms
 
             var paymentReportsItem = new ToolStripMenuItem("&Payment Reports");
             paymentReportsItem.Font = menuFont;
+            paymentReportsItem.ShortcutKeys = Keys.Control | Keys.R;
+            paymentReportsItem.ShowShortcutKeys = true;
             paymentReportsItem.Click += (s, e) => { ShowControl(new PaymentReportsControl()); };
 
             reportsMenu.DropDownItems.Add(paymentReportsItem);

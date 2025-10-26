@@ -38,12 +38,12 @@ namespace SaleBillSystem.NET.Forms
             public int? BrokerID { get; set; }
         }
 
-        public AdvancePaymentSelectionForm(int? brokerId = null, int? partyId = null)
+        public AdvancePaymentSelectionForm(int? brokerId = null, int? partyId = null, List<AdvancePayment>? preSelectedPayments = null)
         {
             InitializeComponent();
             _brokerId = brokerId;
             _partyId = partyId;
-            _selectedAdvancePayments = new List<AdvancePayment>();
+            _selectedAdvancePayments = preSelectedPayments != null ? new List<AdvancePayment>(preSelectedPayments) : new List<AdvancePayment>();
             _allAdvancePayments = new List<AdvancePayment>(); // Initialize to prevent null reference warnings
             LoadAdvancePayments();
         }
@@ -347,12 +347,13 @@ namespace SaleBillSystem.NET.Forms
                     Reference = ap.Reference ?? string.Empty,
                     PartyName = GetPartyName(ap.PartyID),
                     BrokerName = GetBrokerName(ap.BrokerID),
-                    IsSelected = false, // Default to not selected
+                    IsSelected = _selectedAdvancePayments.Any(selected => selected.AdvanceID == ap.AdvanceID), // Check if pre-selected
                     PartyID = ap.PartyID,
                     BrokerID = ap.BrokerID
                 }).ToList();
 
             dgvAdvancePayments.DataSource = advancePaymentsWithSelection;
+            UpdateSelectAllCheckbox();
         }
 
         private string GetPartyName(int? partyId)
@@ -453,15 +454,9 @@ namespace SaleBillSystem.NET.Forms
                     }
                 }
 
-                if (_selectedAdvancePayments.Any())
-                {
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
-                }
-                else
-                {
-                    MessageBox.Show("Please select at least one advance payment.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                // Allow saving with no selections (user might want to clear all)
+                this.DialogResult = DialogResult.OK;
+                this.Close();
             }
             catch (Exception ex)
             {

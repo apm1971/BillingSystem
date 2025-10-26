@@ -67,6 +67,7 @@ namespace SaleBillSystem.NET.Models
     {
         public int BillID { get; set; }
         public string BillNo { get; set; } = "";
+        public string PartyName { get; set; } = "";
         public DateTime BillDate { get; set; }
         public decimal OriginalAmount { get; set; }
         public decimal BalanceDue { get; set; }

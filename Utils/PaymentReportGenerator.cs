@@ -404,6 +404,7 @@ namespace SaleBillSystem.NET.Utils
             html.AppendLine("                <thead>");
             html.AppendLine("                    <tr>");
             html.AppendLine("                        <th>Bill No</th>");
+            html.AppendLine("                        <th>Party Name</th>");
             html.AppendLine("                        <th>Date</th>");
             html.AppendLine("                        <th>Original Amount</th>");
             html.AppendLine("                        <th>Balance Due</th>");
@@ -422,6 +423,7 @@ namespace SaleBillSystem.NET.Utils
             {
                 html.AppendLine("                    <tr>");
                 html.AppendLine($"                        <td>{bill.BillNo}</td>");
+                html.AppendLine($"                        <td>{bill.PartyName}</td>");
                 html.AppendLine($"                        <td>{bill.BillDate:dd-MMM-yyyy}</td>");
                 html.AppendLine($"                        <td class='amount'>₹{bill.OriginalAmount:N2}</td>");
                 html.AppendLine($"                        <td class='amount'>₹{bill.BalanceDue:N2}</td>");
@@ -438,7 +440,7 @@ namespace SaleBillSystem.NET.Utils
                 if (bill.InterestPeriods.Count > 0)
                 {
                     html.AppendLine("                    <tr>");
-                    html.AppendLine("                        <td colspan='11'>");
+                    html.AppendLine("                        <td colspan='12'>");
                     html.AppendLine("                            <div class='interest-period'>");
                     html.AppendLine("                                <h4>Interest Calculation Details</h4>");
                     foreach (var period in bill.InterestPeriods)

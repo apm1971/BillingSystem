@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Forms;
 using SaleBillSystem.NET.Models;
+using SaleBillSystem.NET.Utils;
 
 namespace SaleBillSystem.NET
 {
@@ -17,6 +18,25 @@ namespace SaleBillSystem.NET
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            // ===== LICENSE CHECK =====
+            var licenseStatus = LicenseManager.ValidateLicense();
+            
+            if (!licenseStatus.IsValid)
+            {
+                // Show activation form
+                using (var activationForm = new ActivationForm())
+                {
+                    if (activationForm.ShowDialog() != DialogResult.OK)
+                    {
+                        // User closed without activating - exit application
+                        MessageBox.Show("Software not activated. Application will exit.", 
+                            "Activation Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+            }
+            // ===== END LICENSE CHECK =====
 
             // Initialize database
             if (!DatabaseManager.Initialize())
@@ -61,6 +81,14 @@ namespace SaleBillSystem.NET
             }catch(Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Warning: Could not initialize advance payment system: {ex.Message}");
+            }
+            try
+            {
+                DatabaseManager.CreateGodownTablesIfNotExists();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Could not initialize godown management system: {ex.Message}");
             }
             try
             {

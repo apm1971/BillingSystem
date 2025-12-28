@@ -377,7 +377,7 @@ namespace SaleBillSystem.NET.Data
                     ExecuteNonQuery(conn, @"INSERT INTO Settings (SettingKey, SettingValue, Description) VALUES ('DefaultBrokerageRate', '0.0', 'Default brokerage rate (%) for early payments to show on payment screen')");
                     ExecuteNonQuery(conn, @"INSERT INTO UserMaster (Username, PasswordHash, DisplayName, IsAdmin) VALUES ('admin', 'admin', 'Admin', 1)");
                     ExecuteNonQuery(conn, @"INSERT INTO CompanyMaster (CompanyName, Address, Phone) VALUES ('Your Company Name', 'Your Company Address', 'Your Company Phone')");
-                }
+                 }
                 
                 return true;
             }
@@ -2063,25 +2063,149 @@ namespace SaleBillSystem.NET.Data
             try
             {
                 Console.WriteLine("Initializing advance payment system...");
-                
+
                 // Create the AdvancePayments table
                 CreateAdvancePaymentsTable();
-                
+
                 // Create the AdvanceUtilization table
                 CreateAdvanceUtilizationTable();
-                
+
                 // Add advance columns to PaymentMaster table
                 AddAdvanceColumnsToPaymentMaster();
-                 
+
                  // Update existing database constraints if needed
                  UpdateAdvanceUtilizationTable();
-                
+
                 Console.WriteLine("Advance payment system initialized successfully.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error initializing advance payment system: {ex.Message}");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates all Godown Management tables if they don't exist
+        /// </summary>
+        public static void CreateGodownTablesIfNotExists()
+        {
+            try
+            {
+                using (var conn = GetConnection())
+                {
+                    conn.Open();
+
+                    // Check and create GodownMaster table
+                    if (!TableExists(conn, "GodownMaster"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownMaster (
+                            GodownID COUNTER PRIMARY KEY,
+                            GodownName TEXT(255) NOT NULL,
+                            GodownShortName TEXT(50)
+                        )");
+                        Console.WriteLine("GodownMaster table created successfully.");
+                    }
+
+                    // Check and create GodownItemMaster table
+                    if (!TableExists(conn, "GodownItemMaster"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownItemMaster (
+                            GodownItemID COUNTER PRIMARY KEY,
+                            ItemName TEXT(255) NOT NULL
+                        )");
+                        Console.WriteLine("GodownItemMaster table created successfully.");
+                    }
+
+                    // Check and create GodownOpeningStock table
+                    if (!TableExists(conn, "GodownOpeningStock"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownOpeningStock (
+                            OpeningStockID COUNTER PRIMARY KEY,
+                            GodownID INTEGER,
+                            GodownItemID INTEGER,
+                            Quantity DOUBLE,
+                            AsOnDate DATETIME
+                        )");
+                        Console.WriteLine("GodownOpeningStock table created successfully.");
+                    }
+
+                    // Check and create GodownTransactionMaster table
+                    if (!TableExists(conn, "GodownTransactionMaster"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownTransactionMaster (
+                            TransactionID COUNTER PRIMARY KEY,
+                            TransactionNo TEXT(50) NOT NULL,
+                            TransactionDate DATETIME,
+                            TransactionType TEXT(20),
+                            FromGodownID INTEGER,
+                            ToGodownID INTEGER,
+                            TotalQuantity DOUBLE,
+                            ReferenceNo TEXT(50),
+                            CreatedDate DATETIME,
+                            CreatedBy INTEGER
+                        )");
+                        Console.WriteLine("GodownTransactionMaster table created successfully.");
+                    }
+
+                    // Check and create GodownTransactionDetails table
+                    if (!TableExists(conn, "GodownTransactionDetails"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownTransactionDetails (
+                            DetailID COUNTER PRIMARY KEY,
+                            TransactionID INTEGER,
+                            GodownItemID INTEGER,
+                            Quantity DOUBLE
+                        )");
+                        Console.WriteLine("GodownTransactionDetails table created successfully.");
+                    }
+
+                    // Check and create GodownLedger table
+                    if (!TableExists(conn, "GodownLedger"))
+                    {
+                        ExecuteNonQuery(conn, @"CREATE TABLE GodownLedger (
+                            LedgerID COUNTER PRIMARY KEY,
+                            GodownID INTEGER,
+                            GodownItemID INTEGER,
+                            TransactionID INTEGER,
+                            TransactionDate DATETIME,
+                            TransactionType TEXT(20),
+                            InwardQty DOUBLE,
+                            OutwardQty DOUBLE,
+                            BalanceQty DOUBLE
+                        )");
+                        Console.WriteLine("GodownLedger table created successfully.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating Godown tables: {ex.Message}");
+                System.Windows.Forms.MessageBox.Show(
+                    $"Error creating Godown Management tables: {ex.Message}",
+                    "Database Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to check if a table exists in the database
+        /// </summary>
+        private static bool TableExists(OleDbConnection conn, string tableName)
+        {
+            try
+            {
+                string checkTableSql = $"SELECT COUNT(*) FROM {tableName}";
+                using (var checkCmd = new OleDbCommand(checkTableSql, conn))
+                {
+                    checkCmd.ExecuteScalar();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
 

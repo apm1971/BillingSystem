@@ -1,5 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Exclude LicenseGeneratorTool folder - it's a separate project -->
+  <ItemGroup>
+    <Compile Remove="LicenseGeneratorTool\**" />
+    <Content Remove="LicenseGeneratorTool\**" />
+    <EmbeddedResource Remove="LicenseGeneratorTool\**" />
+    <None Remove="LicenseGeneratorTool\**" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>

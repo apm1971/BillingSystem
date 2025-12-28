@@ -42,6 +42,11 @@ namespace SaleBillSystem.NET.Forms
                     ShowControl(new SaleBillUserControl());
                     return true;
 
+                case Keys.Control | Keys.L:
+                    // Ctrl + L: Bill List
+                    ShowControl(new BillListUserControl());
+                    return true;
+
                 case Keys.Control | Keys.A:
                     // Ctrl + A: Advance Payment Entry
                     ShowControl(new AdvancePaymentEntryControl());
@@ -167,9 +172,20 @@ namespace SaleBillSystem.NET.Forms
             brokerMasterItem.Font = menuFont;
             brokerMasterItem.Click += (s, e) => { ShowControl(new BrokerMasterUserControl()); };
 
+            var godownMasterItem = new ToolStripMenuItem("&Godown Master");
+            godownMasterItem.Font = menuFont;
+            godownMasterItem.Click += (s, e) => { ShowControl(new GodownMasterUserControl()); };
+
+            var godownItemMasterItem = new ToolStripMenuItem("Godown &Item Master");
+            godownItemMasterItem.Font = menuFont;
+            godownItemMasterItem.Click += (s, e) => { ShowControl(new GodownItemMasterUserControl()); };
+
             mastersMenu.DropDownItems.Add(partyMasterItem);
             mastersMenu.DropDownItems.Add(itemMasterItem);
             mastersMenu.DropDownItems.Add(brokerMasterItem);
+            mastersMenu.DropDownItems.Add(new ToolStripSeparator());
+            mastersMenu.DropDownItems.Add(godownMasterItem);
+            mastersMenu.DropDownItems.Add(godownItemMasterItem);
 
             // === BILLS MENU ===
             var billsMenu = new ToolStripMenuItem("&Bills");
@@ -184,8 +200,11 @@ namespace SaleBillSystem.NET.Forms
             var billledgerItem = new ToolStripMenuItem("&Bill Ledger");
             billledgerItem.Font = menuFont;
             billledgerItem.Click += (s, e) => { ShowControl(new BillLedgerControl()); };
-            var billListItem = new ToolStripMenuItem("&Bill List");
+
+            var billListItem = new ToolStripMenuItem("Bill &List");
             billListItem.Font = menuFont;
+            billListItem.ShortcutKeys = Keys.Control | Keys.L;
+            billListItem.ShowShortcutKeys = true;
             billListItem.Click += (s, e) => { ShowControl(new BillListUserControl()); };
 
             billsMenu.DropDownItems.Add(newBillItem);
@@ -228,6 +247,26 @@ namespace SaleBillSystem.NET.Forms
 
             reportsMenu.DropDownItems.Add(paymentReportsItem);
 
+            // === GODOWN TRANSACTIONS MENU ===
+            var godownMenu = new ToolStripMenuItem("&Godown");
+            godownMenu.Font = menuFont;
+
+            var openingStockItem = new ToolStripMenuItem("&Opening Stock Entry");
+            openingStockItem.Font = menuFont;
+            openingStockItem.Click += (s, e) => { ShowControl(new GodownOpeningStockControl()); };
+
+            var transactionEntryItem = new ToolStripMenuItem("&Transaction Entry");
+            transactionEntryItem.Font = menuFont;
+            transactionEntryItem.Click += (s, e) => { ShowControl(new GodownTransactionControl()); };
+
+            var stockReportItem = new ToolStripMenuItem("&Stock Report");
+            stockReportItem.Font = menuFont;
+            stockReportItem.Click += (s, e) => { ShowControl(new GodownStockReportControl()); };
+
+            godownMenu.DropDownItems.Add(openingStockItem);
+            godownMenu.DropDownItems.Add(transactionEntryItem);
+            godownMenu.DropDownItems.Add(stockReportItem);
+
             // === UTILITIES MENU ===
             var utilitiesMenu = new ToolStripMenuItem("&Utilities");
             utilitiesMenu.Font = menuFont;
@@ -256,12 +295,13 @@ namespace SaleBillSystem.NET.Forms
             databaseInfoItem.Font = menuFont;
             databaseInfoItem.Click += (s, e) => { ShowDatabaseInfo(); };
 
+            // License Generator removed from distributed app - use separate LicenseGeneratorTool
+
             // utilitiesMenu.DropDownItems.Add(migrateItem);
             utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             utilitiesMenu.DropDownItems.Add(backupDatabaseItem);
             utilitiesMenu.DropDownItems.Add(restoreDatabaseItem);
             utilitiesMenu.DropDownItems.Add(databaseInfoItem);
-            utilitiesMenu.DropDownItems.Add(new ToolStripSeparator());
             // utilitiesMenu.DropDownItems.Add(passwordTestItem);
             // utilitiesMenu.DropDownItems.Add(forcePasswordItem);
 
@@ -270,6 +310,7 @@ namespace SaleBillSystem.NET.Forms
             mainMenuStrip.Items.Add(billsMenu);
             mainMenuStrip.Items.Add(paymentsMenu);
             mainMenuStrip.Items.Add(reportsMenu);
+            mainMenuStrip.Items.Add(godownMenu);
             mainMenuStrip.Items.Add(utilitiesMenu);
 
             // Add Transactions, Reports, etc. menus here

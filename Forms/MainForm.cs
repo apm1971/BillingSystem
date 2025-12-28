@@ -263,9 +263,14 @@ namespace SaleBillSystem.NET.Forms
             stockReportItem.Font = menuFont;
             stockReportItem.Click += (s, e) => { ShowControl(new GodownStockReportControl()); };
 
+            var stockLedgerItem = new ToolStripMenuItem("Stock &Ledger");
+            stockLedgerItem.Font = menuFont;
+            stockLedgerItem.Click += (s, e) => { ShowControl(new GodownStockLedgerControl()); };
+
             godownMenu.DropDownItems.Add(openingStockItem);
             godownMenu.DropDownItems.Add(transactionEntryItem);
             godownMenu.DropDownItems.Add(stockReportItem);
+            godownMenu.DropDownItems.Add(stockLedgerItem);
 
             // === UTILITIES MENU ===
             var utilitiesMenu = new ToolStripMenuItem("&Utilities");

@@ -18,6 +18,8 @@ namespace SaleBillSystem.NET.Forms
         private void InitializeComponent()
         {
             groupBox1 = new GroupBox();
+            btnExportPDF = new Button();
+            btnExportExcel = new Button();
             btnRefresh = new Button();
             dtpAsOnDate = new DateTimePicker();
             lblAsOnDate = new Label();
@@ -34,9 +36,11 @@ namespace SaleBillSystem.NET.Forms
             ((System.ComponentModel.ISupportInitialize)dgvStockReport).BeginInit();
             statusStrip1.SuspendLayout();
             SuspendLayout();
-            // 
+            //
             // groupBox1
-            // 
+            //
+            groupBox1.Controls.Add(btnExportPDF);
+            groupBox1.Controls.Add(btnExportExcel);
             groupBox1.Controls.Add(btnRefresh);
             groupBox1.Controls.Add(dtpAsOnDate);
             groupBox1.Controls.Add(lblAsOnDate);
@@ -51,9 +55,9 @@ namespace SaleBillSystem.NET.Forms
             groupBox1.TabIndex = 0;
             groupBox1.TabStop = false;
             groupBox1.Text = "Filters";
-            // 
+            //
             // btnRefresh
-            // 
+            //
             btnRefresh.BackColor = Color.LightBlue;
             btnRefresh.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
             btnRefresh.Location = new Point(830, 30);
@@ -63,6 +67,32 @@ namespace SaleBillSystem.NET.Forms
             btnRefresh.Text = "Refresh";
             btnRefresh.UseVisualStyleBackColor = false;
             btnRefresh.Click += btnRefresh_Click;
+            //
+            // btnExportExcel
+            //
+            btnExportExcel.BackColor = Color.FromArgb(34, 139, 34);
+            btnExportExcel.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            btnExportExcel.ForeColor = Color.White;
+            btnExportExcel.Location = new Point(940, 30);
+            btnExportExcel.Name = "btnExportExcel";
+            btnExportExcel.Size = new Size(110, 30);
+            btnExportExcel.TabIndex = 7;
+            btnExportExcel.Text = "Export Excel";
+            btnExportExcel.UseVisualStyleBackColor = false;
+            btnExportExcel.Click += btnExportExcel_Click;
+            //
+            // btnExportPDF
+            //
+            btnExportPDF.BackColor = Color.FromArgb(220, 53, 69);
+            btnExportPDF.Font = new Font("Microsoft Sans Serif", 10F, FontStyle.Bold);
+            btnExportPDF.ForeColor = Color.White;
+            btnExportPDF.Location = new Point(1060, 30);
+            btnExportPDF.Name = "btnExportPDF";
+            btnExportPDF.Size = new Size(110, 30);
+            btnExportPDF.TabIndex = 8;
+            btnExportPDF.Text = "Export PDF";
+            btnExportPDF.UseVisualStyleBackColor = false;
+            btnExportPDF.Click += btnExportPDF_Click;
             // 
             // dtpAsOnDate
             // 
@@ -183,6 +213,8 @@ namespace SaleBillSystem.NET.Forms
 
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Button btnRefresh;
+        private System.Windows.Forms.Button btnExportExcel;
+        private System.Windows.Forms.Button btnExportPDF;
         private System.Windows.Forms.DateTimePicker dtpAsOnDate;
         private System.Windows.Forms.Label lblAsOnDate;
         private System.Windows.Forms.ComboBox cmbFilterItem;

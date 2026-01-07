@@ -9,3 +9,5 @@ obj/
 .env.test.local
 .env.production.local
 dist/
+publish/
+publish.zip

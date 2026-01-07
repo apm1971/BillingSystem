@@ -276,6 +276,20 @@ namespace SaleBillSystem.NET.Forms
             var utilitiesMenu = new ToolStripMenuItem("&Utilities");
             utilitiesMenu.Font = menuFont;
 
+            // User Management - Only visible to admin users
+            if (Program.CurrentUser != null && Program.CurrentUser.IsAdmin)
+            {
+                var userManagementItem = new ToolStripMenuItem("&User Management");
+                userManagementItem.Font = menuFont;
+                userManagementItem.Click += (s, e) => { ShowControl(new UserManagementControl()); };
+                utilitiesMenu.DropDownItems.Add(userManagementItem);
+
+                var databasePathItem = new ToolStripMenuItem("&Database Path Settings");
+                databasePathItem.Font = menuFont;
+                databasePathItem.Click += (s, e) => { ShowControl(new DatabasePathSettingsControl()); };
+                utilitiesMenu.DropDownItems.Add(databasePathItem);
+            }
+
             // var migrateItem = new ToolStripMenuItem("&Migrate Database");
             // migrateItem.Font = menuFont;
             // migrateItem.Click += (s, e) => { RunDatabaseMigration(); };

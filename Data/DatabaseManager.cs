@@ -5,6 +5,7 @@ using System.Data.OleDb; // Changed from SQLite to OleDb
 using System.IO;
 using System.Linq;
 using SaleBillSystem.NET.Models;
+using SaleBillSystem.NET.Utils;
 // Remove ADOX reference
 
 namespace SaleBillSystem.NET.Data
@@ -26,51 +27,36 @@ namespace SaleBillSystem.NET.Data
         {
             try
             {
-                // Default database path in application directory
-                string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
+                // Get database path from SettingsManager (uses local JSON config file)
+                string dbPath;
                 
-                // Check if a custom path is stored in settings
-                if (File.Exists(dbPath))
+                // Check if a custom path is configured in settings
+                string customPath = SettingsManager.DatabasePath;
+                if (!string.IsNullOrEmpty(customPath))
                 {
-                    // Temporarily connect to the default database to check for custom path setting
-                    string tempConnectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};Jet OLEDB:Database Password={DB_PASSWORD};Persist Security Info=False;";
-                    using (OleDbConnection tempConn = new OleDbConnection(tempConnectionString))
+                    if (File.Exists(customPath))
                     {
-                        try
-                        {
-                            tempConn.Open();
-                            
-                            // Check if Settings table exists
-                            DataTable tables = tempConn.GetSchema("Tables", new string[] { null, null, "Settings" });
-                            if (tables.Rows.Count > 0)
-                            {
-                                // Check for custom database path setting
-                                using (OleDbCommand cmd = new OleDbCommand("SELECT SettingValue FROM Settings WHERE SettingKey = 'DatabasePath'", tempConn))
-                                {
-                                    object result = cmd.ExecuteScalar();
-                                    if (result != null && result != DBNull.Value)
-                                    {
-                                        string customPath = result.ToString();
-                                        if (!string.IsNullOrEmpty(customPath) && File.Exists(customPath))
-                                        {
-                                            dbPath = customPath;
-                                            CustomDatabasePath = customPath;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // If we can't read the setting, continue with default path
-                        }
+                        dbPath = customPath;
+                        CustomDatabasePath = customPath;
+                    }
+                    else
+                    {
+                        // Custom path is set but file doesn't exist
+                        System.Windows.Forms.MessageBox.Show(
+                            $"Configured database not found at:\n{customPath}\n\nUsing default database location.",
+                            "Database Not Found",
+                            System.Windows.Forms.MessageBoxButtons.OK,
+                            System.Windows.Forms.MessageBoxIcon.Warning);
+                        
+                        // Revert to default
+                        SettingsManager.DatabasePath = null;
+                        CustomDatabasePath = null;
+                        dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
                     }
                 }
-                
-                // If custom path is set but file doesn't exist, revert to default
-                if (CustomDatabasePath != null && !File.Exists(CustomDatabasePath))
+                else
                 {
-                    CustomDatabasePath = null;
+                    // Use default database path in application directory
                     dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", DB_FILENAME);
                 }
                 

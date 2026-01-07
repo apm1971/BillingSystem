@@ -270,7 +270,7 @@ namespace SaleBillSystem.NET.Forms
             dgvBills.CellFormatting += DgvBills_CellFormatting;
 
             // Initialize date pickers
-            dtpStartDate.Value = DateTime.Now.AddMonths(-1);
+            dtpStartDate.Value = DateTime.Now.AddMonths(-3);
             dtpEndDate.Value = DateTime.Now;
 
             // Add event handlers for date pickers to update list dynamically

@@ -393,7 +393,11 @@ namespace SaleBillSystem.NET.Forms
     AddNewGridRow(); 
     
     CalculateTotals();
-    txtBillDate.Focus();
+    
+    // Use BeginInvoke to set focus after AddNewGridRow's BeginInvoke completes
+    this.BeginInvoke((Action)(() => {
+        txtBillDate.Focus();
+    }));
 }
 
         private void LoadBillData()

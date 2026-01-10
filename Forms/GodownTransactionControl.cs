@@ -34,7 +34,7 @@ namespace SaleBillSystem.NET.Forms
             // Add shortcuts info label if not present
             var lblShortcuts = new Label
             {
-                Text = "Shortcuts: Ctrl+S = Save | F8 = Delete Row | Enter = Next Cell/Add Row | Down = Open Dropdown",
+                Text = "Shortcuts: Ctrl+S = Save | F8 = Delete Row | F4 = Add Godown | F5 = Add Item | Enter = Next Cell/Add Row",
                 Dock = DockStyle.Bottom,
                 ForeColor = Color.DimGray,
                 Font = new Font("Segoe UI", 8f),
@@ -180,6 +180,20 @@ namespace SaleBillSystem.NET.Forms
             if (keyData == Keys.F3)
             {
                 FocusOnGrid();
+                return true;
+            }
+            
+            // F4 = Quick Add New Godown
+            if (keyData == Keys.F4)
+            {
+                OpenQuickAddGodown();
+                return true;
+            }
+            
+            // F5 = Quick Add New Item
+            if (keyData == Keys.F5)
+            {
+                OpenQuickAddItem();
                 return true;
             }
             
@@ -622,5 +636,426 @@ namespace SaleBillSystem.NET.Forms
         {
             ClearForm();
         }
+
+        private void btnGenerateReport_Click(object sender, EventArgs e)
+        {
+            ShowTransactionReport();
+        }
+
+        private void ShowTransactionReport()
+        {
+            if (transactionDetails.Count == 0 || !transactionDetails.Any(d => d.GodownItemID > 0 && d.Quantity > 0))
+            {
+                MessageBox.Show("No transaction items to generate report.", "Information", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var reportForm = new Form())
+            {
+                reportForm.Text = "Transaction Report";
+                reportForm.Size = new Size(700, 600);
+                reportForm.StartPosition = FormStartPosition.CenterParent;
+                reportForm.FormBorderStyle = FormBorderStyle.Sizable;
+                reportForm.MinimizeBox = false;
+                reportForm.MaximizeBox = true;
+                reportForm.KeyPreview = true;
+
+                // Top panel with Print button
+                var topPanel = new Panel
+                {
+                    Dock = DockStyle.Top,
+                    Height = 50,
+                    BackColor = Color.WhiteSmoke,
+                    Padding = new Padding(10)
+                };
+
+                var btnPrint = new Button
+                {
+                    Text = "🖨️ Print",
+                    Location = new Point(10, 10),
+                    Size = new Size(100, 30),
+                    BackColor = Color.LightBlue,
+                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                    FlatStyle = FlatStyle.Flat
+                };
+
+                var btnClose = new Button
+                {
+                    Text = "Close",
+                    Location = new Point(120, 10),
+                    Size = new Size(80, 30),
+                    BackColor = Color.LightGray,
+                    Font = new Font("Segoe UI", 10F),
+                    FlatStyle = FlatStyle.Flat
+                };
+
+                topPanel.Controls.AddRange(new Control[] { btnPrint, btnClose });
+
+                // Report content panel
+                var reportPanel = new Panel
+                {
+                    Dock = DockStyle.Fill,
+                    AutoScroll = true,
+                    BackColor = Color.White,
+                    Padding = new Padding(20)
+                };
+
+                // Create report content
+                var reportContent = new RichTextBox
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    BorderStyle = BorderStyle.None,
+                    BackColor = Color.White,
+                    Font = new Font("Segoe UI", 10F)
+                };
+
+                // Build report text
+                string transactionType = cmbTransactionType.SelectedItem?.ToString() ?? "";
+                string godownInfo = "";
+                
+                if (transactionType == "Transfer")
+                {
+                    string fromGodown = (cmbFromGodown.SelectedItem as Godown)?.GodownName ?? "";
+                    string toGodown = (cmbToGodown.SelectedItem as Godown)?.GodownName ?? "";
+                    godownInfo = $"From Godown: {fromGodown}\nTo Godown: {toGodown}";
+                }
+                else if (transactionType == "Inward")
+                {
+                    string toGodown = (cmbToGodown.SelectedItem as Godown)?.GodownName ?? "";
+                    godownInfo = $"To Godown: {toGodown}";
+                }
+                else if (transactionType == "Outward")
+                {
+                    string fromGodown = (cmbToGodown.SelectedItem as Godown)?.GodownName ?? "";
+                    godownInfo = $"From Godown: {fromGodown}";
+                }
+
+                string reportText = $@"
+══════════════════════════════════════════════════════════
+                    GODOWN TRANSACTION REPORT
+══════════════════════════════════════════════════════════
+
+Transaction Type: {transactionType}
+Transaction Date: {dtpTransactionDate.Value:dd-MMM-yyyy}
+Transaction No: {(string.IsNullOrWhiteSpace(txtTransactionNo.Text) ? "(Auto-generated)" : txtTransactionNo.Text)}
+Reference No: {txtReferenceNo.Text}
+{godownInfo}
+
+──────────────────────────────────────────────────────────
+ITEM DETAILS
+──────────────────────────────────────────────────────────
+
+";
+
+                int sno = 1;
+                double totalQty = 0;
+                foreach (var detail in transactionDetails.Where(d => d.GodownItemID > 0 && d.Quantity > 0))
+                {
+                    reportText += $"{sno,3}. {detail.ItemName,-40} Qty: {detail.Quantity:N2}\n";
+                    totalQty += detail.Quantity;
+                    sno++;
+                }
+
+                reportText += $@"
+──────────────────────────────────────────────────────────
+TOTAL ITEMS: {sno - 1}                    TOTAL QUANTITY: {totalQty:N2}
+══════════════════════════════════════════════════════════
+
+Generated on: {DateTime.Now:dd-MMM-yyyy hh:mm:ss tt}
+";
+
+                reportContent.Text = reportText;
+                reportPanel.Controls.Add(reportContent);
+
+                reportForm.Controls.Add(reportPanel);
+                reportForm.Controls.Add(topPanel);
+
+                // Print button click
+                btnPrint.Click += (s, ev) =>
+                {
+                    try
+                    {
+                        var printDoc = new System.Drawing.Printing.PrintDocument();
+                        printDoc.PrintPage += (sender, args) =>
+                        {
+                            args.Graphics.DrawString(reportContent.Text, 
+                                new Font("Consolas", 10F), 
+                                Brushes.Black, 
+                                new RectangleF(50, 50, args.PageBounds.Width - 100, args.PageBounds.Height - 100));
+                        };
+
+                        using (var printDialog = new PrintDialog())
+                        {
+                            printDialog.Document = printDoc;
+                            if (printDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                printDoc.Print();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error printing: {ex.Message}", "Print Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                btnClose.Click += (s, ev) => reportForm.Close();
+
+                reportForm.KeyDown += (s, ev) =>
+                {
+                    if (ev.KeyCode == Keys.Escape)
+                    {
+                        reportForm.Close();
+                    }
+                    else if (ev.Control && ev.KeyCode == Keys.P)
+                    {
+                        btnPrint.PerformClick();
+                        ev.SuppressKeyPress = true;
+                    }
+                };
+
+                reportForm.ShowDialog();
+            }
+        }
+
+        #region Quick Add Dialogs
+
+        private void OpenQuickAddGodown()
+        {
+            using (var form = new Form())
+            {
+                form.Text = "Quick Add Godown (F4)";
+                form.Size = new Size(400, 200);
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MaximizeBox = false;
+                form.MinimizeBox = false;
+                form.KeyPreview = true;
+
+                // Create simple input form
+                var lblName = new Label { Text = "Godown Name:", Location = new Point(20, 25), AutoSize = true };
+                var txtName = new TextBox { Location = new Point(150, 22), Size = new Size(220, 25) };
+
+                var lblShortName = new Label { Text = "Short Name:", Location = new Point(20, 60), AutoSize = true };
+                var txtShortName = new TextBox { Location = new Point(150, 57), Size = new Size(220, 25) };
+
+                var btnSave = new Button 
+                { 
+                    Text = "Save (Ctrl+S)", 
+                    Location = new Point(150, 100), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightGreen
+                };
+                var btnCancel = new Button 
+                { 
+                    Text = "Cancel (Esc)", 
+                    Location = new Point(260, 100), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightCoral
+                };
+
+                form.Controls.AddRange(new Control[] { lblName, txtName, lblShortName, txtShortName, btnSave, btnCancel });
+
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        MessageBox.Show("Please enter a godown name", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtName.Focus();
+                        return;
+                    }
+
+                    try
+                    {
+                        var newGodown = new Godown
+                        {
+                            GodownName = txtName.Text.Trim(),
+                            GodownShortName = txtShortName.Text.Trim()
+                        };
+
+                        bool success = GodownService.AddGodown(newGodown);
+                        if (success)
+                        {
+                            MessageBox.Show("Godown added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            form.DialogResult = DialogResult.OK;
+                            form.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error adding godown: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                btnCancel.Click += (s, e) => form.Close();
+
+                // Handle keyboard shortcuts
+                form.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Escape)
+                    {
+                        form.Close();
+                    }
+                    else if (e.Control && e.KeyCode == Keys.S)
+                    {
+                        btnSave.PerformClick();
+                        e.SuppressKeyPress = true;
+                    }
+                };
+
+                txtName.Focus();
+                form.ShowDialog();
+
+                // Refresh godown list after closing
+                RefreshGodownList();
+            }
+        }
+
+        private void OpenQuickAddItem()
+        {
+            using (var form = new Form())
+            {
+                form.Text = "Quick Add Item (F5)";
+                form.Size = new Size(400, 170);
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MaximizeBox = false;
+                form.MinimizeBox = false;
+                form.KeyPreview = true;
+
+                // Create simple input form
+                var lblName = new Label { Text = "Item Name:", Location = new Point(20, 25), AutoSize = true };
+                var txtName = new TextBox { Location = new Point(120, 22), Size = new Size(250, 25) };
+
+                var btnSave = new Button 
+                { 
+                    Text = "Save (Ctrl+S)", 
+                    Location = new Point(120, 65), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightGreen
+                };
+                var btnCancel = new Button 
+                { 
+                    Text = "Cancel (Esc)", 
+                    Location = new Point(230, 65), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightCoral
+                };
+
+                form.Controls.AddRange(new Control[] { lblName, txtName, btnSave, btnCancel });
+
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        MessageBox.Show("Please enter an item name", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtName.Focus();
+                        return;
+                    }
+
+                    try
+                    {
+                        var newItem = new GodownItem
+                        {
+                            ItemName = txtName.Text.Trim()
+                        };
+
+                        bool success = GodownItemService.AddGodownItem(newItem);
+                        if (success)
+                        {
+                            MessageBox.Show("Item added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            form.DialogResult = DialogResult.OK;
+                            form.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error adding item: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                btnCancel.Click += (s, e) => form.Close();
+
+                // Handle keyboard shortcuts
+                form.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Escape)
+                    {
+                        form.Close();
+                    }
+                    else if (e.Control && e.KeyCode == Keys.S)
+                    {
+                        btnSave.PerformClick();
+                        e.SuppressKeyPress = true;
+                    }
+                };
+
+                txtName.Focus();
+                form.ShowDialog();
+
+                // Refresh item list after closing
+                RefreshItemList();
+            }
+        }
+
+        private void RefreshGodownList()
+        {
+            try
+            {
+                godowns = GodownService.GetAllGodowns();
+                
+                // Refresh From Godown combo
+                var selectedFromGodown = cmbFromGodown.SelectedValue;
+                cmbFromGodown.DataSource = null;
+                cmbFromGodown.DataSource = new List<Godown>(godowns);
+                cmbFromGodown.DisplayMember = "GodownName";
+                cmbFromGodown.ValueMember = "GodownID";
+                if (selectedFromGodown != null)
+                {
+                    cmbFromGodown.SelectedValue = selectedFromGodown;
+                }
+
+                // Refresh To Godown combo
+                var selectedToGodown = cmbToGodown.SelectedValue;
+                cmbToGodown.DataSource = null;
+                cmbToGodown.DataSource = new List<Godown>(godowns);
+                cmbToGodown.DisplayMember = "GodownName";
+                cmbToGodown.ValueMember = "GodownID";
+                if (selectedToGodown != null)
+                {
+                    cmbToGodown.SelectedValue = selectedToGodown;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing godown list: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RefreshItemList()
+        {
+            try
+            {
+                items = GodownItemService.GetAllGodownItems();
+
+                // Update ComboBox column DataSource
+                if (dgvTransactionDetails.Columns["ItemName"] is DataGridViewComboBoxColumn itemColumn && items.Count > 0)
+                {
+                    var itemNames = items.Select(i => i.ItemName).Distinct().ToList();
+                    itemColumn.DataSource = itemNames;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing item list: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
     }
 }

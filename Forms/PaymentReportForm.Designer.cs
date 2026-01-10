@@ -21,6 +21,7 @@ namespace SaleBillSystem.NET.Forms
             this.pnlButtons = new System.Windows.Forms.Panel();
             this.btnClose = new System.Windows.Forms.Button();
             this.btnSaveAs = new System.Windows.Forms.Button();
+            this.btnSlipPrint = new System.Windows.Forms.Button();
             this.btnPrint = new System.Windows.Forms.Button();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.pnlButtons.SuspendLayout();
@@ -39,6 +40,7 @@ namespace SaleBillSystem.NET.Forms
             // 
             this.pnlButtons.Controls.Add(this.btnClose);
             this.pnlButtons.Controls.Add(this.btnSaveAs);
+            this.pnlButtons.Controls.Add(this.btnSlipPrint);
             this.pnlButtons.Controls.Add(this.btnPrint);
             this.pnlButtons.Controls.Add(this.btnRefresh);
             this.pnlButtons.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -69,10 +71,21 @@ namespace SaleBillSystem.NET.Forms
             this.btnSaveAs.UseVisualStyleBackColor = true;
             this.btnSaveAs.Click += new System.EventHandler(this.BtnSaveAs_Click);
             // 
+            // btnSlipPrint
+            // 
+            this.btnSlipPrint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSlipPrint.Location = new System.Drawing.Point(870, 12);
+            this.btnSlipPrint.Name = "btnSlipPrint";
+            this.btnSlipPrint.Size = new System.Drawing.Size(75, 26);
+            this.btnSlipPrint.TabIndex = 4;
+            this.btnSlipPrint.Text = "Slip Print";
+            this.btnSlipPrint.UseVisualStyleBackColor = true;
+            this.btnSlipPrint.Click += new System.EventHandler(this.BtnSlipPrint_Click);
+            // 
             // btnPrint
             // 
             this.btnPrint.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnPrint.Location = new System.Drawing.Point(951, 12);
+            this.btnPrint.Location = new System.Drawing.Point(789, 12);
             this.btnPrint.Name = "btnPrint";
             this.btnPrint.Size = new System.Drawing.Size(75, 26);
             this.btnPrint.TabIndex = 1;
@@ -83,7 +96,7 @@ namespace SaleBillSystem.NET.Forms
             // btnRefresh
             // 
             this.btnRefresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefresh.Location = new System.Drawing.Point(870, 12);
+            this.btnRefresh.Location = new System.Drawing.Point(708, 12);
             this.btnRefresh.Name = "btnRefresh";
             this.btnRefresh.Size = new System.Drawing.Size(75, 26);
             this.btnRefresh.TabIndex = 0;
@@ -113,6 +126,7 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Button btnClose;
         private System.Windows.Forms.Button btnSaveAs;
         private System.Windows.Forms.Button btnPrint;
+        private System.Windows.Forms.Button btnSlipPrint;
         private System.Windows.Forms.Button btnRefresh;
     }
 }

@@ -33,7 +33,7 @@ namespace SaleBillSystem.NET.Forms
             // Add shortcuts info label if not present
             var lblShortcuts = new Label
             {
-                Text = "Shortcuts: Ctrl+S = Save | F8 = Delete Row | Enter = Next Cell/Add Row | Down = Open Dropdown",
+                Text = "Shortcuts: Ctrl+S = Save | F8 = Delete Row | F4 = Add Godown | F5 = Add Item | Enter = Next Cell/Add Row",
                 Dock = DockStyle.Bottom,
                 ForeColor = Color.DimGray,
                 Font = new Font("Segoe UI", 8f),
@@ -178,6 +178,20 @@ namespace SaleBillSystem.NET.Forms
             if (keyData == Keys.F3)
             {
                 FocusOnGrid();
+                return true;
+            }
+            
+            // F4 = Quick Add New Godown
+            if (keyData == Keys.F4)
+            {
+                OpenQuickAddGodown();
+                return true;
+            }
+            
+            // F5 = Quick Add New Item
+            if (keyData == Keys.F5)
+            {
+                OpenQuickAddItem();
                 return true;
             }
             
@@ -516,5 +530,236 @@ namespace SaleBillSystem.NET.Forms
         {
             LoadOpeningStock();
         }
+
+        #region Quick Add Dialogs
+
+        private void OpenQuickAddGodown()
+        {
+            using (var form = new Form())
+            {
+                form.Text = "Quick Add Godown (F4)";
+                form.Size = new Size(400, 200);
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MaximizeBox = false;
+                form.MinimizeBox = false;
+                form.KeyPreview = true;
+
+                // Create simple input form
+                var lblName = new Label { Text = "Godown Name:", Location = new Point(20, 25), AutoSize = true };
+                var txtName = new TextBox { Location = new Point(150, 22), Size = new Size(220, 25) };
+
+                var lblShortName = new Label { Text = "Short Name:", Location = new Point(20, 60), AutoSize = true };
+                var txtShortName = new TextBox { Location = new Point(150, 57), Size = new Size(220, 25) };
+
+                var btnSave = new Button 
+                { 
+                    Text = "Save (Ctrl+S)", 
+                    Location = new Point(150, 100), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightGreen
+                };
+                var btnCancel = new Button 
+                { 
+                    Text = "Cancel (Esc)", 
+                    Location = new Point(260, 100), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightCoral
+                };
+
+                form.Controls.AddRange(new Control[] { lblName, txtName, lblShortName, txtShortName, btnSave, btnCancel });
+
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        MessageBox.Show("Please enter a godown name", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtName.Focus();
+                        return;
+                    }
+
+                    try
+                    {
+                        var newGodown = new Godown
+                        {
+                            GodownName = txtName.Text.Trim(),
+                            GodownShortName = txtShortName.Text.Trim()
+                        };
+
+                        bool success = GodownService.AddGodown(newGodown);
+                        if (success)
+                        {
+                            MessageBox.Show("Godown added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            form.DialogResult = DialogResult.OK;
+                            form.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error adding godown: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                btnCancel.Click += (s, e) => form.Close();
+
+                // Handle keyboard shortcuts
+                form.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Escape)
+                    {
+                        form.Close();
+                    }
+                    else if (e.Control && e.KeyCode == Keys.S)
+                    {
+                        btnSave.PerformClick();
+                        e.SuppressKeyPress = true;
+                    }
+                };
+
+                txtName.Focus();
+                form.ShowDialog();
+
+                // Refresh godown list after closing
+                RefreshGodownList();
+            }
+        }
+
+        private void OpenQuickAddItem()
+        {
+            using (var form = new Form())
+            {
+                form.Text = "Quick Add Item (F5)";
+                form.Size = new Size(400, 170);
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MaximizeBox = false;
+                form.MinimizeBox = false;
+                form.KeyPreview = true;
+
+                // Create simple input form
+                var lblName = new Label { Text = "Item Name:", Location = new Point(20, 25), AutoSize = true };
+                var txtName = new TextBox { Location = new Point(120, 22), Size = new Size(250, 25) };
+
+                var btnSave = new Button 
+                { 
+                    Text = "Save (Ctrl+S)", 
+                    Location = new Point(120, 65), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightGreen
+                };
+                var btnCancel = new Button 
+                { 
+                    Text = "Cancel (Esc)", 
+                    Location = new Point(230, 65), 
+                    Size = new Size(100, 35),
+                    BackColor = Color.LightCoral
+                };
+
+                form.Controls.AddRange(new Control[] { lblName, txtName, btnSave, btnCancel });
+
+                btnSave.Click += (s, e) =>
+                {
+                    if (string.IsNullOrWhiteSpace(txtName.Text))
+                    {
+                        MessageBox.Show("Please enter an item name", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtName.Focus();
+                        return;
+                    }
+
+                    try
+                    {
+                        var newItem = new GodownItem
+                        {
+                            ItemName = txtName.Text.Trim()
+                        };
+
+                        bool success = GodownItemService.AddGodownItem(newItem);
+                        if (success)
+                        {
+                            MessageBox.Show("Item added successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            form.DialogResult = DialogResult.OK;
+                            form.Close();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error adding item: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+
+                btnCancel.Click += (s, e) => form.Close();
+
+                // Handle keyboard shortcuts
+                form.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Escape)
+                    {
+                        form.Close();
+                    }
+                    else if (e.Control && e.KeyCode == Keys.S)
+                    {
+                        btnSave.PerformClick();
+                        e.SuppressKeyPress = true;
+                    }
+                };
+
+                txtName.Focus();
+                form.ShowDialog();
+
+                // Refresh item list after closing
+                RefreshItemList();
+            }
+        }
+
+        private void RefreshGodownList()
+        {
+            try
+            {
+                int previousSelection = selectedGodownID;
+                godowns = GodownService.GetAllGodowns();
+                
+                cmbGodown.DataSource = null;
+                cmbGodown.DataSource = new List<Godown>(godowns);
+                cmbGodown.DisplayMember = "GodownName";
+                cmbGodown.ValueMember = "GodownID";
+
+                // Try to restore previous selection
+                if (previousSelection > 0)
+                {
+                    var previousGodown = godowns.FirstOrDefault(g => g.GodownID == previousSelection);
+                    if (previousGodown != null)
+                    {
+                        cmbGodown.SelectedValue = previousSelection;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing godown list: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RefreshItemList()
+        {
+            try
+            {
+                items = GodownItemService.GetAllGodownItems();
+
+                // Update ComboBox column DataSource
+                if (dgvOpeningStock.Columns["ItemName"] is DataGridViewComboBoxColumn itemColumn && items.Count > 0)
+                {
+                    var itemNames = items.Select(i => i.ItemName).Distinct().ToList();
+                    itemColumn.DataSource = itemNames;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error refreshing item list: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
     }
 }

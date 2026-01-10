@@ -154,6 +154,16 @@ namespace SaleBillSystem.NET.Forms
             btnDelete.Enabled = false;
         }
 
+        /// <summary>
+        /// Public method to start adding a new item (for quick-add scenarios)
+        /// </summary>
+        public void StartNewItem()
+        {
+            // Clear grid selection first to prevent SelectionChanged from re-populating
+            dgvItems.ClearSelection();
+            ClearForm();
+        }
+
         private void PopulateForm(GodownItem item)
         {
             currentItem = item;

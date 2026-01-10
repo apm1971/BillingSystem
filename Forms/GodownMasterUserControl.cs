@@ -171,6 +171,16 @@ namespace SaleBillSystem.NET.Forms
             btnDelete.Enabled = false;
         }
 
+        /// <summary>
+        /// Public method to start adding a new godown (for quick-add scenarios)
+        /// </summary>
+        public void StartNewGodown()
+        {
+            // Clear grid selection first to prevent SelectionChanged from re-populating
+            dgvGodowns.ClearSelection();
+            ClearForm();
+        }
+
         private void PopulateForm(Godown godown)
         {
             currentGodown = godown;

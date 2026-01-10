@@ -86,5 +86,47 @@ namespace SaleBillSystem.NET.Forms
         {
             LoadReport();
         }
+
+        private void BtnSlipPrint_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Generate compact slip report for thermal printer
+                var slipHtml = PaymentReportGenerator.GenerateSlipReport(_reportData);
+                
+                // Create a new form with a web browser for slip printing
+                using (var slipForm = new Form())
+                {
+                    slipForm.Text = "Payment Slip - 3 inch Thermal Print";
+                    slipForm.Size = new System.Drawing.Size(300, 600);
+                    slipForm.StartPosition = FormStartPosition.CenterParent;
+                    slipForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                    slipForm.MaximizeBox = false;
+                    slipForm.MinimizeBox = false;
+                    
+                    var slipBrowser = new WebBrowser
+                    {
+                        Dock = DockStyle.Fill,
+                        DocumentText = slipHtml
+                    };
+                    
+                    slipForm.Controls.Add(slipBrowser);
+                    
+                    // Wait for document to load before showing print dialog
+                    slipBrowser.DocumentCompleted += (s, args) =>
+                    {
+                        // Auto-trigger print
+                        slipBrowser.ShowPrintDialog();
+                    };
+                    
+                    slipForm.ShowDialog(this);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error printing slip: {ex.Message}", "Slip Print Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
 }

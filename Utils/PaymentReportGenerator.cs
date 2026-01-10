@@ -11,6 +11,229 @@ namespace SaleBillSystem.NET.Utils
     public class PaymentReportGenerator
     {
         /// <summary>
+        /// Generates a compact slip report optimized for 3-inch thermal printer (72mm width)
+        /// </summary>
+        public static string GenerateSlipReport(PaymentReportData reportData)
+        {
+            var html = new StringBuilder();
+            
+            // Start HTML document with thermal printer specific styles
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html lang='en'>");
+            html.AppendLine("<head>");
+            html.AppendLine("    <meta charset='UTF-8'>");
+            html.AppendLine("    <title>Payment Slip</title>");
+            html.AppendLine(GetSlipCSSStyles());
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
+            
+            // Compact slip content
+            html.AppendLine("<div class='slip-container'>");
+            
+            // Header
+            html.AppendLine("<div class='slip-header'>");
+            html.AppendLine("<div class='title'>PAYMENT SLIP</div>");
+            html.AppendLine($"<div class='date'>{reportData.PaymentDate:dd-MMM-yyyy}</div>");
+            html.AppendLine("</div>");
+            
+            // Divider
+            html.AppendLine("<div class='divider'>================================</div>");
+            
+            // Party and Broker Info
+            if (!string.IsNullOrEmpty(reportData.PartyName))
+                html.AppendLine($"<div class='info-row'><span class='label'>Party:</span><span class='value'>{TruncateText(reportData.PartyName, 18)}</span></div>");
+            
+            if (!string.IsNullOrEmpty(reportData.BrokerName))
+                html.AppendLine($"<div class='info-row'><span class='label'>Broker:</span><span class='value'>{TruncateText(reportData.BrokerName, 17)}</span></div>");
+            
+            html.AppendLine($"<div class='info-row'><span class='label'>Method:</span><span class='value'>{reportData.PaymentMethod}</span></div>");
+            
+            // Divider
+            html.AppendLine("<div class='divider'>--------------------------------</div>");
+            
+            // Amount Summary
+            html.AppendLine($"<div class='amount-row'><span class='label'>Amount Due:</span><span class='value'>₹{reportData.TotalAmountDue:N0}</span></div>");
+            html.AppendLine($"<div class='amount-row'><span class='label'>Advance Used:</span><span class='value'>₹{reportData.TotalAdvanceUsed:N0}</span></div>");
+            html.AppendLine($"<div class='amount-row'><span class='label'>Interest:</span><span class='value'>₹{reportData.TotalInterest:N0}</span></div>");
+            html.AppendLine($"<div class='amount-row'><span class='label'>Discount:</span><span class='value'>₹{reportData.TotalDiscount:N0}</span></div>");
+            html.AppendLine($"<div class='amount-row'><span class='label'>Brokerage:</span><span class='value'>₹{reportData.TotalBrokerage:N0}</span></div>");
+            
+            // Divider
+            html.AppendLine("<div class='divider'>--------------------------------</div>");
+            
+            // Total
+            html.AppendLine($"<div class='total-row'><span class='label'>CASH PAID:</span><span class='value'>₹{reportData.TotalCashNeeded:N0}</span></div>");
+            html.AppendLine($"<div class='total-row'><span class='label'>TOTAL AMOUNT:</span><span class='value'>₹{reportData.TotalPaymentAmount:N0}</span></div>");
+            
+            // Divider
+            html.AppendLine("<div class='divider'>================================</div>");
+            
+            // Bill Details (compact list)
+            if (reportData.BillDetails.Count > 0)
+            {
+                html.AppendLine("<div class='section-title'>BILLS SETTLED</div>");
+                html.AppendLine("<div class='bill-list'>");
+                foreach (var bill in reportData.BillDetails)
+                {
+                    html.AppendLine($"<div class='bill-item'>");
+                    html.AppendLine($"<span class='bill-no'>{bill.BillNo}</span>");
+                    html.AppendLine($"<span class='bill-amt'>₹{bill.AmountPaid:N0}</span>");
+                    html.AppendLine("</div>");
+                }
+                html.AppendLine("</div>");
+                html.AppendLine("<div class='divider'>--------------------------------</div>");
+            }
+            
+            // Payment Terms (compact)
+            html.AppendLine("<div class='terms-row'>");
+            html.AppendLine($"<span>Int:{reportData.PaymentTerms.InterestDays}d@{reportData.PaymentTerms.InterestRate}%</span>");
+            html.AppendLine($"<span>Disc:{reportData.PaymentTerms.DiscountDays}d@{reportData.PaymentTerms.DiscountRate}%</span>");
+            html.AppendLine("</div>");
+            
+            // Footer
+            html.AppendLine("<div class='divider'>================================</div>");
+            html.AppendLine("<div class='footer'>");
+            html.AppendLine("<div>Thank You!</div>");
+            html.AppendLine($"<div class='timestamp'>{DateTime.Now:dd-MMM-yy HH:mm}</div>");
+            html.AppendLine("</div>");
+            
+            html.AppendLine("</div>"); // slip-container
+            
+            // Print script
+            html.AppendLine("<script>");
+            html.AppendLine("window.onload = function() { window.print(); };");
+            html.AppendLine("</script>");
+            
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+            
+            return html.ToString();
+        }
+
+        /// <summary>
+        /// Truncates text to fit within thermal printer width
+        /// </summary>
+        private static string TruncateText(string text, int maxLength)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            return text.Length <= maxLength ? text : text.Substring(0, maxLength - 2) + "..";
+        }
+
+        /// <summary>
+        /// CSS styles for 3-inch thermal printer slip (72mm width)
+        /// </summary>
+        private static string GetSlipCSSStyles()
+        {
+            return @"
+    <style>
+        @page {
+            size: 72mm auto;
+            margin: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            line-height: 1.2;
+            background: white;
+            color: black;
+            width: 72mm;
+            margin: 0 auto;
+        }
+        .slip-container {
+            width: 100%;
+            padding: 2mm;
+        }
+        .slip-header {
+            text-align: center;
+            margin-bottom: 2mm;
+        }
+        .slip-header .title {
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .slip-header .date {
+            font-size: 10px;
+            margin-top: 1mm;
+        }
+        .divider {
+            text-align: center;
+            font-size: 8px;
+            margin: 1mm 0;
+            letter-spacing: -0.5px;
+        }
+        .info-row, .amount-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            padding: 0.5mm 0;
+        }
+        .info-row .label, .amount-row .label {
+            font-weight: bold;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 1mm 0;
+            border-top: 1px dashed black;
+            border-bottom: 1px dashed black;
+            margin: 1mm 0;
+        }
+        .section-title {
+            font-size: 9px;
+            font-weight: bold;
+            text-align: center;
+            margin: 1mm 0;
+        }
+        .bill-list {
+            font-size: 8px;
+        }
+        .bill-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3mm 0;
+        }
+        .terms-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 7px;
+            padding: 1mm 0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 9px;
+            margin-top: 2mm;
+        }
+        .footer .timestamp {
+            font-size: 7px;
+            color: #666;
+            margin-top: 1mm;
+        }
+        @media print {
+            body {
+                width: 72mm;
+            }
+            .slip-container {
+                page-break-after: always;
+            }
+        }
+        @media screen {
+            body {
+                border: 1px dashed #ccc;
+                margin: 10px auto;
+            }
+        }
+    </style>";
+        }
+
+        /// <summary>
         /// Generates a complete HTML report from payment data
         /// </summary>
         public static string GeneratePaymentReport(PaymentReportData reportData)

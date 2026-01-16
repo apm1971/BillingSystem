@@ -459,10 +459,16 @@ namespace SaleBillSystem.NET.Forms
                     _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.BillDate).ToList() : _filteredBills.OrderByDescending(b => b.BillDate).ToList();
                     break;
                 case "PartyName":
-                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.PartyName).ToList() : _filteredBills.OrderByDescending(b => b.PartyName).ToList();
+                    // Secondary sort by date within the same party
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) 
+                        ? _filteredBills.OrderBy(b => b.PartyName).ThenBy(b => b.BillDate).ToList() 
+                        : _filteredBills.OrderByDescending(b => b.PartyName).ThenBy(b => b.BillDate).ToList();
                     break;
                 case "BrokerName":
-                    _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.BrokerName).ToList() : _filteredBills.OrderByDescending(b => b.BrokerName).ToList();
+                    // Secondary sort by date within the same broker
+                    _filteredBills = (_sortOrder == SortOrder.Ascending) 
+                        ? _filteredBills.OrderBy(b => b.BrokerName).ThenBy(b => b.BillDate).ToList() 
+                        : _filteredBills.OrderByDescending(b => b.BrokerName).ThenBy(b => b.BillDate).ToList();
                     break;
                 case "OriginalAmount":
                     _filteredBills = (_sortOrder == SortOrder.Ascending) ? _filteredBills.OrderBy(b => b.OriginalAmount).ToList() : _filteredBills.OrderByDescending(b => b.OriginalAmount).ToList();

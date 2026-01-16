@@ -43,7 +43,7 @@ namespace SaleBillSystem.NET.Forms
                 {
                     MessageBox.Show("Invalid username or password.", "Login Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    txtPassword.Clear();
+                    txtPassword.SelectAll();
                     txtPassword.Focus();
                 }
             }

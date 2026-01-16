@@ -74,9 +74,12 @@ namespace SaleBillSystem.NET.Forms
         private void ShowLoginScreen()
         {
             mainMenuStrip.Visible = false;
+            statusStrip.Visible = false;
+            panelHeader.Visible = false;
+            panelMain.Visible = false;
 
-            // The loginControl is already on the form from the Designer
             loginControl.Visible = true;
+            loginControl.BringToFront();
             loginControl.Dock = DockStyle.Fill;
             loginControl.LoginSuccess += OnLoginSuccess;
         }
@@ -102,8 +105,14 @@ namespace SaleBillSystem.NET.Forms
 
         private void ShowMainApplicationUI()
         {
+            loginControl.Visible = false;
             mainMenuStrip.Visible = true;
+            statusStrip.Visible = true;
+            panelHeader.Visible = true;
+            panelMain.Visible = true;
             InitializeMainMenu();
+            UpdateHeaderInfo();
+            UpdateStatusInfo("Ready");
             this.Text = $"{Program.APP_NAME} - Main Dashboard";
         }
 
@@ -333,6 +342,25 @@ namespace SaleBillSystem.NET.Forms
             mainMenuStrip.Items.Add(utilitiesMenu);
 
             // Add Transactions, Reports, etc. menus here
+        }
+
+        #endregion
+
+        #region Header and Status Updates
+
+        private void UpdateHeaderInfo()
+        {
+            if (Program.CurrentUser != null)
+            {
+                lblUserName.Text = Program.CurrentUser.DisplayName;
+            }
+            lblDateTime.Text = DateTime.Now.ToString("dddd, MMM dd, yyyy");
+        }
+
+        private void UpdateStatusInfo(string message)
+        {
+            lblStatusInfo.Text = message;
+            statusStrip.Refresh();
         }
 
         #endregion

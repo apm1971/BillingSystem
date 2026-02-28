@@ -12,6 +12,7 @@ namespace SaleBillSystem.NET.Utils
     {
         /// <summary>
         /// Generates a compact slip report optimized for 3-inch thermal printer (72mm width)
+        /// Shows complete bill details including party, amounts, interest, discount, brokerage
         /// </summary>
         public static string GenerateSlipReport(PaymentReportData reportData)
         {
@@ -41,59 +42,149 @@ namespace SaleBillSystem.NET.Utils
             
             // Party and Broker Info
             if (!string.IsNullOrEmpty(reportData.PartyName))
-                html.AppendLine($"<div class='info-row'><span class='label'>Party:</span><span class='value'>{TruncateText(reportData.PartyName, 18)}</span></div>");
+                html.AppendLine($"<div class='info-row'><span class='label'>Party:</span><span class='value'>{TruncateText(reportData.PartyName, 20)}</span></div>");
             
             if (!string.IsNullOrEmpty(reportData.BrokerName))
-                html.AppendLine($"<div class='info-row'><span class='label'>Broker:</span><span class='value'>{TruncateText(reportData.BrokerName, 17)}</span></div>");
+                html.AppendLine($"<div class='info-row'><span class='label'>Broker:</span><span class='value'>{TruncateText(reportData.BrokerName, 19)}</span></div>");
             
             html.AppendLine($"<div class='info-row'><span class='label'>Method:</span><span class='value'>{reportData.PaymentMethod}</span></div>");
             
             // Divider
             html.AppendLine("<div class='divider'>--------------------------------</div>");
             
-            // Amount Summary
-            html.AppendLine($"<div class='amount-row'><span class='label'>Amount Due:</span><span class='value'>₹{reportData.TotalAmountDue:N0}</span></div>");
-            html.AppendLine($"<div class='amount-row'><span class='label'>Advance Used:</span><span class='value'>₹{reportData.TotalAdvanceUsed:N0}</span></div>");
-            html.AppendLine($"<div class='amount-row'><span class='label'>Interest:</span><span class='value'>₹{reportData.TotalInterest:N0}</span></div>");
-            html.AppendLine($"<div class='amount-row'><span class='label'>Discount:</span><span class='value'>₹{reportData.TotalDiscount:N0}</span></div>");
-            html.AppendLine($"<div class='amount-row'><span class='label'>Brokerage:</span><span class='value'>₹{reportData.TotalBrokerage:N0}</span></div>");
-            
-            // Divider
-            html.AppendLine("<div class='divider'>--------------------------------</div>");
-            
-            // Total
-            html.AppendLine($"<div class='total-row'><span class='label'>CASH PAID:</span><span class='value'>₹{reportData.TotalCashNeeded:N0}</span></div>");
-            html.AppendLine($"<div class='total-row'><span class='label'>TOTAL AMOUNT:</span><span class='value'>₹{reportData.TotalPaymentAmount:N0}</span></div>");
-            
-            // Divider
-            html.AppendLine("<div class='divider'>================================</div>");
-            
-            // Bill Details (compact list)
+            // Bill Details Section - Complete breakdown
             if (reportData.BillDetails.Count > 0)
             {
                 html.AppendLine("<div class='section-title'>BILLS SETTLED</div>");
                 html.AppendLine("<div class='bill-list'>");
+                
                 foreach (var bill in reportData.BillDetails)
                 {
-                    html.AppendLine($"<div class='bill-item'>");
+                    html.AppendLine("<div class='bill-item-detail'>");
+                    
+                    // Bill header with number and date
+                    html.AppendLine($"<div class='bill-header'>");
                     html.AppendLine($"<span class='bill-no'>{bill.BillNo}</span>");
-                    html.AppendLine($"<span class='bill-amt'>₹{bill.AmountPaid:N0}</span>");
+                    html.AppendLine($"<span class='bill-date'>{bill.BillDate:dd-MM-yy}</span>");
+                    html.AppendLine("</div>");
+                    
+                    // Party name - always show
+                    if (!string.IsNullOrEmpty(bill.PartyName))
+                    {
+                        html.AppendLine($"<div class='bill-party'>Party: {TruncateText(bill.PartyName, 24)}</div>");
+                    }
+                    
+                    // Amount breakdown
+                    html.AppendLine($"<div class='bill-row'><span>Original:</span><span>₹{bill.OriginalAmount:N0}</span></div>");
+                    html.AppendLine($"<div class='bill-row'><span>Balance:</span><span>₹{bill.BalanceDue:N0}</span></div>");
+                    html.AppendLine($"<div class='bill-row highlight'><span>Paid:</span><span>₹{bill.AmountPaid:N0}</span></div>");
+                    
+                    // Show adjustments only if non-zero
+                    if (bill.InterestCharged > 0)
+                        html.AppendLine($"<div class='bill-row negative'><span>+Interest:</span><span>₹{bill.InterestCharged:N0}</span></div>");
+                    
+                    if (bill.DiscountEarned > 0)
+                        html.AppendLine($"<div class='bill-row positive'><span>-Discount:</span><span>₹{bill.DiscountEarned:N0}</span></div>");
+                    
+                    if (bill.Brokerage > 0)
+                        html.AppendLine($"<div class='bill-row'><span>Brokerage:</span><span>₹{bill.Brokerage:N0}</span></div>");
+                    
+                    if (bill.AdvanceUsed > 0)
+                        html.AppendLine($"<div class='bill-row'><span>Adv.Used:</span><span>₹{bill.AdvanceUsed:N0}</span></div>");
+                    
+                    if (bill.CashUsed > 0)
+                        html.AppendLine($"<div class='bill-row'><span>Cash:</span><span>₹{bill.CashUsed:N0}</span></div>");
+                    
+                    // Status
+                    html.AppendLine($"<div class='bill-status'>[{bill.Status}]</div>");
+                    
+                    html.AppendLine("</div>"); // bill-item-detail
+                    html.AppendLine("<div class='bill-sep'>- - - - - - - - - - -</div>");
+                }
+                html.AppendLine("</div>"); // bill-list
+            }
+            
+            // Divider
+            html.AppendLine("<div class='divider'>================================</div>");
+            
+            // Advance Utilizations Section
+            if (reportData.AdvanceUtilizations.Count > 0)
+            {
+                html.AppendLine("<div class='section-title'>PAYMENTS USED</div>");
+                html.AppendLine("<div class='advance-list'>");
+                
+                foreach (var adv in reportData.AdvanceUtilizations)
+                {
+                    html.AppendLine("<div class='adv-item'>");
+                    html.AppendLine($"<div class='adv-row'><span>ID:{adv.AdvanceID}</span><span>{adv.AdvanceDate:dd-MM-yy}</span></div>");
+                    html.AppendLine($"<div class='adv-row'><span>Used:</span><span>₹{adv.AmountUsed:N0}</span></div>");
+                    if (adv.UsedForBills.Count > 0)
+                    {
+                        html.AppendLine($"<div class='adv-bills'>For: {string.Join(",", adv.UsedForBills)}</div>");
+                    }
                     html.AppendLine("</div>");
                 }
                 html.AppendLine("</div>");
                 html.AppendLine("<div class='divider'>--------------------------------</div>");
             }
             
+            // Summary Section
+            html.AppendLine("<div class='section-title'>SUMMARY</div>");
+            html.AppendLine($"<div class='amount-row'><span class='label'>Amount Due:</span><span class='value'>₹{reportData.TotalAmountDue:N0}</span></div>");
+            
+            if (reportData.TotalAdvanceUsed > 0)
+                html.AppendLine($"<div class='amount-row'><span class='label'>Advance Used:</span><span class='value'>₹{reportData.TotalAdvanceUsed:N0}</span></div>");
+            
+            if (reportData.TotalInterest > 0)
+                html.AppendLine($"<div class='amount-row negative'><span class='label'>+Interest:</span><span class='value'>₹{reportData.TotalInterest:N0}</span></div>");
+            
+            if (reportData.TotalDiscount > 0)
+                html.AppendLine($"<div class='amount-row positive'><span class='label'>-Discount:</span><span class='value'>₹{reportData.TotalDiscount:N0}</span></div>");
+            
+            if (reportData.TotalBrokerage > 0)
+                html.AppendLine($"<div class='amount-row'><span class='label'>Brokerage:</span><span class='value'>₹{reportData.TotalBrokerage:N0}</span></div>");
+            
+            // Divider
+            html.AppendLine("<div class='divider'>--------------------------------</div>");
+            
+            // Total
+            html.AppendLine($"<div class='total-row'><span class='label'>CASH PAID:</span><span class='value'>₹{reportData.TotalCashNeeded:N0}</span></div>");
+            html.AppendLine($"<div class='total-row grand'><span class='label'>TOTAL:</span><span class='value'>₹{reportData.TotalPaymentAmount:N0}</span></div>");
+            
+            if (reportData.UnusedAdvance > 0)
+            {
+                html.AppendLine($"<div class='amount-row'><span class='label'>Unused Adv:</span><span class='value'>₹{reportData.UnusedAdvance:N0}</span></div>");
+            }
+            
+            // Cheque details if any
+            if (reportData.ChequeAmountFirm1 > 0 || reportData.ChequeAmountFirm2 > 0)
+            {
+                html.AppendLine("<div class='divider'>--------------------------------</div>");
+                html.AppendLine("<div class='section-title'>CHEQUE DETAILS</div>");
+                if (reportData.ChequeAmountFirm1 > 0)
+                    html.AppendLine($"<div class='amount-row'><span class='label'>Firm1 Chq:</span><span class='value'>₹{reportData.ChequeAmountFirm1:N0}</span></div>");
+                if (reportData.ChequeAmountFirm2 > 0)
+                    html.AppendLine($"<div class='amount-row'><span class='label'>Firm2 Chq:</span><span class='value'>₹{reportData.ChequeAmountFirm2:N0}</span></div>");
+            }
+            
+            // Divider
+            html.AppendLine("<div class='divider'>================================</div>");
+            
             // Payment Terms (compact)
             html.AppendLine("<div class='terms-row'>");
             html.AppendLine($"<span>Int:{reportData.PaymentTerms.InterestDays}d@{reportData.PaymentTerms.InterestRate}%</span>");
             html.AppendLine($"<span>Disc:{reportData.PaymentTerms.DiscountDays}d@{reportData.PaymentTerms.DiscountRate}%</span>");
             html.AppendLine("</div>");
+            if (reportData.PaymentTerms.BrokerageRate > 0)
+            {
+                html.AppendLine($"<div class='terms-row'><span>Brokerage: {reportData.PaymentTerms.BrokerageRate}%</span></div>");
+            }
             
             // Footer
             html.AppendLine("<div class='divider'>================================</div>");
             html.AppendLine("<div class='footer'>");
             html.AppendLine("<div>Thank You!</div>");
+            html.AppendLine($"<div class='bill-count'>{reportData.BillDetails.Count} Bill(s) Settled</div>");
             html.AppendLine($"<div class='timestamp'>{DateTime.Now:dd-MMM-yy HH:mm}</div>");
             html.AppendLine("</div>");
             
@@ -176,6 +267,12 @@ namespace SaleBillSystem.NET.Utils
         .info-row .label, .amount-row .label {
             font-weight: bold;
         }
+        .amount-row.negative {
+            color: #c00;
+        }
+        .amount-row.positive {
+            color: #090;
+        }
         .total-row {
             display: flex;
             justify-content: space-between;
@@ -183,14 +280,18 @@ namespace SaleBillSystem.NET.Utils
             font-weight: bold;
             padding: 1mm 0;
             border-top: 1px dashed black;
-            border-bottom: 1px dashed black;
             margin: 1mm 0;
+        }
+        .total-row.grand {
+            font-size: 12px;
+            border-bottom: 1px dashed black;
         }
         .section-title {
             font-size: 9px;
             font-weight: bold;
             text-align: center;
             margin: 1mm 0;
+            text-decoration: underline;
         }
         .bill-list {
             font-size: 8px;
@@ -199,6 +300,68 @@ namespace SaleBillSystem.NET.Utils
             display: flex;
             justify-content: space-between;
             padding: 0.3mm 0;
+        }
+        .bill-item-detail {
+            padding: 1mm 0;
+        }
+        .bill-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .bill-no {
+            font-weight: bold;
+        }
+        .bill-date {
+            font-size: 8px;
+        }
+        .bill-party {
+            font-size: 8px;
+            font-weight: bold;
+            color: #000;
+        }
+        .bill-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            padding: 0.2mm 1mm;
+        }
+        .bill-row.highlight {
+            font-weight: bold;
+        }
+        .bill-row.negative {
+            color: #c00;
+        }
+        .bill-row.positive {
+            color: #090;
+        }
+        .bill-status {
+            text-align: right;
+            font-size: 7px;
+            font-weight: bold;
+        }
+        .bill-sep {
+            text-align: center;
+            font-size: 6px;
+            color: #000;
+            margin: 0.5mm 0;
+        }
+        .advance-list {
+            font-size: 8px;
+        }
+        .adv-item {
+            padding: 0.5mm 0;
+            border-bottom: 1px dotted #ccc;
+        }
+        .adv-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+        }
+        .adv-bills {
+            font-size: 7px;
+            color: #000;
         }
         .terms-row {
             display: flex;
@@ -211,9 +374,13 @@ namespace SaleBillSystem.NET.Utils
             font-size: 9px;
             margin-top: 2mm;
         }
+        .footer .bill-count {
+            font-size: 8px;
+            margin-top: 1mm;
+        }
         .footer .timestamp {
             font-size: 7px;
-            color: #666;
+            color: #000;
             margin-top: 1mm;
         }
         @media print {

@@ -613,7 +613,7 @@ namespace SaleBillSystem.NET.Forms
                     foreach (var item in billItems)
                     {
                         details.AppendLine($"• {item.ItemName}");
-                        details.AppendLine($"  Quantity: {item.Quantity} × Rate: ₹{item.Rate:N2} = ₹{item.Amount:N2}");
+                        details.AppendLine($"  Qty: {item.Quantity} × ₹{item.Rate:N2} = ₹{item.Amount:N2}");
                         if (item.Charges > 0)
                         {
                             details.AppendLine($"  Charges: ₹{item.Charges:N2}");
@@ -638,14 +638,237 @@ namespace SaleBillSystem.NET.Forms
                         details.AppendLine($"Notes: {selectedBill.Notes}");
                     }
 
-                    MessageBox.Show(details.ToString(), $"Bill Details - {selectedBill.BillNo}",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Create a custom dialog with View and Print buttons
+                    ShowBillDetailDialog(selectedBill, billItems, details.ToString());
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error loading bill details: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        /// <summary>
+        /// Shows a dialog with bill details and a Print button for thermal printer
+        /// </summary>
+        private void ShowBillDetailDialog(Bill bill, List<BillItem> billItems, string detailsText)
+        {
+            var detailForm = new Form
+            {
+                Text = $"Bill Details - {bill.BillNo}",
+                Size = new Size(500, 550),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowIcon = false
+            };
+
+            // Create text box to show details
+            var txtDetails = new TextBox
+            {
+                Text = detailsText,
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 10f),
+                Location = new Point(10, 10),
+                Size = new Size(464, 440),
+                BackColor = Color.White
+            };
+
+            // Create button panel
+            var buttonPanel = new Panel
+            {
+                Location = new Point(10, 460),
+                Size = new Size(464, 40)
+            };
+
+            // Print button for 3-inch thermal printer
+            var btnPrint = new Button
+            {
+                Text = "🖨️ Print (3\" Thermal)",
+                Size = new Size(150, 35),
+                Location = new Point(0, 0),
+                BackColor = Color.FromArgb(0, 123, 255),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnPrint.FlatAppearance.BorderSize = 0;
+            btnPrint.Click += (s, e) => PrintBillSlip(bill, billItems);
+
+            // Close button
+            var btnClose = new Button
+            {
+                Text = "Close",
+                Size = new Size(100, 35),
+                Location = new Point(364, 0),
+                DialogResult = DialogResult.Cancel,
+                BackColor = Color.FromArgb(108, 117, 125),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnClose.FlatAppearance.BorderSize = 0;
+
+            buttonPanel.Controls.Add(btnPrint);
+            buttonPanel.Controls.Add(btnClose);
+
+            detailForm.Controls.Add(txtDetails);
+            detailForm.Controls.Add(buttonPanel);
+            detailForm.CancelButton = btnClose;
+
+            detailForm.ShowDialog(this);
+        }
+
+        /// <summary>
+        /// Generates and prints a bill slip optimized for 3-inch thermal printer (72mm / ~288 pixels)
+        /// </summary>
+        private void PrintBillSlip(Bill bill, List<BillItem> billItems)
+        {
+            try
+            {
+                string htmlContent = GenerateThermalBillSlip(bill, billItems);
+                string tempFilePath = Path.Combine(Path.GetTempPath(), $"BillSlip_{bill.BillNo}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
+                File.WriteAllText(tempFilePath, htmlContent, Encoding.UTF8);
+
+                // Open the file in the default web browser for printing
+                Process.Start(new ProcessStartInfo(tempFilePath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not generate or open the bill slip: {ex.Message}", "Print Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Generates HTML content optimized for 3-inch (72mm) thermal printer
+        /// </summary>
+        private string GenerateThermalBillSlip(Bill bill, List<BillItem> billItems)
+        {
+            var sb = new StringBuilder();
+
+            // 3-inch thermal printer width is approximately 72mm (288 pixels at 100 DPI)
+            sb.AppendLine("<!DOCTYPE html>");
+            sb.AppendLine("<html><head>");
+            sb.AppendLine("<meta charset='UTF-8'>");
+            sb.AppendLine("<title>Bill Slip</title>");
+            sb.AppendLine("<style>");
+            // Thermal printer styling for 3-inch width
+            sb.AppendLine("@page { size: 72mm auto; margin: 2mm; }");
+            sb.AppendLine("@media print { body { width: 72mm; } }");
+            sb.AppendLine("body { font-family: 'Courier New', monospace; font-size: 10pt; width: 72mm; margin: 0 auto; padding: 2mm; line-height: 1.2; }");
+            sb.AppendLine(".header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 3mm; margin-bottom: 2mm; }");
+            sb.AppendLine(".header h2 { margin: 0; font-size: 12pt; }");
+            sb.AppendLine(".header p { margin: 1mm 0; font-size: 9pt; }");
+            sb.AppendLine(".info-row { display: flex; justify-content: space-between; font-size: 9pt; margin: 1mm 0; }");
+            sb.AppendLine(".info-label { font-weight: bold; }");
+            sb.AppendLine(".divider { border-bottom: 1px dashed #000; margin: 2mm 0; }");
+            sb.AppendLine(".item { margin: 2mm 0; padding-bottom: 1mm; border-bottom: 1px dotted #ccc; }");
+            sb.AppendLine(".item-name { font-weight: bold; font-size: 9pt; }");
+            sb.AppendLine(".item-details { font-size: 8pt; margin-left: 2mm; }");
+            sb.AppendLine(".item-amount { text-align: right; font-size: 9pt; }");
+            sb.AppendLine(".totals { border-top: 1px dashed #000; margin-top: 2mm; padding-top: 2mm; }");
+            sb.AppendLine(".total-row { display: flex; justify-content: space-between; font-size: 9pt; margin: 1mm 0; }");
+            sb.AppendLine(".total-row.grand { font-weight: bold; font-size: 11pt; border-top: 1px solid #000; padding-top: 2mm; margin-top: 2mm; }");
+            sb.AppendLine(".balance { font-weight: bold; font-size: 11pt; color: #c00; }");
+            sb.AppendLine(".footer { text-align: center; margin-top: 3mm; font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; }");
+            sb.AppendLine(".status-paid { color: #090; }");
+            sb.AppendLine(".status-partial { color: #00f; }");
+            sb.AppendLine(".status-unpaid { color: #c00; }");
+            sb.AppendLine("</style>");
+            sb.AppendLine("</head><body>");
+
+            // Header
+            sb.AppendLine("<div class='header'>");
+            sb.AppendLine("<h2>SALE BILL</h2>");
+            sb.AppendLine($"<p><strong>{bill.BillNo}</strong></p>");
+            sb.AppendLine($"<p>{bill.BillDate:dd-MM-yyyy}</p>");
+            sb.AppendLine("</div>");
+
+            // Party and Broker info
+            sb.AppendLine("<div class='info-section'>");
+            sb.AppendLine($"<div class='info-row'><span class='info-label'>Party:</span><span>{bill.PartyName}</span></div>");
+            if (!string.IsNullOrEmpty(bill.BrokerName) && bill.BrokerName != "No Broker")
+            {
+                sb.AppendLine($"<div class='info-row'><span class='info-label'>Broker:</span><span>{bill.BrokerName}</span></div>");
+            }
+
+            string statusClass = bill.Status switch
+            {
+                "Paid" => "status-paid",
+                "Partial" => "status-partial",
+                "Unpaid" => "status-unpaid",
+                _ => ""
+            };
+            sb.AppendLine($"<div class='info-row'><span class='info-label'>Status:</span><span class='{statusClass}'>{bill.Status}</span></div>");
+            sb.AppendLine("</div>");
+
+            sb.AppendLine("<div class='divider'></div>");
+
+            // Items
+            sb.AppendLine("<div class='items'>");
+            decimal totalItemAmount = 0;
+            decimal totalItemCharges = 0;
+
+            foreach (var item in billItems)
+            {
+                sb.AppendLine("<div class='item'>");
+                sb.AppendLine($"<div class='item-name'>{item.ItemName}</div>");
+                sb.AppendLine($"<div class='item-details'>{item.Quantity} x ₹{item.Rate:N2}</div>");
+                if (item.Charges > 0)
+                {
+                    sb.AppendLine($"<div class='item-details'>+ Charges: ₹{item.Charges:N2}</div>");
+                }
+                sb.AppendLine($"<div class='item-amount'>₹{item.TotalAmount:N2}</div>");
+                sb.AppendLine("</div>");
+
+                totalItemAmount += item.Amount;
+                totalItemCharges += item.Charges;
+            }
+            sb.AppendLine("</div>");
+
+            // Totals
+            sb.AppendLine("<div class='totals'>");
+            sb.AppendLine($"<div class='total-row'><span>Subtotal:</span><span>₹{totalItemAmount:N2}</span></div>");
+            if (totalItemCharges > 0)
+            {
+                sb.AppendLine($"<div class='total-row'><span>Item Charges:</span><span>₹{totalItemCharges:N2}</span></div>");
+            }
+            if (bill.AdditionalCharges > 0)
+            {
+                sb.AppendLine($"<div class='total-row'><span>Add. Charges:</span><span>₹{bill.AdditionalCharges:N2}</span></div>");
+            }
+            sb.AppendLine($"<div class='total-row grand'><span>NET AMOUNT:</span><span>₹{bill.TotalAmount:N2}</span></div>");
+            
+            if (bill.Balance > 0)
+            {
+                sb.AppendLine($"<div class='total-row balance'><span>BALANCE DUE:</span><span>₹{bill.Balance:N2}</span></div>");
+            }
+            else if (bill.Balance == 0)
+            {
+                sb.AppendLine("<div class='total-row' style='color:#090;'><span>PAID IN FULL</span><span>✓</span></div>");
+            }
+            sb.AppendLine("</div>");
+
+            // Notes
+            if (!string.IsNullOrEmpty(bill.Notes))
+            {
+                sb.AppendLine("<div class='divider'></div>");
+                sb.AppendLine($"<div style='font-size:8pt;'><strong>Notes:</strong> {bill.Notes}</div>");
+            }
+
+            // Footer
+            sb.AppendLine("<div class='footer'>");
+            sb.AppendLine($"<p>Printed: {DateTime.Now:dd-MM-yyyy HH:mm}</p>");
+            sb.AppendLine("<p>Thank You!</p>");
+            sb.AppendLine("</div>");
+
+            sb.AppendLine("</body></html>");
+            return sb.ToString();
         }
 
         private void DeleteSelectedBill()

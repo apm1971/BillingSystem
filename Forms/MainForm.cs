@@ -162,6 +162,9 @@ namespace SaleBillSystem.NET.Forms
             // Clear existing items to prevent duplicates if called multiple times
             mainMenuStrip.Items.Clear();
 
+            // Apply custom renderer for better visibility on blue background
+            mainMenuStrip.Renderer = new CustomMenuRenderer();
+
             // Create a bold, larger font for menu items
             var menuFont = new Font("Segoe UI", 10.5f, FontStyle.Bold);
 
@@ -794,5 +797,116 @@ namespace SaleBillSystem.NET.Forms
         // {
 
         // }
+    }
+
+    /// <summary>
+    /// Custom menu renderer for professional-looking menu strip with proper visibility
+    /// </summary>
+    public class CustomMenuRenderer : ToolStripProfessionalRenderer
+    {
+        private static readonly Color MenuBackColor = Color.FromArgb(51, 102, 153);
+        private static readonly Color MenuForeColor = Color.White;
+        private static readonly Color DropDownBackColor = Color.White;
+        private static readonly Color DropDownForeColor = Color.FromArgb(51, 51, 51);
+        private static readonly Color HoverBackColor = Color.FromArgb(41, 82, 123);
+        private static readonly Color DropDownHoverBackColor = Color.FromArgb(229, 243, 255);
+
+        public CustomMenuRenderer() : base(new CustomMenuColorTable()) { }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            var item = e.Item;
+            var g = e.Graphics;
+            var rect = new Rectangle(Point.Empty, item.Size);
+
+            // Check if this is a top-level menu item
+            bool isTopLevel = item.OwnerItem == null && item.Owner is MenuStrip;
+
+            if (isTopLevel)
+            {
+                // Top-level menu item styling
+                if (item.Selected || item.Pressed)
+                {
+                    using (var brush = new SolidBrush(HoverBackColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+                else
+                {
+                    using (var brush = new SolidBrush(MenuBackColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+            }
+            else
+            {
+                // Dropdown menu item styling
+                if (item.Selected)
+                {
+                    using (var brush = new SolidBrush(DropDownHoverBackColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+                else
+                {
+                    using (var brush = new SolidBrush(DropDownBackColor))
+                    {
+                        g.FillRectangle(brush, rect);
+                    }
+                }
+            }
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            var item = e.Item;
+            bool isTopLevel = item.OwnerItem == null && item.Owner is MenuStrip;
+
+            if (isTopLevel)
+            {
+                e.TextColor = MenuForeColor;
+            }
+            else
+            {
+                e.TextColor = DropDownForeColor;
+            }
+
+            base.OnRenderItemText(e);
+        }
+
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            if (e.ToolStrip is MenuStrip)
+            {
+                using (var brush = new SolidBrush(MenuBackColor))
+                {
+                    e.Graphics.FillRectangle(brush, e.AffectedBounds);
+                }
+            }
+            else
+            {
+                base.OnRenderToolStripBackground(e);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Custom color table for menu styling
+    /// </summary>
+    public class CustomMenuColorTable : ProfessionalColorTable
+    {
+        public override Color MenuItemSelected => Color.FromArgb(229, 243, 255);
+        public override Color MenuItemSelectedGradientBegin => Color.FromArgb(41, 82, 123);
+        public override Color MenuItemSelectedGradientEnd => Color.FromArgb(41, 82, 123);
+        public override Color MenuItemPressedGradientBegin => Color.FromArgb(41, 82, 123);
+        public override Color MenuItemPressedGradientEnd => Color.FromArgb(41, 82, 123);
+        public override Color MenuBorder => Color.FromArgb(200, 200, 200);
+        public override Color ToolStripDropDownBackground => Color.White;
+        public override Color ImageMarginGradientBegin => Color.White;
+        public override Color ImageMarginGradientMiddle => Color.White;
+        public override Color ImageMarginGradientEnd => Color.White;
     }
 }

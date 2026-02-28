@@ -17,6 +17,7 @@ namespace SaleBillSystem.NET.Forms
         private List<AdvancePayment> _advancePayments = new List<AdvancePayment>();
         private List<AdvancePayment> _allAdvancePayments = new List<AdvancePayment>();
         private bool _dateFilterApplied = false;
+        private string? _sessionDate = null; // Persists payment date across saves within a session
 
         public AdvancePaymentEntryControl()
         {
@@ -327,7 +328,7 @@ namespace SaleBillSystem.NET.Forms
                 cmbPaymentMethodFilter.SelectedIndex = 0; // "All"
             }
             
-            txtPaymentDate.Text = DateTime.Now.ToString("dd-MM-yyyy");
+            txtPaymentDate.Text = _sessionDate ?? DateTime.Now.ToString("dd-MM-yyyy");
             nudAmount.Value = 0;
             cmbPaymentMethod.SelectedIndex = 0;
             txtReference.Clear();
@@ -572,6 +573,9 @@ namespace SaleBillSystem.NET.Forms
                     MessageBox.Show("Advance payment added successfully!", "Success", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     
+                    // Remember the payment date for this session
+                    _sessionDate = txtPaymentDate.Text;
+                    
                     // Refresh the data - reload all payments and reapply current filter if active
                     _allAdvancePayments = AdvancePaymentService.GetAllAdvancePayments();
                     if (_dateFilterApplied)
@@ -595,6 +599,7 @@ namespace SaleBillSystem.NET.Forms
 
         private void BtnClear_Click(object sender, EventArgs e)
         {
+            _sessionDate = null; // Reset session so date goes back to today
             ClearForm();
             // Reset the date filter
             _dateFilterApplied = false;

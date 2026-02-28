@@ -52,7 +52,7 @@ namespace SaleBillSystem.NET.Utils
             // Divider
             html.AppendLine("<div class='divider'>--------------------------------</div>");
             
-            // Bill Details Section - Complete breakdown
+            // Bill Details Section - Compact layout
             if (reportData.BillDetails.Count > 0)
             {
                 html.AppendLine("<div class='section-title'>BILLS SETTLED</div>");
@@ -60,46 +60,27 @@ namespace SaleBillSystem.NET.Utils
                 
                 foreach (var bill in reportData.BillDetails)
                 {
-                    html.AppendLine("<div class='bill-item-detail'>");
+                    html.AppendLine("<div class='bill-item-compact'>");
                     
-                    // Bill header with number and date
-                    html.AppendLine($"<div class='bill-header'>");
-                    html.AppendLine($"<span class='bill-no'>{bill.BillNo}</span>");
-                    html.AppendLine($"<span class='bill-date'>{bill.BillDate:dd-MM-yy}</span>");
-                    html.AppendLine("</div>");
+                    // Line 1: Bill No + Date + Party (all on one line)
+                    var partyText = !string.IsNullOrEmpty(bill.PartyName) ? $" {TruncateText(bill.PartyName, 14)}" : "";
+                    html.AppendLine($"<div class='bill-hdr'><span class='bill-no'>{bill.BillNo}</span><span>{bill.BillDate:dd-MM-yy}{partyText}</span></div>");
                     
-                    // Party name - always show
-                    if (!string.IsNullOrEmpty(bill.PartyName))
-                    {
-                        html.AppendLine($"<div class='bill-party'>Party: {TruncateText(bill.PartyName, 24)}</div>");
-                    }
+                    // Line 2: Balance + Paid side by side
+                    html.AppendLine($"<div class='bill-amounts'><span>Bal:₹{bill.BalanceDue:N0}</span><span class='paid'>Pd:₹{bill.AmountPaid:N0}</span></div>");
                     
-                    // Amount breakdown
-                    html.AppendLine($"<div class='bill-row'><span>Original:</span><span>₹{bill.OriginalAmount:N0}</span></div>");
-                    html.AppendLine($"<div class='bill-row'><span>Balance:</span><span>₹{bill.BalanceDue:N0}</span></div>");
-                    html.AppendLine($"<div class='bill-row highlight'><span>Paid:</span><span>₹{bill.AmountPaid:N0}</span></div>");
+                    // Line 3: Adjustments inline (only non-zero values)
+                    var adjustments = new List<string>();
+                    if (bill.InterestCharged > 0) adjustments.Add($"Int:₹{bill.InterestCharged:N0}");
+                    if (bill.DiscountEarned > 0) adjustments.Add($"Dis:₹{bill.DiscountEarned:N0}");
+                    if (bill.Brokerage > 0) adjustments.Add($"Brk:₹{bill.Brokerage:N0}");
+                    if (bill.AdvanceUsed > 0) adjustments.Add($"Adv:₹{bill.AdvanceUsed:N0}");
+                    if (bill.CashUsed > 0) adjustments.Add($"Csh:₹{bill.CashUsed:N0}");
                     
-                    // Show adjustments only if non-zero
-                    if (bill.InterestCharged > 0)
-                        html.AppendLine($"<div class='bill-row negative'><span>+Interest:</span><span>₹{bill.InterestCharged:N0}</span></div>");
+                    if (adjustments.Count > 0)
+                        html.AppendLine($"<div class='bill-adj'>{string.Join(" ", adjustments)}</div>");
                     
-                    if (bill.DiscountEarned > 0)
-                        html.AppendLine($"<div class='bill-row positive'><span>-Discount:</span><span>₹{bill.DiscountEarned:N0}</span></div>");
-                    
-                    if (bill.Brokerage > 0)
-                        html.AppendLine($"<div class='bill-row'><span>Brokerage:</span><span>₹{bill.Brokerage:N0}</span></div>");
-                    
-                    if (bill.AdvanceUsed > 0)
-                        html.AppendLine($"<div class='bill-row'><span>Adv.Used:</span><span>₹{bill.AdvanceUsed:N0}</span></div>");
-                    
-                    if (bill.CashUsed > 0)
-                        html.AppendLine($"<div class='bill-row'><span>Cash:</span><span>₹{bill.CashUsed:N0}</span></div>");
-                    
-                    // Status
-                    html.AppendLine($"<div class='bill-status'>[{bill.Status}]</div>");
-                    
-                    html.AppendLine("</div>"); // bill-item-detail
-                    html.AppendLine("<div class='bill-sep'>- - - - - - - - - - -</div>");
+                    html.AppendLine("</div>"); // bill-item-compact
                 }
                 html.AppendLine("</div>"); // bill-list
             }
@@ -296,56 +277,36 @@ namespace SaleBillSystem.NET.Utils
         .bill-list {
             font-size: 8px;
         }
-        .bill-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.3mm 0;
+        .bill-item-compact {
+            padding: 0.5mm 0;
+            border-bottom: 1px dotted #999;
+            margin-bottom: 0.5mm;
         }
-        .bill-item-detail {
-            padding: 1mm 0;
+        .bill-item-compact:last-child {
+            border-bottom: none;
         }
-        .bill-header {
+        .bill-hdr {
             display: flex;
             justify-content: space-between;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 8px;
         }
         .bill-no {
             font-weight: bold;
         }
-        .bill-date {
-            font-size: 8px;
-        }
-        .bill-party {
-            font-size: 8px;
-            font-weight: bold;
-            color: #000;
-        }
-        .bill-row {
+        .bill-amounts {
             display: flex;
             justify-content: space-between;
             font-size: 8px;
-            padding: 0.2mm 1mm;
+            padding: 0 1mm;
         }
-        .bill-row.highlight {
+        .bill-amounts .paid {
             font-weight: bold;
         }
-        .bill-row.negative {
-            color: #c00;
-        }
-        .bill-row.positive {
-            color: #090;
-        }
-        .bill-status {
-            text-align: right;
+        .bill-adj {
             font-size: 7px;
-            font-weight: bold;
-        }
-        .bill-sep {
-            text-align: center;
-            font-size: 6px;
-            color: #000;
-            margin: 0.5mm 0;
+            padding: 0 1mm;
+            color: #333;
         }
         .advance-list {
             font-size: 8px;

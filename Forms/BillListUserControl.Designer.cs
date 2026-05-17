@@ -41,6 +41,7 @@ namespace SaleBillSystem.NET.Forms
             lblStartDate = new Label();
             btnDeleteBill = new Button();
             btnViewDetails = new Button();
+            btnSettlement = new Button();
             btnEditBill = new Button();
             btnNewBill = new Button();
             btnPrint = new Button();
@@ -73,6 +74,7 @@ namespace SaleBillSystem.NET.Forms
             panel1.Controls.Add(lblStartDate);
             panel1.Controls.Add(btnDeleteBill);
             panel1.Controls.Add(btnViewDetails);
+            panel1.Controls.Add(btnSettlement);
             panel1.Controls.Add(btnEditBill);
             panel1.Controls.Add(btnNewBill);
             panel1.Controls.Add(btnPrint);
@@ -202,6 +204,18 @@ namespace SaleBillSystem.NET.Forms
             btnViewDetails.TabIndex = 6;
             btnViewDetails.Text = "View";
             btnViewDetails.UseVisualStyleBackColor = false;
+            // 
+            // btnSettlement
+            // 
+            btnSettlement.BackColor = Color.FromArgb(156, 39, 176);
+            btnSettlement.Font = new Font("Microsoft Sans Serif", 9F, FontStyle.Bold);
+            btnSettlement.ForeColor = Color.White;
+            btnSettlement.Location = new Point(1063, 14);
+            btnSettlement.Name = "btnSettlement";
+            btnSettlement.Size = new Size(88, 30);
+            btnSettlement.TabIndex = 17;
+            btnSettlement.Text = "Settlement";
+            btnSettlement.UseVisualStyleBackColor = false;
             // 
             // btnEditBill
             // 
@@ -408,5 +422,6 @@ namespace SaleBillSystem.NET.Forms
         private System.Windows.Forms.Label lblChequeFirm2;
         private System.Windows.Forms.Label lblChequeFirm1Value;
         private System.Windows.Forms.Label lblChequeFirm1;
+        private System.Windows.Forms.Button btnSettlement;
     }
 } 

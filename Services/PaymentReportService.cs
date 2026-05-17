@@ -579,6 +579,50 @@ namespace SaleBillSystem.NET.Services
                 return false;
             }
         }
+        /// <summary>
+        /// Finds the settlement report that contains a specific bill by searching report data.
+        /// Returns the PaymentReportData for the settlement where this bill was paid.
+        /// </summary>
+        public static PaymentReportData GetPaymentReportByBillId(int billId)
+        {
+            try
+            {
+                EnsurePaymentReportsTableExists();
+
+                string sql = "SELECT ReportID, ReportData FROM PaymentReports ORDER BY PaymentDate DESC";
+
+                using (var connection = DatabaseManager.GetConnection())
+                {
+                    connection.Open();
+                    using (var command = new OleDbCommand(sql, connection))
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            string jsonData = reader.GetString(reader.GetOrdinal("ReportData"));
+                            var reportData = JsonSerializer.Deserialize<PaymentReportData>(jsonData);
+                            
+                            if (reportData?.BillDetails != null)
+                            {
+                                foreach (var bill in reportData.BillDetails)
+                                {
+                                    if (bill.BillID == billId)
+                                    {
+                                        return reportData;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error finding report for bill {billId}: {ex.Message}");
+            }
+
+            return null;
+        }
     }
 
     /// <summary>

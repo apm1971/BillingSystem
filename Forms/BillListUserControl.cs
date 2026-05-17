@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using SaleBillSystem.NET.Data;
 using SaleBillSystem.NET.Models;
+using SaleBillSystem.NET.Services;
 using System.IO;
 using System.Text;
 using System.Diagnostics;
@@ -252,6 +253,7 @@ namespace SaleBillSystem.NET.Forms
             btnNewBill.Click += BtnNewBill_Click;
             btnEditBill.Click += BtnEditBill_Click;
             btnViewDetails.Click += BtnViewDetails_Click;
+            btnSettlement.Click += BtnSettlement_Click;
             btnDeleteBill.Click += BtnDeleteBill_Click;
             // btnRefresh.Click += BtnRefresh_Click;
             btnPrint.Click += BtnPrint_Click;
@@ -515,6 +517,7 @@ namespace SaleBillSystem.NET.Forms
 
         private void BtnEditBill_Click(object sender, EventArgs e) => EditSelectedBill();
         private void BtnViewDetails_Click(object sender, EventArgs e) => ViewSelectedBillDetails();
+        private void BtnSettlement_Click(object sender, EventArgs e) => ViewSettlementReport();
         private void BtnDeleteBill_Click(object sender, EventArgs e) => DeleteSelectedBill();
         // private void BtnRefresh_Click(object sender, EventArgs e)
         // {
@@ -603,6 +606,17 @@ namespace SaleBillSystem.NET.Forms
                     details.AppendLine($"Party: {selectedBill.PartyName}");
                     details.AppendLine($"Broker: {selectedBill.BrokerName}");
                     details.AppendLine($"Status: {selectedBill.Status}");
+                    
+                    // Show settlement date if bill is fully paid
+                    if (selectedBill.Status == "Paid")
+                    {
+                        var settlementDate = LedgerService.GetSettlementDate(selectedBill.BillID);
+                        if (settlementDate.HasValue)
+                        {
+                            details.AppendLine($"Settlement Date: {settlementDate.Value:dd/MM/yyyy}");
+                        }
+                    }
+                    
                     details.AppendLine();
                     details.AppendLine("Items:");
                     details.AppendLine("----------------------------------------");
@@ -644,6 +658,48 @@ namespace SaleBillSystem.NET.Forms
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error loading bill details: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+        /// <summary>
+        /// Opens the settlement report for the selected bill
+        /// </summary>
+        private void ViewSettlementReport()
+        {
+            if (dgvBills.CurrentRow?.DataBoundItem is Bill selectedBill)
+            {
+                if (selectedBill.Status == "Unpaid")
+                {
+                    MessageBox.Show(
+                        $"Bill '{selectedBill.BillNo}' has not been settled yet.",
+                        "No Settlement",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                try
+                {
+                    Cursor = Cursors.WaitCursor;
+                    var reportData = PaymentReportService.GetPaymentReportByBillId(selectedBill.BillID);
+                    Cursor = Cursors.Default;
+
+                    if (reportData == null)
+                    {
+                        MessageBox.Show(
+                            $"No settlement report found for bill '{selectedBill.BillNo}'.\n\nThe settlement may have been made before reports were tracked.",
+                            "Report Not Found",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    var reportForm = new PaymentReportForm(reportData);
+                    reportForm.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    Cursor = Cursors.Default;
+                    MessageBox.Show($"Error loading settlement report: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

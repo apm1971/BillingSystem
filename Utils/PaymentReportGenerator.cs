@@ -66,8 +66,8 @@ namespace SaleBillSystem.NET.Utils
                     var partyText = !string.IsNullOrEmpty(bill.PartyName) ? $" {TruncateText(bill.PartyName, 14)}" : "";
                     html.AppendLine($"<div class='bill-hdr'><span class='bill-no'>{bill.BillNo}</span><span>{bill.BillDate:dd-MM-yy}{partyText}</span></div>");
                     
-                    // Line 2: Balance + Paid side by side
-                    html.AppendLine($"<div class='bill-amounts'><span>Bal:₹{bill.BalanceDue:N0}</span><span class='paid'>Pd:₹{bill.AmountPaid:N0}</span></div>");
+                    // Line 2: Original + Balance + Paid side by side
+                    html.AppendLine($"<div class='bill-amounts'><span>Org:₹{bill.OriginalAmount:N0}</span><span>Bal:₹{bill.BalanceDue:N0}</span><span class='paid'>Pd:₹{bill.AmountPaid:N0}</span></div>");
                     
                     // Line 3: Adjustments inline (only non-zero values)
                     var adjustments = new List<string>();
@@ -727,6 +727,14 @@ namespace SaleBillSystem.NET.Utils
             var html = new StringBuilder();
             html.AppendLine("        <div class='compact-info'>");
             
+            // Calculate total original amount from bill details
+            decimal totalOriginalAmount = 0;
+            foreach (var bill in data.BillDetails)
+            {
+                totalOriginalAmount += bill.OriginalAmount;
+            }
+            
+            html.AppendLine($"            <span><strong>Original Amount:</strong> ₹{totalOriginalAmount:N0}</span>");
             html.AppendLine($"            <span><strong>Amount Due:</strong> ₹{data.TotalAmountDue:N0}</span>");
             html.AppendLine($"            <span><strong>Payments Used:</strong> ₹{data.TotalAdvanceUsed:N0}</span>");
             html.AppendLine($"            <span><strong>Cash Needed:</strong> ₹{data.TotalCashNeeded:N0}</span>");
@@ -810,6 +818,36 @@ namespace SaleBillSystem.NET.Utils
                 }
             }
             
+            // Calculate totals for all numeric columns
+            decimal totalOriginalAmount = 0, totalBalanceDue = 0, totalAmountPaid = 0;
+            decimal totalInterest = 0, totalDiscount = 0, totalBrokerage = 0;
+            decimal totalAdvanceUsed = 0, totalCashUsed = 0;
+            foreach (var bill in data.BillDetails)
+            {
+                totalOriginalAmount += bill.OriginalAmount;
+                totalBalanceDue += bill.BalanceDue;
+                totalAmountPaid += bill.AmountPaid;
+                totalInterest += bill.InterestCharged;
+                totalDiscount += bill.DiscountEarned;
+                totalBrokerage += bill.Brokerage;
+                totalAdvanceUsed += bill.AdvanceUsed;
+                totalCashUsed += bill.CashUsed;
+            }
+            
+            // Total row
+            html.AppendLine("                    <tr class='total-row'>");
+            html.AppendLine("                        <td colspan='3'><strong>Total</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalOriginalAmount:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalBalanceDue:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount positive'><strong>₹{totalAmountPaid:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount negative'><strong>₹{totalInterest:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount positive'><strong>₹{totalDiscount:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalBrokerage:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalAdvanceUsed:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalCashUsed:N2}</strong></td>");
+            html.AppendLine("                        <td></td>");
+            html.AppendLine("                    </tr>");
+            
             html.AppendLine("                </tbody>");
             html.AppendLine("            </table>");
             html.AppendLine("        </div>");
@@ -861,6 +899,24 @@ namespace SaleBillSystem.NET.Utils
                 html.AppendLine($"                        <td>{string.Join(", ", advance.UsedForBills)}</td>");
                 html.AppendLine("                    </tr>");
             }
+            
+            // Calculate totals for payment utilizations
+            decimal totalPmtOriginal = 0, totalPmtUsed = 0, totalPmtRemaining = 0;
+            foreach (var advance in data.AdvanceUtilizations)
+            {
+                totalPmtOriginal += advance.OriginalAmount;
+                totalPmtUsed += advance.AmountUsed;
+                totalPmtRemaining += advance.RemainingAmount;
+            }
+            
+            // Total row
+            html.AppendLine("                    <tr class='total-row'>");
+            html.AppendLine("                        <td colspan='2'><strong>Total</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalPmtOriginal:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount positive'><strong>₹{totalPmtUsed:N2}</strong></td>");
+            html.AppendLine($"                        <td class='amount'><strong>₹{totalPmtRemaining:N2}</strong></td>");
+            html.AppendLine("                        <td colspan='3'></td>");
+            html.AppendLine("                    </tr>");
             
             html.AppendLine("                </tbody>");
             html.AppendLine("            </table>");

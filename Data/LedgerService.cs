@@ -335,6 +335,45 @@ public static Dictionary<int, List<Transaction>> GetTransactionsForBills(List<in
     
     return result;
 }
+/// <summary>
+/// Gets the settlement date for a bill by finding when the balance first reached zero.
+/// Returns null if the bill has not been fully settled.
+/// </summary>
+public static DateTime? GetSettlementDate(int billId)
+{
+    try
+    {
+        var transactions = GetTransactionsForBill(billId);
+        if (transactions.Count == 0) return null;
+
+        decimal runningBalance = 0;
+        DateTime? settlementDate = null;
+
+        foreach (var txn in transactions)
+        {
+            runningBalance += txn.DebitAmount - txn.CreditAmount;
+            
+            if (runningBalance <= 0)
+            {
+                // Bill became fully settled at this transaction's date
+                settlementDate = txn.TransactionDate;
+            }
+            else
+            {
+                // Balance went positive again (e.g. new debit), so no longer settled
+                settlementDate = null;
+            }
+        }
+
+        return settlementDate;
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Error getting settlement date: {ex.Message}", "Database Error",
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return null;
+    }
+}
    }
 }
 
